@@ -29,6 +29,8 @@
         .status-cancelled { background-color: #FEE2E2; color: #991B1B; }
         .status-modified { background-color: #FFEDD5; color: #9A3412; }
         input:not([type="checkbox"]):not([type="radio"]), textarea, select { border: 1px solid #EDE1E7; background: #fff; padding: 10px; border-radius: 8px; outline-color: #B76E88; width: 100%; font-size: 14px; }
+        .no-spinner::-webkit-inner-spin-button, .no-spinner::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .no-spinner { -moz-appearance: textfield; }
         .photo-thumb { width: 82px; height: 82px; object-fit: cover; border-radius: 10px; border: 1px solid #EDE1E7; cursor: pointer; }
         .clinic-badge-fs { background-color: #EDE1E7; color: #2A2330; font-size: 8px; padding: 2px 8px; border-radius: 99px; font-weight: bold; text-transform: uppercase; }
         .clinic-badge-viva { background-color: #E0F0EA; color: #065F46; font-size: 8px; padding: 2px 8px; border-radius: 99px; font-weight: bold; text-transform: uppercase; }
@@ -348,30 +350,28 @@
                         <input type="text" id="np-last-name" placeholder="Last name" required>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Date of Birth (MM/DD/YYYY)</label>
-                        <div class="flex gap-1">
-                            <select id="np-dob-month" onchange="updateNpDOB()" style="padding:10px;font-size:12px;width:42%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
-                                <option value="" disabled selected>MM</option>
-                                <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
-                                <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
-                                <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
-                                <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
-                            </select>
-                            <input type="number" id="np-dob-day" placeholder="DD" min="1" max="31" onchange="updateNpDOB()" style="padding:10px;font-size:12px;width:27%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
-                            <input type="number" id="np-dob-year" placeholder="YYYY" min="1920" max="2015" onchange="updateNpDOB()" style="padding:10px;font-size:12px;width:31%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
-                        </div>
-                        <input type="hidden" id="np-dob">
-                    </div>
-                    <div>
-                        <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Sex</label>
-                        <select id="np-sex">
-                            <option value="">Select...</option>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
+                <div>
+                    <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Date of Birth (MM/DD/YYYY)</label>
+                    <div class="flex gap-2">
+                        <select id="np-dob-month" onchange="updateNpDOB()" style="padding:10px;font-size:14px;width:40%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                            <option value="" disabled selected>MM</option>
+                            <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
+                            <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
+                            <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
+                            <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
                         </select>
+                        <input type="number" id="np-dob-day" placeholder="DD" min="1" max="31" onchange="updateNpDOB()" class="no-spinner" style="padding:10px;font-size:14px;width:28%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                        <input type="number" id="np-dob-year" placeholder="YYYY" min="1920" max="2015" onchange="updateNpDOB()" class="no-spinner" style="padding:10px;font-size:14px;width:32%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
                     </div>
+                    <input type="hidden" id="np-dob">
+                </div>
+                <div>
+                    <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Sex</label>
+                    <select id="np-sex">
+                        <option value="">Select...</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                    </select>
                 </div>
                 <div>
                     <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Phone</label>
@@ -421,30 +421,28 @@
                         <input type="text" id="ep-last-name" placeholder="Last name" required>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Date of Birth (MM/DD/YYYY)</label>
-                        <div class="flex gap-1">
-                            <select id="ep-dob-month" onchange="updateEpDOB()" style="padding:10px;font-size:12px;width:42%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
-                                <option value="" disabled selected>MM</option>
-                                <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
-                                <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
-                                <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
-                                <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
-                            </select>
-                            <input type="number" id="ep-dob-day" placeholder="DD" min="1" max="31" onchange="updateEpDOB()" style="padding:10px;font-size:12px;width:27%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
-                            <input type="number" id="ep-dob-year" placeholder="YYYY" min="1920" max="2015" onchange="updateEpDOB()" style="padding:10px;font-size:12px;width:31%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
-                        </div>
-                        <input type="hidden" id="ep-dob">
-                    </div>
-                    <div>
-                        <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Sex</label>
-                        <select id="ep-sex">
-                            <option value="">Select...</option>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
+                <div>
+                    <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Date of Birth (MM/DD/YYYY)</label>
+                    <div class="flex gap-2">
+                        <select id="ep-dob-month" onchange="updateEpDOB()" style="padding:10px;font-size:14px;width:40%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                            <option value="" disabled selected>MM</option>
+                            <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
+                            <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
+                            <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
+                            <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
                         </select>
+                        <input type="number" id="ep-dob-day" placeholder="DD" min="1" max="31" onchange="updateEpDOB()" class="no-spinner" style="padding:10px;font-size:14px;width:28%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                        <input type="number" id="ep-dob-year" placeholder="YYYY" min="1920" max="2015" onchange="updateEpDOB()" class="no-spinner" style="padding:10px;font-size:14px;width:32%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
                     </div>
+                    <input type="hidden" id="ep-dob">
+                </div>
+                <div>
+                    <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Sex</label>
+                    <select id="ep-sex">
+                        <option value="">Select...</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                    </select>
                 </div>
                 <div>
                     <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Phone</label>

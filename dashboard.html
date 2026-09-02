@@ -645,7 +645,7 @@
         });
         
         // 3. LOCALIZATION
-        let currentLang = localStorage.getItem('preferredLang') || 'en';
+        let currentLang = localStorage.getItem('preferredLang') || 'es';
         function updateLanguage() {
             document.querySelectorAll('[data-en]').forEach(el => {
                 el.innerText = currentLang === 'en' ? el.getAttribute('data-en') : el.getAttribute('data-es');

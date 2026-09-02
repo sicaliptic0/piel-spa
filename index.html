@@ -29,6 +29,8 @@
         .btn-gold:hover { background-image: none; background-color: var(--gold-hover); color: white; }
         .btn-outline { border: 1px solid var(--soft-gold); color: var(--soft-gold); }
         details > summary::-webkit-details-marker { display: none; }
+        .no-spinner::-webkit-inner-spin-button, .no-spinner::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .no-spinner { -moz-appearance: textfield; }
         .brand-piel {
             font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
             background-image: var(--iris-gradient-text); -webkit-background-clip: text; background-clip: text; color: transparent;
@@ -52,7 +54,7 @@
         <div class="flex gap-3 md:gap-4 items-center">
             <!-- Idioma: Agregamos whitespace-nowrap para que ES / EN nunca salte de línea -->
             <button id="lang-toggle" class="whitespace-nowrap text-[9px] md:text-[10px] tracking-widest text-[#B76E88] hover:text-[#2A2330] uppercase transition">
-                ES / EN
+                EN / ES
             </button>
             
             <!-- Botón Portal: Menos padding lateral (px-2) y letra más pequeña (text-[8px]) solo en móviles -->
@@ -97,13 +99,13 @@
             </h1>
             
             <p class="text-base md:text-xl max-w-2xl mx-auto opacity-90 font-light text-[#2A2330] mb-12"
-               data-en="Founded by health and personal care specialists from Venezuela, with deep experience in evidence-based rejuvenation — delivered through elite concierge care in New York."
-               data-es="Fundada por especialistas en salud y cuidado personal de Venezuela, con amplia experiencia en rejuvenecimiento basado en evidencia — a través de atención concierge de élite en Nueva York.">
-               Founded by health and personal care specialists from Venezuela, with deep experience in evidence-based rejuvenation — delivered through elite concierge care in New York.
+               data-en="Founded by health and personal care specialists with deep experience in facial rejuvenation and treatments that truly work, backed by real science — with personalized care at our office and an elite concierge service in New York."
+               data-es="Fundada por especialistas en salud y cuidado personal, con amplia experiencia en rejuvenecimiento facial y tratamientos que realmente funcionan, respaldados por la ciencia — con atención personalizada en nuestro consultorio y un servicio concierge de élite en Nueva York.">
+               Founded by health and personal care specialists with deep experience in facial rejuvenation and treatments that truly work, backed by real science — with personalized care at our office and an elite concierge service in New York.
             </p>
-            
+
             <div class="flex flex-col md:flex-row justify-center gap-5">
-                <button onclick="document.getElementById('auth-modal').classList.remove('hidden')" class="btn-gold px-12 py-4 uppercase text-[10px] md:text-xs tracking-[0.2em] hover:bg-[#9C5570] transition shadow-lg" data-en="Book Consultation" data-es="Reservar Consulta">Book Consultation</button>
+                <button onclick="document.getElementById('auth-modal').classList.remove('hidden')" class="btn-gold px-12 py-4 uppercase text-[10px] md:text-xs tracking-[0.2em] hover:bg-[#9C5570] transition shadow-lg" data-en="Patient Portal" data-es="Portal del Paciente">Patient Portal</button>
             </div>
         </div>
     </section>
@@ -401,29 +403,28 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="flex flex-col">
-                        <label class="text-[8px] uppercase tracking-widest opacity-40 ml-1 mb-1" data-en="Date of Birth (MM/DD/YYYY)" data-es="Fecha de Nac. (MM/DD/AAAA)">Date of Birth (MM/DD/YYYY)</label>
-                        <div class="flex gap-1">
-                            <select id="auth-dob-month" onchange="updateDOB()" class="w-[42%] p-3 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-xs text-[#2A2330]">
-                                <option value="" disabled selected>Month</option>
-                                <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
-                                <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
-                                <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
-                                <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
-                            </select>
-                            <input type="number" id="auth-dob-day" placeholder="DD" min="1" max="31" onchange="updateDOB()" class="w-[27%] p-3 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-xs text-[#2A2330]">
-                            <input type="number" id="auth-dob-year" placeholder="YYYY" min="1920" max="2015" onchange="updateDOB()" class="w-[31%] p-3 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-xs text-[#2A2330]">
-                        </div>
-                        <input type="hidden" id="auth-dob">
-                    </div>
-                    <div class="flex flex-col justify-end">
-                        <select id="auth-sex" class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm text-[#2A2330]">
-                            <option value="" disabled selected data-en="Sex" data-es="Sexo">Sex</option>
-                            <option value="male" data-en="Male" data-es="Masculino">Male</option>
-                            <option value="female" data-en="Female" data-es="Femenino">Female</option>
+                <div class="flex flex-col">
+                    <label class="text-[8px] uppercase tracking-widest opacity-40 ml-1 mb-1" data-en="Date of Birth (MM/DD/YYYY)" data-es="Fecha de Nac. (MM/DD/AAAA)">Date of Birth (MM/DD/YYYY)</label>
+                    <div class="flex gap-2">
+                        <select id="auth-dob-month" onchange="updateDOB()" class="w-[40%] p-3 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm text-[#2A2330]">
+                            <option value="" disabled selected>Month</option>
+                            <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
+                            <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
+                            <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
+                            <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
                         </select>
+                        <input type="number" id="auth-dob-day" placeholder="DD" min="1" max="31" onchange="updateDOB()" class="no-spinner w-[28%] p-3 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm text-[#2A2330]">
+                        <input type="number" id="auth-dob-year" placeholder="YYYY" min="1920" max="2015" onchange="updateDOB()" class="no-spinner w-[32%] p-3 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm text-[#2A2330]">
                     </div>
+                    <input type="hidden" id="auth-dob">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-[8px] uppercase tracking-widest opacity-40 ml-1 mb-1" data-en="Sex" data-es="Sexo">Sex</label>
+                    <select id="auth-sex" class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm text-[#2A2330]">
+                        <option value="" disabled selected data-en="Sex" data-es="Sexo">Sex</option>
+                        <option value="male" data-en="Male" data-es="Masculino">Male</option>
+                        <option value="female" data-en="Female" data-es="Femenino">Female</option>
+                    </select>
                 </div>
             </div>
 
@@ -504,15 +505,19 @@
             }
         }
 
-        // 1. LÓGICA DE IDIOMA
+        // 1. LÓGICA DE IDIOMA (Español por defecto)
         const btn = document.getElementById('lang-toggle');
-        let currentLang = 'en';
-        btn.addEventListener('click', () => {
-            currentLang = currentLang === 'en' ? 'es' : 'en';
+        let currentLang = 'es';
+        function applyLanguage() {
             document.querySelectorAll('[data-en]').forEach(el => {
                 el.innerText = el.getAttribute(`data-${currentLang}`);
             });
             btn.innerText = currentLang === 'en' ? 'ES / EN' : 'EN / ES';
+        }
+        applyLanguage();
+        btn.addEventListener('click', () => {
+            currentLang = currentLang === 'en' ? 'es' : 'en';
+            applyLanguage();
         });
 
         // 2. CONFIGURACIÓN SUPABASE
