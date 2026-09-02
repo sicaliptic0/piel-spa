@@ -3,37 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login | FS Med-Esthetics</title>
+    <title>Admin Login | Piel Spa</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;500&family=Outfit:wght@300;400;600&family=Montserrat:wght@600&display=swap" rel="stylesheet">
+    <style>
+        .brand-piel {
+            font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
+            background-image: linear-gradient(120deg, #D97CA0 0%, #B87CD1 50%, #7CA3D9 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        .brand-spa {
+            font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500;
+            letter-spacing: 0; text-transform: none; color: #2A2330;
+        }
+    </style>
 </head>
-<body class="bg-[#FCFAF7] h-screen flex items-center justify-center font-['Outfit']">
+<body class="bg-[#FDFBFC] h-screen flex items-center justify-center font-['Outfit']">
 
-    <div class="w-full max-w-md p-10 bg-white rounded-2xl shadow-xl border border-[#E9E0D2]">
+    <div class="w-full max-w-md p-10 bg-white rounded-2xl shadow-xl border border-[#EDE1E7]">
         <div class="text-center mb-10">
-            <h1 class="text-[#B59A6D] text-xs uppercase tracking-[0.2em] font-bold mb-2">Internal Access Only</h1>
-            <h2 class="text-3xl italic font-serif text-[#5D534A]">Provider Login</h2>
+            <div class="text-xl mb-4"><span class="brand-piel">Piel</span> <span class="brand-spa">spa</span></div>
+            <h1 class="text-[#B76E88] text-xs uppercase tracking-[0.2em] font-bold mb-2">Internal Access Only</h1>
+            <h2 class="text-3xl italic font-serif text-[#2A2330]">Provider Login</h2>
         </div>
 
         <form id="admin-login-form" class="space-y-6">
             <div>
                 <label class="block text-[10px] uppercase tracking-widest opacity-40 mb-2">Staff Email</label>
-                <input type="email" id="admin-email" required class="w-full p-4 bg-[#FCFAF7] border border-[#E9E0D2] outline-none focus:border-[#B59A6D] text-sm">
+                <input type="email" id="admin-email" required class="w-full p-4 bg-[#FDFBFC] border border-[#EDE1E7] outline-none focus:border-[#B76E88] text-sm">
             </div>
             <div>
                 <label class="block text-[10px] uppercase tracking-widest opacity-40 mb-2">Secret Password</label>
                 <div class="relative">
-                    <input type="password" id="admin-password" required class="w-full p-4 bg-[#FCFAF7] border border-[#E9E0D2] outline-none focus:border-[#B59A6D] text-sm pr-12">
-                    <button type="button" onclick="toggleAdminPassword()" tabindex="-1" class="absolute right-4 top-1/2 -translate-y-1/2 text-[#5D534A] opacity-40 hover:opacity-80 transition">
+                    <input type="password" id="admin-password" required class="w-full p-4 bg-[#FDFBFC] border border-[#EDE1E7] outline-none focus:border-[#B76E88] text-sm pr-12">
+                    <button type="button" onclick="toggleAdminPassword()" tabindex="-1" class="absolute right-4 top-1/2 -translate-y-1/2 text-[#2A2330] opacity-40 hover:opacity-80 transition">
                         <span id="admin-eye"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></span>
                     </button>
                 </div>
             </div>
-            <button type="submit" class="w-full bg-[#5D534A] text-white py-4 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B59A6D] transition duration-300 shadow-md">
+            <button type="submit" class="w-full bg-[#2A2330] text-white py-4 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition duration-300 shadow-md">
                 Authenticate Access
             </button>
             <div class="text-center pt-1">
-                <button type="button" onclick="sendAdminPasswordReset()" class="text-[10px] uppercase tracking-widest text-[#B59A6D] opacity-60 hover:opacity-100 transition">
+                <button type="button" onclick="sendAdminPasswordReset()" class="text-[10px] uppercase tracking-widest text-[#B76E88] opacity-60 hover:opacity-100 transition">
                     Forgot Password / Reset Access
                 </button>
             </div>
@@ -81,4 +92,4 @@
         });
     </script>
 </body>
-</html>
+</html>

@@ -3,23 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clinical Admin | FS Med-Esthetics</title>
+    <title>Clinical Admin | Piel Spa</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;500&family=Outfit:wght@300;400;500&family=Montserrat:wght@600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Outfit', sans-serif; background-color: #fcfaf7; color: #5d534a; }
+        :root {
+            --iris-gradient-text: linear-gradient(120deg, #D97CA0 0%, #B87CD1 50%, #7CA3D9 100%);
+        }
+        body { font-family: 'Outfit', sans-serif; background-color: #FDFBFC; color: #2A2330; }
         h1, h2, h3 { font-family: 'Cormorant Garamond', serif; }
-        .admin-sidebar { background-color: #ffffff; border-right: 1px solid #e9e0d2; }
+        .brand-piel {
+            font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
+            background-image: var(--iris-gradient-text); -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        .brand-spa {
+            font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500;
+            letter-spacing: 0; text-transform: none; color: #2A2330;
+        }
+        .admin-sidebar { background-color: #ffffff; border-right: 1px solid #EDE1E7; }
         .nav-link { cursor: pointer; transition: 0.3s; }
-        .active-link { background-color: #fcfaf7; color: #b59a6d; border-right: 4px solid #b59a6d; font-weight: bold; opacity: 1 !important; }
+        .active-link { background-color: #FDFBFC; color: #B76E88; border-right: 4px solid #B76E88; font-weight: bold; opacity: 1 !important; }
         .status-badge { font-size: 8px; padding: 2px 8px; border-radius: 99px; text-transform: uppercase; font-weight: bold; }
         .status-pending { background-color: #FEF3C7; color: #92400E; }
         .status-confirmed { background-color: #D1FAE5; color: #065F46; }
         .status-cancelled { background-color: #FEE2E2; color: #991B1B; }
         .status-modified { background-color: #FFEDD5; color: #9A3412; }
-        input:not([type="checkbox"]):not([type="radio"]), textarea, select { border: 1px solid #e9e0d2; background: #fff; padding: 10px; border-radius: 8px; outline-color: #b59a6d; width: 100%; font-size: 14px; }
-        .photo-thumb { width: 82px; height: 82px; object-fit: cover; border-radius: 10px; border: 1px solid #e9e0d2; cursor: pointer; }
-        .clinic-badge-fs { background-color: #EDE9E3; color: #5d534a; font-size: 8px; padding: 2px 8px; border-radius: 99px; font-weight: bold; text-transform: uppercase; }
+        input:not([type="checkbox"]):not([type="radio"]), textarea, select { border: 1px solid #EDE1E7; background: #fff; padding: 10px; border-radius: 8px; outline-color: #B76E88; width: 100%; font-size: 14px; }
+        .photo-thumb { width: 82px; height: 82px; object-fit: cover; border-radius: 10px; border: 1px solid #EDE1E7; cursor: pointer; }
+        .clinic-badge-fs { background-color: #EDE1E7; color: #2A2330; font-size: 8px; padding: 2px 8px; border-radius: 99px; font-weight: bold; text-transform: uppercase; }
         .clinic-badge-viva { background-color: #E0F0EA; color: #065F46; font-size: 8px; padding: 2px 8px; border-radius: 99px; font-weight: bold; text-transform: uppercase; }
         /* History modal display toggle — avoids md:flex vs hidden conflict */
         #history-modal { display: none; }
@@ -39,35 +50,41 @@
     <aside id="admin-sidebar" class="w-64 admin-sidebar flex flex-col p-6 z-30 fixed md:static h-full -translate-x-full md:translate-x-0 transition-transform duration-300">
         <!-- Mobile close button -->
         <button onclick="closeMobileSidebar()" class="md:hidden absolute top-4 right-4 text-2xl opacity-40 hover:opacity-100 transition">&times;</button>
-        <h1 class="text-[#b59a6d] text-xl tracking-widest font-bold mb-10 text-center">FS ADMIN</h1>
+        <div class="text-center mb-10">
+            <h1 class="text-xl tracking-widest font-bold"><span class="brand-piel">Piel</span> <span class="brand-spa">spa</span></h1>
+            <p class="text-[9px] uppercase tracking-[0.3em] opacity-40 mt-1">Admin</p>
+        </div>
         <nav class="flex-1 space-y-2">
             <a onclick="switchAdminView('patients-view', this)" class="nav-link active-link block px-4 py-3 text-[10px] uppercase tracking-widest">Patients</a>
-            <a onclick="switchAdminView('appointments-view', this)" class="nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">Appointments</a>
+            <a onclick="switchAdminView('appointments-view', this)" class="nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest flex items-center justify-between">
+                <span>Appointments</span>
+                <span id="pending-badge" class="hidden bg-amber-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full leading-none">0</span>
+            </a>
         </nav>
         <button onclick="logout()" class="text-[10px] uppercase tracking-widest opacity-40 hover:opacity-100 transition mt-auto">Logout</button>
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden bg-[#FCFAF7] w-full">
+    <main class="flex-1 flex flex-col overflow-hidden bg-[#FDFBFC] w-full">
         <!-- Header -->
-        <header class="min-h-[5rem] bg-white border-b border-[#e9e0d2] flex flex-wrap items-center justify-between px-4 md:px-12 py-3 gap-3 z-0">
+        <header class="min-h-[5rem] bg-white border-b border-[#EDE1E7] flex flex-wrap items-center justify-between px-4 md:px-12 py-3 gap-3 z-0">
             <div class="flex items-center gap-3">
                 <!-- Hamburger (mobile only) -->
                 <button onclick="openMobileSidebar()" class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition" aria-label="Open menu">
-                    <svg class="w-6 h-6 text-[#5d534a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6 text-[#2A2330]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
                 <h2 id="view-title" class="text-2xl italic">Patient Database</h2>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-                <button onclick="openNewPatientModal()" class="bg-[#5d534a] text-white px-5 py-2 text-[10px] uppercase tracking-widest font-bold shadow-md hover:bg-[#4a4239] transition rounded-full">+ New Patient</button>
-                <button onclick="openAdminBooking()" class="bg-[#b59a6d] text-white px-6 py-2 text-[10px] uppercase tracking-widest font-bold shadow-md hover:bg-[#9e865e] transition rounded-full">+ New Appointment</button>
+                <button onclick="openNewPatientModal()" class="bg-[#2A2330] text-white px-5 py-2 text-[10px] uppercase tracking-widest font-bold shadow-md hover:bg-[#1D1822] transition rounded-full">+ New Patient</button>
+                <button onclick="openAdminBooking()" class="bg-[#B76E88] text-white px-6 py-2 text-[10px] uppercase tracking-widest font-bold shadow-md hover:bg-[#9C5570] transition rounded-full">+ New Appointment</button>
             </div>
         </header>
 
         <!-- Patients View -->
         <div id="patients-view" class="flex-1 overflow-y-auto p-4 md:p-8">
-            <div class="bg-white rounded-xl shadow-sm border border-[#e9e0d2] overflow-hidden">
+            <div class="bg-white rounded-xl shadow-sm border border-[#EDE1E7] overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left min-w-[600px]">
                         <thead class="bg-gray-50 text-[10px] uppercase tracking-widest opacity-60">
@@ -88,7 +105,7 @@
 
         <!-- Appointments View -->
         <div id="appointments-view" class="flex-1 overflow-y-auto p-4 md:p-8 hidden">
-            <div class="bg-white rounded-xl shadow-sm border border-[#e9e0d2] overflow-hidden">
+            <div class="bg-white rounded-xl shadow-sm border border-[#EDE1E7] overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left min-w-[600px]">
                         <thead class="bg-gray-50 text-[10px] uppercase tracking-widest opacity-60">
@@ -112,9 +129,9 @@
         <div class="w-full max-w-5xl bg-white md:h-[90vh] p-4 md:p-8 md:rounded-2xl md:shadow-2xl flex flex-col relative md:overflow-hidden">
 
             <!-- Mobile: sticky top bar with back button -->
-            <div class="flex items-center justify-between mb-3 md:hidden sticky top-0 bg-white z-20 pt-2 pb-3 border-b border-[#e9e0d2]">
-                <span class="text-[10px] uppercase tracking-widest text-[#b59a6d] font-bold">Clinical History</span>
-                <button onclick="closeHistoryModal()" class="flex items-center gap-1 bg-[#5d534a] text-white text-xs px-4 py-2 rounded-full font-bold uppercase tracking-widest">
+            <div class="flex items-center justify-between mb-3 md:hidden sticky top-0 bg-white z-20 pt-2 pb-3 border-b border-[#EDE1E7]">
+                <span class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold">Clinical History</span>
+                <button onclick="closeHistoryModal()" class="flex items-center gap-1 bg-[#2A2330] text-white text-xs px-4 py-2 rounded-full font-bold uppercase tracking-widest">
                     ← Back
                 </button>
             </div>
@@ -128,10 +145,10 @@
             </div>
 
             <!-- Clinic Affiliation Bar -->
-            <div class="bg-[#FCFAF7] border border-[#e9e0d2] rounded-lg px-4 py-3 mb-4 flex items-center gap-4 flex-wrap z-10">
-                <span class="text-[9px] uppercase tracking-widest text-[#b59a6d] font-bold">Clinic:</span>
+            <div class="bg-[#FDFBFC] border border-[#EDE1E7] rounded-lg px-4 py-3 mb-4 flex items-center gap-4 flex-wrap z-10">
+                <span class="text-[9px] uppercase tracking-widest text-[#B76E88] font-bold">Clinic:</span>
                 <label class="flex items-center gap-2 cursor-pointer text-sm">
-                    <input type="checkbox" id="clinic-fs" onchange="saveClinicAffiliation()" class="accent-[#b59a6d]">
+                    <input type="checkbox" id="clinic-fs" onchange="saveClinicAffiliation()" class="accent-[#B76E88]">
                     FS Med-Esthetics
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer text-sm">
@@ -141,21 +158,21 @@
             </div>
 
             <!-- ===== HISTORIA DE INGRESO ===== -->
-            <div class="border border-[#e9e0d2] rounded-xl mb-4 z-10 bg-white overflow-hidden">
-                <button type="button" onclick="toggleAdmissionSection()" class="w-full flex items-center justify-between px-4 py-3 hover:bg-[#FCFAF7] transition">
+            <div class="border border-[#EDE1E7] rounded-xl mb-4 z-10 bg-white overflow-hidden">
+                <button type="button" onclick="toggleAdmissionSection()" class="w-full flex items-center justify-between px-4 py-3 hover:bg-[#FDFBFC] transition">
                     <div class="flex items-center gap-3">
-                        <span class="text-[9px] uppercase tracking-widest text-[#b59a6d] font-bold">Historia de Ingreso</span>
+                        <span class="text-[9px] uppercase tracking-widest text-[#B76E88] font-bold">Historia de Ingreso</span>
                         <span id="adm-save-indicator" class="hidden text-[8px] uppercase tracking-widest text-green-600 font-bold">✓ Guardado</span>
                     </div>
-                    <svg id="adm-chevron" class="w-4 h-4 text-[#b59a6d] transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    <svg id="adm-chevron" class="w-4 h-4 text-[#B76E88] transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
-                <div id="admission-section" class="hidden border-t border-[#e9e0d2] p-4 space-y-4">
+                <div id="admission-section" class="hidden border-t border-[#EDE1E7] p-4 space-y-4">
 
                     <!-- Escalas -->
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div>
                             <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Fitzpatrick</label>
-                            <select id="adm-fitzpatrick" style="padding:8px;font-size:12px;width:100%;border:1px solid #e9e0d2;border-radius:8px;background:#fff;outline-color:#b59a6d;">
+                            <select id="adm-fitzpatrick" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
                                 <option value="">—</option>
                                 <option value="I">I · Very Fair</option>
                                 <option value="II">II · Fair</option>
@@ -167,7 +184,7 @@
                         </div>
                         <div>
                             <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Glogau</label>
-                            <select id="adm-glogau" style="padding:8px;font-size:12px;width:100%;border:1px solid #e9e0d2;border-radius:8px;background:#fff;outline-color:#b59a6d;">
+                            <select id="adm-glogau" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
                                 <option value="">—</option>
                                 <option value="I">I · Mild</option>
                                 <option value="II">II · Moderate</option>
@@ -177,7 +194,7 @@
                         </div>
                         <div>
                             <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Tipo de Piel</label>
-                            <select id="adm-skin-type" style="padding:8px;font-size:12px;width:100%;border:1px solid #e9e0d2;border-radius:8px;background:#fff;outline-color:#b59a6d;">
+                            <select id="adm-skin-type" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
                                 <option value="">—</option>
                                 <option value="oily">Grasa</option>
                                 <option value="dry">Seca</option>
@@ -187,7 +204,7 @@
                         </div>
                         <div>
                             <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Escala de Merz</label>
-                            <select id="adm-merz" style="padding:8px;font-size:12px;width:100%;border:1px solid #e9e0d2;border-radius:8px;background:#fff;outline-color:#b59a6d;">
+                            <select id="adm-merz" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
                                 <option value="">—</option>
                                 <option value="0">0 · Sin alteración</option>
                                 <option value="1">1 · Leve</option>
@@ -202,12 +219,12 @@
                     <div>
                         <label class="text-[9px] uppercase font-bold opacity-40 mb-2 block">Motivo de Consulta</label>
                         <div class="flex flex-wrap gap-4">
-                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#b59a6d]" value="wrinkles"> Arrugas</label>
-                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#b59a6d]" value="spots"> Manchas</label>
-                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#b59a6d]" value="texture"> Textura</label>
-                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#b59a6d]" value="fillers"> Rellenos</label>
-                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#b59a6d]" value="sagging"> Flacidez</label>
-                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#b59a6d]" value="other"> Otros</label>
+                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#B76E88]" value="wrinkles"> Arrugas</label>
+                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#B76E88]" value="spots"> Manchas</label>
+                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#B76E88]" value="texture"> Textura</label>
+                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#B76E88]" value="fillers"> Rellenos</label>
+                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#B76E88]" value="sagging"> Flacidez</label>
+                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#B76E88]" value="other"> Otros</label>
                         </div>
                     </div>
 
@@ -215,11 +232,11 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                             <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Cicatrices / Manchas (Localización y cantidad)</label>
-                            <textarea id="adm-scars" rows="3" placeholder="Ej: Cicatriz mejilla derecha x1, Melasma frontal..." style="width:100%;padding:8px;font-size:12px;border:1px solid #e9e0d2;border-radius:8px;background:#fff;outline-color:#b59a6d;resize:vertical;"></textarea>
+                            <textarea id="adm-scars" rows="3" placeholder="Ej: Cicatriz mejilla derecha x1, Melasma frontal..." style="width:100%;padding:8px;font-size:12px;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;resize:vertical;"></textarea>
                         </div>
                         <div>
                             <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Antecedentes Personales</label>
-                            <textarea id="adm-personal-history" rows="3" placeholder="Alergias, enfermedades, medicamentos, cirugías previas..." style="width:100%;padding:8px;font-size:12px;border:1px solid #e9e0d2;border-radius:8px;background:#fff;outline-color:#b59a6d;resize:vertical;"></textarea>
+                            <textarea id="adm-personal-history" rows="3" placeholder="Alergias, enfermedades, medicamentos, cirugías previas..." style="width:100%;padding:8px;font-size:12px;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;resize:vertical;"></textarea>
                         </div>
                     </div>
 
@@ -227,7 +244,7 @@
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <label class="text-[9px] uppercase font-bold opacity-40">Antecedentes Estéticos</label>
-                            <button type="button" onclick="addAestheticRow()" class="text-[9px] uppercase tracking-widest font-bold text-[#b59a6d] border border-[#b59a6d] px-3 py-1 rounded-full hover:bg-[#b59a6d] hover:text-white transition">+ Agregar</button>
+                            <button type="button" onclick="addAestheticRow()" class="text-[9px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1 rounded-full hover:bg-[#B76E88] hover:text-white transition">+ Agregar</button>
                         </div>
                         <div id="aesthetic-header-row" class="grid gap-2 mb-1 px-1 hidden md:grid" style="grid-template-columns: 2fr 2fr 1fr 2fr auto;">
                             <span class="text-[8px] uppercase tracking-widest opacity-40 font-bold">Procedimiento</span>
@@ -241,21 +258,21 @@
                         </div>
                     </div>
 
-                    <button type="button" onclick="saveAdmissionHistory()" class="w-full bg-[#5d534a] text-white py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#b59a6d] transition shadow-md rounded-lg">Guardar Historia de Ingreso</button>
+                    <button type="button" onclick="saveAdmissionHistory()" class="w-full bg-[#2A2330] text-white py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition shadow-md rounded-lg">Guardar Historia de Ingreso</button>
                 </div>
             </div>
 
             <div class="flex-1 flex flex-col md:overflow-hidden relative z-10">
                 <div class="flex justify-between items-center mb-6">
-                    <button id="add-note-btn" onclick="toggleSoapForm(true)" class="bg-[#b59a6d] text-white px-6 py-2 text-[10px] uppercase tracking-widest font-bold rounded-full shadow-sm hover:bg-[#9e865e] transition">Add New Encounter</button>
+                    <button id="add-note-btn" onclick="toggleSoapForm(true)" class="bg-[#B76E88] text-white px-6 py-2 text-[10px] uppercase tracking-widest font-bold rounded-full shadow-sm hover:bg-[#9C5570] transition">Add New Encounter</button>
                 </div>
 
                 <div id="notes-container" class="md:flex-1 md:overflow-y-auto pr-2 md:pr-4 space-y-6 pb-10"></div>
 
                 <div id="soap-form-container" class="hidden fixed md:absolute inset-0 bg-white flex flex-col z-[60] md:z-30 md:rounded-2xl overflow-y-auto p-4 md:p-0">
-                    <div class="flex justify-between items-center mb-6 pt-2 sticky top-0 bg-white pb-3 border-b border-[#e9e0d2] md:border-none md:static">
+                    <div class="flex justify-between items-center mb-6 pt-2 sticky top-0 bg-white pb-3 border-b border-[#EDE1E7] md:border-none md:static">
                         <h4 class="text-xl italic" id="form-title">New Clinical Entry</h4>
-                        <button onclick="toggleSoapForm(false)" class="bg-[#5d534a] text-white text-[10px] px-4 py-2 rounded-full uppercase tracking-widest font-bold md:bg-transparent md:text-[#5d534a] md:underline md:opacity-40 md:hover:opacity-100 md:rounded-none md:px-0 md:py-0">← Back</button>
+                        <button onclick="toggleSoapForm(false)" class="bg-[#2A2330] text-white text-[10px] px-4 py-2 rounded-full uppercase tracking-widest font-bold md:bg-transparent md:text-[#2A2330] md:underline md:opacity-40 md:hover:opacity-100 md:rounded-none md:px-0 md:py-0">← Back</button>
                     </div>
                     <form id="soap-form" class="space-y-4 pb-10">
                         <input type="hidden" id="edit-note-id">
@@ -269,16 +286,16 @@
                                 <input type="time" id="soap-time" required>
                             </div>
                         </div>
-                        <div class="bg-[#FCFAF7] border border-[#E9E0D2] p-4 rounded-lg">
+                        <div class="bg-[#FDFBFC] border border-[#EDE1E7] p-4 rounded-lg">
                             <div class="flex items-center justify-between mb-3">
-                                <label class="text-[9px] uppercase tracking-widest text-[#B59A6D] font-bold">Procedimiento realizado</label>
+                                <label class="text-[9px] uppercase tracking-widest text-[#B76E88] font-bold">Procedimiento realizado</label>
                                 <span id="soap-procedures-selected" class="text-[10px] uppercase tracking-widest opacity-60 font-semibold">0 selected</span>
                             </div>
-                            <div id="soap-procedures-list" class="w-full p-3 border border-[#e9e0d2] bg-white text-sm text-[#5d534a] rounded-lg max-h-56 overflow-y-auto overflow-x-hidden space-y-3"></div>
+                            <div id="soap-procedures-list" class="w-full p-3 border border-[#EDE1E7] bg-white text-sm text-[#2A2330] rounded-lg max-h-56 overflow-y-auto overflow-x-hidden space-y-3"></div>
                         </div>
 
-                        <div class="bg-[#FCFAF7] border border-[#E9E0D2] p-4 rounded-lg space-y-4">
-                            <p class="text-[9px] uppercase tracking-widest text-[#B59A6D] font-bold">Clinical Photo Evidence (optional)</p>
+                        <div class="bg-[#FDFBFC] border border-[#EDE1E7] p-4 rounded-lg space-y-4">
+                            <p class="text-[9px] uppercase tracking-widest text-[#B76E88] font-bold">Clinical Photo Evidence (optional)</p>
 
                             <div>
                                 <label class="text-[9px] uppercase tracking-widest opacity-50 block mb-2">Patient Photos (up to 5)</label>
@@ -306,7 +323,7 @@
                             <textarea id="soap-p" placeholder="Plan/Treatment (P) - Procedures, dosage, orders" class="h-32 resize-none"></textarea>
                         </div>
                         <textarea id="soap-sugg" placeholder="Follow-up Suggestions & Post-procedure Instructions" class="h-20 resize-none"></textarea>
-                        <button type="submit" class="w-full bg-[#5d534a] text-white py-4 uppercase text-[10px] tracking-widest font-bold hover:bg-[#b59a6d] transition shadow-md rounded-lg mt-2">Save Clinical Record</button>
+                        <button type="submit" class="w-full bg-[#2A2330] text-white py-4 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition shadow-md rounded-lg mt-2">Save Clinical Record</button>
                     </form>
                 </div>
             </div>
@@ -335,15 +352,15 @@
                     <div>
                         <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Date of Birth (MM/DD/YYYY)</label>
                         <div class="flex gap-1">
-                            <select id="np-dob-month" onchange="updateNpDOB()" style="padding:10px;font-size:12px;width:42%;border:1px solid #e9e0d2;border-radius:8px;background:#fff;outline-color:#b59a6d;">
+                            <select id="np-dob-month" onchange="updateNpDOB()" style="padding:10px;font-size:12px;width:42%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
                                 <option value="" disabled selected>MM</option>
                                 <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
                                 <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
                                 <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
                                 <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
                             </select>
-                            <input type="number" id="np-dob-day" placeholder="DD" min="1" max="31" onchange="updateNpDOB()" style="padding:10px;font-size:12px;width:27%;border:1px solid #e9e0d2;border-radius:8px;background:#fff;outline-color:#b59a6d;">
-                            <input type="number" id="np-dob-year" placeholder="YYYY" min="1920" max="2015" onchange="updateNpDOB()" style="padding:10px;font-size:12px;width:31%;border:1px solid #e9e0d2;border-radius:8px;background:#fff;outline-color:#b59a6d;">
+                            <input type="number" id="np-dob-day" placeholder="DD" min="1" max="31" onchange="updateNpDOB()" style="padding:10px;font-size:12px;width:27%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                            <input type="number" id="np-dob-year" placeholder="YYYY" min="1920" max="2015" onchange="updateNpDOB()" style="padding:10px;font-size:12px;width:31%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
                         </div>
                         <input type="hidden" id="np-dob">
                     </div>
@@ -366,11 +383,11 @@
                 </div>
 
                 <!-- Clinic Affiliation -->
-                <div class="bg-[#FCFAF7] border border-[#e9e0d2] rounded-lg p-4">
-                    <p class="text-[9px] uppercase tracking-widest text-[#b59a6d] font-bold mb-3">Clinic Affiliation *</p>
+                <div class="bg-[#FDFBFC] border border-[#EDE1E7] rounded-lg p-4">
+                    <p class="text-[9px] uppercase tracking-widest text-[#B76E88] font-bold mb-3">Clinic Affiliation *</p>
                     <div class="flex items-center gap-6 flex-wrap">
                         <label class="flex items-center gap-2 cursor-pointer text-sm">
-                            <input type="checkbox" id="np-clinic-fs" class="accent-[#b59a6d]">
+                            <input type="checkbox" id="np-clinic-fs" class="accent-[#B76E88]">
                             FS Med-Esthetics
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer text-sm">
@@ -380,7 +397,7 @@
                     </div>
                 </div>
 
-                <button type="submit" class="w-full bg-[#5d534a] text-white py-4 uppercase text-[10px] tracking-widest font-bold hover:bg-[#b59a6d] transition shadow-md rounded-lg mt-2">Create Patient Record</button>
+                <button type="submit" class="w-full bg-[#2A2330] text-white py-4 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition shadow-md rounded-lg mt-2">Create Patient Record</button>
             </form>
         </div>
     </div>
@@ -408,15 +425,15 @@
                     <div>
                         <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Date of Birth (MM/DD/YYYY)</label>
                         <div class="flex gap-1">
-                            <select id="ep-dob-month" onchange="updateEpDOB()" style="padding:10px;font-size:12px;width:42%;border:1px solid #e9e0d2;border-radius:8px;background:#fff;outline-color:#b59a6d;">
+                            <select id="ep-dob-month" onchange="updateEpDOB()" style="padding:10px;font-size:12px;width:42%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
                                 <option value="" disabled selected>MM</option>
                                 <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
                                 <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
                                 <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
                                 <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
                             </select>
-                            <input type="number" id="ep-dob-day" placeholder="DD" min="1" max="31" onchange="updateEpDOB()" style="padding:10px;font-size:12px;width:27%;border:1px solid #e9e0d2;border-radius:8px;background:#fff;outline-color:#b59a6d;">
-                            <input type="number" id="ep-dob-year" placeholder="YYYY" min="1920" max="2015" onchange="updateEpDOB()" style="padding:10px;font-size:12px;width:31%;border:1px solid #e9e0d2;border-radius:8px;background:#fff;outline-color:#b59a6d;">
+                            <input type="number" id="ep-dob-day" placeholder="DD" min="1" max="31" onchange="updateEpDOB()" style="padding:10px;font-size:12px;width:27%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                            <input type="number" id="ep-dob-year" placeholder="YYYY" min="1920" max="2015" onchange="updateEpDOB()" style="padding:10px;font-size:12px;width:31%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
                         </div>
                         <input type="hidden" id="ep-dob">
                     </div>
@@ -439,11 +456,11 @@
                 </div>
 
                 <!-- Clinic Affiliation -->
-                <div class="bg-[#FCFAF7] border border-[#e9e0d2] rounded-lg p-4">
-                    <p class="text-[9px] uppercase tracking-widest text-[#b59a6d] font-bold mb-3">Clinic Affiliation</p>
+                <div class="bg-[#FDFBFC] border border-[#EDE1E7] rounded-lg p-4">
+                    <p class="text-[9px] uppercase tracking-widest text-[#B76E88] font-bold mb-3">Clinic Affiliation</p>
                     <div class="flex items-center gap-6 flex-wrap">
                         <label class="flex items-center gap-2 cursor-pointer text-sm">
-                            <input type="checkbox" id="ep-clinic-fs" class="accent-[#b59a6d]">
+                            <input type="checkbox" id="ep-clinic-fs" class="accent-[#B76E88]">
                             FS Med-Esthetics
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer text-sm">
@@ -453,7 +470,7 @@
                     </div>
                 </div>
 
-                <button type="submit" class="w-full bg-[#b59a6d] text-white py-4 uppercase text-[10px] tracking-widest font-bold hover:bg-[#9e865e] transition shadow-md rounded-lg mt-2">Save Changes</button>
+                <button type="submit" class="w-full bg-[#B76E88] text-white py-4 uppercase text-[10px] tracking-widest font-bold hover:bg-[#9C5570] transition shadow-md rounded-lg mt-2">Save Changes</button>
             </form>
         </div>
     </div>
@@ -467,19 +484,19 @@
                     <option value="">Select Patient...</option>
                 </select>
                 <div class="relative">
-                    <button id="admin-book-treatments-btn" type="button" onclick="toggleAdminTreatmentsDropdown()" class="w-full text-left p-4 border border-[#e9e0d2] outline-none focus:border-[#b59a6d] bg-[#FCFAF7] text-sm text-[#5d534a] rounded-lg">
+                    <button id="admin-book-treatments-btn" type="button" onclick="toggleAdminTreatmentsDropdown()" class="w-full text-left p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm text-[#2A2330] rounded-lg">
                         <div class="flex items-center justify-between gap-4">
                             <span class="font-light">Choose treatments (multi)</span>
                             <span id="admin-book-treatments-selected" class="text-[10px] uppercase tracking-widest opacity-60 font-semibold">0 selected</span>
                         </div>
                     </button>
-                    <div id="admin-book-treatments-dropdown" class="hidden absolute left-0 right-0 mt-2 bg-white border border-[#e9e0d2] rounded-xl shadow-2xl max-h-72 overflow-y-auto overflow-x-hidden p-4 z-[80]">
+                    <div id="admin-book-treatments-dropdown" class="hidden absolute left-0 right-0 mt-2 bg-white border border-[#EDE1E7] rounded-xl shadow-2xl max-h-72 overflow-y-auto overflow-x-hidden p-4 z-[80]">
                         <div id="admin-book-treatments-options" class="space-y-6"></div>
                     </div>
                 </div>
                 <input type="date" id="admin-book-date" class="text-sm" required>
                 <input type="time" id="admin-book-time" class="text-sm" required>
-                <button type="submit" class="bg-[#b59a6d] text-white py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg hover:bg-[#9e865e] transition shadow-md mt-2">Schedule Appointment</button>
+                <button type="submit" class="bg-[#B76E88] text-white py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg hover:bg-[#9C5570] transition shadow-md mt-2">Schedule Appointment</button>
                 <button type="button" onclick="closeAdminBooking()" class="text-[9px] uppercase opacity-40 hover:opacity-100 transition mt-2">Cancel</button>
             </form>
         </div>
@@ -494,7 +511,7 @@
     <!-- ===== APPOINTMENT DECISION MODAL ===== -->
     <div id="appointment-decision-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-[115] p-6 backdrop-blur-sm">
         <div class="bg-white p-8 max-w-lg w-full rounded-2xl shadow-2xl relative">
-            <button onclick="closeAppointmentDecisionModal()" class="absolute top-4 right-6 text-2xl text-gray-400 hover:text-[#B59A6D] transition">&times;</button>
+            <button onclick="closeAppointmentDecisionModal()" class="absolute top-4 right-6 text-2xl text-gray-400 hover:text-[#B76E88] transition">&times;</button>
             <h3 class="text-2xl italic mb-2">Appointment Decision</h3>
             <p id="decision-target" class="text-[10px] uppercase tracking-widest opacity-50 mb-6"></p>
             <form id="appointment-decision-form" class="space-y-4">
@@ -516,7 +533,7 @@
                     <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Instructions for Patient (Email)</label>
                     <textarea id="decision-instructions" rows="4" placeholder="Add personalized confirmation/cancellation/modification instructions..."></textarea>
                 </div>
-                <button type="submit" class="w-full bg-[#5d534a] text-white py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#b59a6d] transition rounded-lg">Send & Update Appointment</button>
+                <button type="submit" class="w-full bg-[#2A2330] text-white py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition rounded-lg">Send & Update Appointment</button>
             </form>
         </div>
     </div>
@@ -620,7 +637,7 @@
                 section.className = 'space-y-3';
 
                 const header = document.createElement('div');
-                header.className = 'text-[10px] uppercase tracking-widest opacity-60 font-semibold text-[#B59A6D]';
+                header.className = 'text-[10px] uppercase tracking-widest opacity-60 font-semibold text-[#B76E88]';
                 header.innerText = cat.title;
                 section.appendChild(header);
 
@@ -632,10 +649,10 @@
                     row.className = 'flex items-start gap-3 cursor-pointer select-none w-full';
 
                     row.innerHTML = `
-                        <input type="checkbox" class="${checkboxClass} mt-1 accent-[#B59A6D]" value="${t.id}">
+                        <input type="checkbox" class="${checkboxClass} mt-1 accent-[#B76E88]" value="${t.id}">
                         <div class="flex-1 min-w-0 w-full">
                             <div class="flex items-start justify-between gap-3 w-full">
-                                <span class="text-sm text-[#5D534A] font-light leading-snug break-words pr-2">${t.label}</span>
+                                <span class="text-sm text-[#2A2330] font-light leading-snug break-words pr-2">${t.label}</span>
                                 <span class="text-[10px] uppercase tracking-widest opacity-60 font-semibold whitespace-nowrap shrink-0">${t.price}</span>
                             </div>
                         </div>
@@ -675,7 +692,7 @@
                 section.className = 'space-y-2';
 
                 const title = document.createElement('div');
-                title.className = 'text-[10px] uppercase tracking-widest opacity-60 font-semibold text-[#B59A6D]';
+                title.className = 'text-[10px] uppercase tracking-widest opacity-60 font-semibold text-[#B76E88]';
                 title.innerText = cat.title;
                 section.appendChild(title);
 
@@ -683,10 +700,10 @@
                     const row = document.createElement('label');
                     row.className = 'flex items-start gap-3 cursor-pointer select-none w-full';
                     row.innerHTML = `
-                        <input type="checkbox" class="soap-procedure-checkbox mt-1 accent-[#B59A6D]" value="${t.id}">
+                        <input type="checkbox" class="soap-procedure-checkbox mt-1 accent-[#B76E88]" value="${t.id}">
                         <div class="flex-1 min-w-0 w-full">
                             <div class="flex items-start justify-between gap-3 w-full">
-                                <span class="text-sm text-[#5D534A] font-light leading-snug break-words pr-2">${t.label}</span>
+                                <span class="text-sm text-[#2A2330] font-light leading-snug break-words pr-2">${t.label}</span>
                                 <span class="text-[10px] uppercase tracking-widest opacity-60 font-semibold whitespace-nowrap shrink-0">${t.price}</span>
                             </div>
                         </div>
@@ -747,7 +764,7 @@
             wrapper.className = 'relative inline-block';
             wrapper.innerHTML = `
                 <img src="${url}" class="photo-thumb" alt="Clinical photo thumbnail">
-                <button type="button" class="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[#5d534a] text-white text-[10px] flex items-center justify-center">&times;</button>
+                <button type="button" class="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[#2A2330] text-white text-[10px] flex items-center justify-center">&times;</button>
             `;
             const img = wrapper.querySelector('img');
             const btn = wrapper.querySelector('button');
@@ -897,6 +914,7 @@
             const admins = ['samuel.galviz@gmail.com', 'freddyjosevp@gmail.com']; // Updated email
             if (!user || !admins.includes(user.email)) { window.location.href = 'index.html'; return; }
             fetchPatients();
+            refreshPendingBadge(); // Show pending count on sidebar from the start
         }
 
         function switchAdminView(viewId, element) {
@@ -960,7 +978,7 @@
                     <td class="p-6 text-xs">${clinicBadges}</td>
                     <td class="p-6">
                         <div class="flex items-center gap-3 flex-wrap">
-                            <button onclick="openHistory('${p.id}', '${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}', '${p.dob || ''}')" class="text-[#b59a6d] font-bold text-[10px] uppercase hover:underline">History</button>
+                            <button onclick="openHistory('${p.id}', '${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}', '${p.dob || ''}')" class="text-[#B76E88] font-bold text-[10px] uppercase hover:underline">History</button>
                             <button onclick="openEditPatient('${p.id}')" class="text-blue-500 font-bold text-[10px] uppercase hover:underline">Edit</button>
                             <button onclick="deletePatient('${p.id}', '${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}')" class="text-red-400 font-bold text-[10px] uppercase hover:underline">Delete</button>
                         </div>
@@ -969,10 +987,27 @@
             }).join('');
         }
 
+        // --- PENDING BADGE ---
+        async function refreshPendingBadge() {
+            const { count } = await _supabase
+                .from('appointments')
+                .select('id', { count: 'exact', head: true })
+                .eq('status', 'pending');
+            const badge = document.getElementById('pending-badge');
+            if (!badge) return;
+            if (count && count > 0) {
+                badge.textContent = count;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
         // --- APPOINTMENTS FETCHING ---
         async function fetchAppointments() {
             const { data, error } = await _supabase.from('appointments').select('*, profiles(first_name, last_name)').order('appointment_date', { ascending: false });
             if (error) { console.error("Fetch Appts Error:", error); return; }
+            refreshPendingBadge();
 
             document.getElementById('appointment-table-body').innerHTML = data.map(appt => `
                 <tr class="border-t border-gray-50 hover:bg-gray-50 transition">
@@ -1003,7 +1038,14 @@
             document.getElementById('decision-patient-name').value = patientName || 'Patient';
             document.getElementById('decision-status').value = status;
             document.getElementById('decision-target').innerText = `${(patientName || 'Patient').trim()} · ${status.toUpperCase()}`;
-            document.getElementById('decision-instructions').value = '';
+
+            // Pre-fill instructions with preset message based on status
+            const presetMessages = {
+                confirmed: 'Su cita está confirmada. Por favor asegúrese de llegar 15 minutos antes. De no poder acudir, avise con anticipación — el tiempo de todos es importante. Acuda con la cara limpia y el menor maquillaje posible. Cualquier duda comuníquese con nosotros a través del correo electrónico o vía telefónica. Verifique nuevamente la fecha y hora y agéndela en su calendario.',
+                modified:  'Su cita ha sido modificada. Por favor asegúrese de llegar 15 minutos antes. De no poder acudir, avise con anticipación — el tiempo de todos es importante. Acuda con la cara limpia y el menor maquillaje posible. Cualquier duda comuníquese con nosotros a través del correo electrónico o vía telefónica. Verifique la nueva fecha y hora y agéndela en su calendario.',
+                cancelled: 'Su cita ha sido cancelada. Comuníquese con nosotros si tiene alguna duda o desea reagendar.'
+            };
+            document.getElementById('decision-instructions').value = presetMessages[status] || '';
 
             const newDtWrap = document.getElementById('decision-new-datetime');
             const newDate = document.getElementById('decision-new-date');
@@ -1225,10 +1267,10 @@
             });
 
             container.innerHTML = data.map(n => `
-                <div class="p-6 bg-white border border-[#e9e0d2] rounded-xl shadow-sm relative group hover:border-[#b59a6d] transition-colors">
+                <div class="p-6 bg-white border border-[#EDE1E7] rounded-xl shadow-sm relative group hover:border-[#B76E88] transition-colors">
                     <div class="flex justify-between items-start mb-4 border-b border-gray-50 pb-3">
                         <div>
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-[#b59a6d]">Encounter: ${escapeHtml(n.visit_date)} @ ${n.visit_time ? escapeHtml(String(n.visit_time).substring(0,5)) : 'N/A'}</span>
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-[#B76E88]">Encounter: ${escapeHtml(n.visit_date)} @ ${n.visit_time ? escapeHtml(String(n.visit_time).substring(0,5)) : 'N/A'}</span>
                         </div>
                         <div class="flex flex-col items-end gap-2">
                             <button onclick='editNoteById("${n.id}")' class="text-[9px] uppercase font-bold text-blue-500 hover:text-blue-700 underline transition">Modify</button>
@@ -1248,14 +1290,14 @@
 
                         function row(label, arr) {
                             if (!arr.length) return '';
-                            return `<div class="mt-3"><p class="font-bold text-[#b59a6d] uppercase tracking-widest text-[8px] mb-2">${label}</p><div class="flex flex-wrap gap-2">${arr.map(url => `<img src="${escapeHtml(url)}" class="photo-thumb" onclick="openImageLightbox('${escapeHtml(url)}')" alt="${label}">`).join('')}</div></div>`;
+                            return `<div class="mt-3"><p class="font-bold text-[#B76E88] uppercase tracking-widest text-[8px] mb-2">${label}</p><div class="flex flex-wrap gap-2">${arr.map(url => `<img src="${escapeHtml(url)}" class="photo-thumb" onclick="openImageLightbox('${escapeHtml(url)}')" alt="${label}">`).join('')}</div></div>`;
                         }
 
                         const block = row('Patient Photos', patientPhotos) + row('Marking Photos', markingPhotos) + row('Post Procedure Photos', postPhotos);
                         return block ? `<div class="mt-4 pt-4 border-t border-gray-50">${block}</div>` : '';
                     })()}
-                    ${Array.isArray(n.procedures_realized_ids) && n.procedures_realized_ids.length ? `<div class="mt-5 pt-4 border-t border-gray-50 text-[10px]"><span class="font-bold text-[#b59a6d] uppercase tracking-widest text-[8px] mr-2">Procedures:</span> <span class="italic text-gray-500">${escapeHtml(formatTreatmentIds(n.procedures_realized_ids))}</span></div>` : ''}
-                    ${n.suggestions ? `<div class="mt-5 pt-4 border-t border-gray-50 text-[10px]"><span class="font-bold text-[#b59a6d] uppercase tracking-widest text-[8px] mr-2">Suggestions:</span> <span class="italic text-gray-500">${escapeHtml(n.suggestions)}</span></div>` : ''}
+                    ${Array.isArray(n.procedures_realized_ids) && n.procedures_realized_ids.length ? `<div class="mt-5 pt-4 border-t border-gray-50 text-[10px]"><span class="font-bold text-[#B76E88] uppercase tracking-widest text-[8px] mr-2">Procedures:</span> <span class="italic text-gray-500">${escapeHtml(formatTreatmentIds(n.procedures_realized_ids))}</span></div>` : ''}
+                    ${n.suggestions ? `<div class="mt-5 pt-4 border-t border-gray-50 text-[10px]"><span class="font-bold text-[#B76E88] uppercase tracking-widest text-[8px] mr-2">Suggestions:</span> <span class="italic text-gray-500">${escapeHtml(n.suggestions)}</span></div>` : ''}
                 </div>
             `).join('');
         }
@@ -1474,7 +1516,7 @@
             const empty = container.querySelector('.aesthetic-empty');
             if (empty) empty.remove();
 
-            const fieldStyle = 'padding:6px 8px;font-size:11px;border:1px solid #e9e0d2;border-radius:6px;background:#fff;width:100%;outline-color:#b59a6d;';
+            const fieldStyle = 'padding:6px 8px;font-size:11px;border:1px solid #EDE1E7;border-radius:6px;background:#fff;width:100%;outline-color:#B76E88;';
             const procOptions = [
                 { v: '',               l: 'Procedimiento...' },
                 { v: 'botox',          l: 'Bótox' },

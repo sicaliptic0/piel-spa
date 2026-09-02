@@ -3,20 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Patient Portal | FS Med-Esthetics</title>
+    <title>Patient Portal | Piel Spa</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Outfit:wght@300;400;500&family=Montserrat:wght@600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;500&family=Outfit:wght@300;400;500&family=Montserrat:wght@600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Outfit', sans-serif; background-color: #FCFAF7; color: #5D534A; }
+        :root {
+            --iris-gradient-text: linear-gradient(120deg, #D97CA0 0%, #B87CD1 50%, #7CA3D9 100%);
+        }
+        body { font-family: 'Outfit', sans-serif; background-color: #FDFBFC; color: #2A2330; }
         h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; }
         .logo-font { font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; }
-        .sidebar { background-color: #ffffff; border-right: 1px solid #E9E0D2; }
-        #sidebar .nav-item { color: #5D534A; }
+        .brand-piel {
+            font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
+            background-image: var(--iris-gradient-text); -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        .brand-spa {
+            font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500;
+            letter-spacing: 0; text-transform: none; color: #2A2330;
+        }
+        .sidebar { background-color: #ffffff; border-right: 1px solid #EDE1E7; }
+        #sidebar .nav-item { color: #2A2330; }
         .nav-item { cursor: pointer; transition: all 0.3s; }
-        .nav-item:hover { background-color: #FCFAF7; color: #B59A6D; }
-        .active-nav { background-color: #FCFAF7; color: #B59A6D; border-right: 3px solid #B59A6D; }
-        .btn-gold { background-color: #B59A6D; color: white; transition: 0.3s; }
-        .btn-gold:hover { background-color: #9E865E; }
+        .nav-item:hover { background-color: #FDFBFC; color: #B76E88; }
+        .active-nav { background-color: #FDFBFC; color: #B76E88; border-right: 3px solid #B76E88; }
+        .btn-gold { background-color: #B76E88; color: white; transition: 0.3s; }
+        .btn-gold:hover { background-color: #9C5570; }
         .booking-field { width: 100%; box-sizing: border-box; max-width: 100%; min-height: 56px; }
         #book-date.booking-field { display: block; min-width: 0; min-inline-size: 0; width: 100% !important; max-width: 100%; -webkit-appearance: none; appearance: none; }
         .booking-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
@@ -36,8 +47,11 @@
     <div id="mobile-overlay" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 hidden md:hidden" onclick="closeMobileMenu()"></div>
 
     <aside id="sidebar" class="w-64 sidebar flex flex-col fixed top-0 left-0 h-screen overflow-y-auto z-50 shadow-2xl md:shadow-none bg-white -translate-x-full pointer-events-none transition-transform duration-300 ease-in-out md:static md:h-full md:translate-x-0 md:pointer-events-auto md:flex">
-        <div class="p-6 text-center border-b border-[#E9E0D2] flex justify-between items-center md:block">
-            <h1 class="logo-font text-sm md:text-base tracking-widest text-[#B59A6D]">FS PORTAL</h1>
+        <div class="p-6 text-center border-b border-[#EDE1E7] flex justify-between items-center md:block">
+            <div>
+                <h1 class="text-base md:text-lg tracking-widest"><span class="brand-piel">Piel</span> <span class="brand-spa">spa</span></h1>
+                <p class="text-[9px] uppercase tracking-[0.3em] opacity-40 mt-1">Portal</p>
+            </div>
             <button onclick="toggleMobileMenu()" class="md:hidden text-xl opacity-50 hover:opacity-100">&times;</button>
         </div>
         <nav class="flex-1 mt-6 space-y-1">
@@ -50,16 +64,16 @@
                 <span class="block uppercase text-[10px] tracking-widest font-bold" data-en="Book Now" data-es="Agendar Cita">Book Now</span>
             </a>
         </nav>
-        <div class="p-6 border-t border-[#E9E0D2]">
-            <button onclick="logout()" class="flex items-center text-[10px] uppercase tracking-widest opacity-60 hover:text-[#B59A6D] transition">
+        <div class="p-6 border-t border-[#EDE1E7]">
+            <button onclick="logout()" class="flex items-center text-[10px] uppercase tracking-widest opacity-60 hover:text-[#B76E88] transition">
                 <span class="mr-3 text-lg">🚪</span>
                 <span class="block" data-en="Logout" data-es="Cerrar Sesión">Logout</span>
             </button>
         </div>
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden bg-[#FCFAF7]">
-        <header class="h-20 bg-white border-b border-[#E9E0D2] flex items-center justify-between px-6 md:px-12">
+    <main class="flex-1 flex flex-col overflow-hidden bg-[#FDFBFC]">
+        <header class="h-20 bg-white border-b border-[#EDE1E7] flex items-center justify-between px-6 md:px-12">
             <button onclick="toggleMobileMenu()" class="md:hidden text-2xl opacity-70 hover:opacity-100 transition focus:outline-none">☰</button>
             
             <h2 class="text-xl md:text-2xl italic font-light">
@@ -67,13 +81,13 @@
                 <span id="user-name" class="font-medium not-italic">Patient</span>
             </h2>
             <div class="flex items-center gap-6">
-                <button onclick="logout()" class="md:hidden text-[9px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100 transition border-b border-[#B59A6D]" data-en="Logout" data-es="Salir">
+                <button onclick="logout()" class="md:hidden text-[9px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100 transition border-b border-[#B76E88]" data-en="Logout" data-es="Salir">
                     Logout
                 </button>
-                <button onclick="toggleLanguage()" class="text-[10px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100 transition border-b border-[#B59A6D]">
+                <button onclick="toggleLanguage()" class="text-[10px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100 transition border-b border-[#B76E88]">
                     <span id="lang-label">ESP</span>
                 </button>
-                <div class="w-8 h-8 rounded-full bg-[#E9E0D2] overflow-hidden border border-[#B59A6D]">
+                <div class="w-8 h-8 rounded-full bg-[#EDE1E7] overflow-hidden border border-[#B76E88]">
                     <img id="user-avatar" src="https://ui-avatars.com/api/?name=P" alt="Avatar">
                 </div>
             </div>
@@ -82,13 +96,13 @@
         <div class="flex-1 min-h-0 overflow-y-auto booking-scroll p-6 md:p-12 pb-24">
             <div id="dashboard-view" class="space-y-8 block">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-white border-l-4 border-[#B59A6D] p-6 shadow-sm rounded-r-lg">
-                        <h3 class="uppercase text-[10px] tracking-widest text-[#B59A6D] font-bold mb-2" data-en="Follow-up Reminder" data-es="Recordatorio de Seguimiento">Follow-up Reminder</h3>
+                    <div class="bg-white border-l-4 border-[#B76E88] p-6 shadow-sm rounded-r-lg">
+                        <h3 class="uppercase text-[10px] tracking-widest text-[#B76E88] font-bold mb-2" data-en="Follow-up Reminder" data-es="Recordatorio de Seguimiento">Follow-up Reminder</h3>
                         <p id="followup-message" class="text-sm font-light opacity-80 mb-4">...</p>
                         <button id="followup-cta" onclick="switchView('booking-view', document.querySelectorAll('.nav-item')[1])" class="btn-gold px-6 py-3 uppercase text-[10px] tracking-widest" data-en="Schedule Now" data-es="Agendar Ahora">Schedule Now</button>
                     </div>
-                    <div class="bg-white p-6 rounded-xl border border-[#E9E0D2] shadow-sm">
-                        <h3 class="uppercase text-[10px] tracking-widest text-[#B59A6D] font-bold mb-4" data-en="Your Next Visit" data-es="Tu Próxima Cita">Your Next Visit</h3>
+                    <div class="bg-white p-6 rounded-xl border border-[#EDE1E7] shadow-sm">
+                        <h3 class="uppercase text-[10px] tracking-widest text-[#B76E88] font-bold mb-4" data-en="Your Next Visit" data-es="Tu Próxima Cita">Your Next Visit</h3>
                         <div class="space-y-2 text-sm opacity-80">
                             <p>📅 <span id="next-visit-date">—</span></p>
                             <p>🕒 <span id="next-visit-time">—</span></p>
@@ -98,7 +112,7 @@
                                 <span id="next-visit-treatments" class="block mt-1">—</span>
                             </p>
                         </div>
-                        <div id="upcoming-list-container" class="mt-5 pt-4 border-t border-[#E9E0D2]">
+                        <div id="upcoming-list-container" class="mt-5 pt-4 border-t border-[#EDE1E7]">
                             <p class="text-[10px] uppercase tracking-widest opacity-60 font-semibold mb-2" data-en="All Scheduled Appointments" data-es="Todas las Citas Agendadas">All Scheduled Appointments</p>
                             <div id="upcoming-list" class="space-y-2 text-xs opacity-80"></div>
                         </div>
@@ -108,22 +122,22 @@
 
             <div id="booking-view" class="hidden max-w-4xl mx-auto">
                 <div class="text-center mb-10">
-                    <h2 class="text-4xl text-[#5D534A]" data-en="Schedule Your Treatment" data-es="Agenda tu Tratamiento">Schedule Your Treatment</h2>
+                    <h2 class="text-4xl text-[#2A2330]" data-en="Schedule Your Treatment" data-es="Agenda tu Tratamiento">Schedule Your Treatment</h2>
                     <p class="font-light opacity-70 mt-2" data-en="Select your service, date, and preferred time." data-es="Selecciona tu servicio, fecha y hora preferida.">Select your service, date, and preferred time.</p>
                 </div>
-                <div class="bg-white border border-[#E9E0D2] rounded-xl shadow-sm p-8 md:p-12">
+                <div class="bg-white border border-[#EDE1E7] rounded-xl shadow-sm p-8 md:p-12">
                     <form id="booking-form" class="space-y-8" onsubmit="handleBooking(event)">
                         <div>
-                            <label class="block uppercase text-[10px] tracking-widest text-[#B59A6D] font-bold mb-4" data-en="1. Select Treatments (Multi-Select)" data-es="1. Seleccionar Tratamientos (Multi-Selección)">1. Select Treatments (Multi-Select)</label>
+                            <label class="block uppercase text-[10px] tracking-widest text-[#B76E88] font-bold mb-4" data-en="1. Select Treatments (Multi-Select)" data-es="1. Seleccionar Tratamientos (Multi-Selección)">1. Select Treatments (Multi-Select)</label>
 
                             <div class="relative">
-                                <button id="book-treatments-btn" type="button" onclick="toggleTreatmentsDropdown()" class="booking-field p-4 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-sm text-[#5D534A] text-left rounded-lg">
+                                <button id="book-treatments-btn" type="button" onclick="toggleTreatmentsDropdown()" class="booking-field p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm text-[#2A2330] text-left rounded-lg">
                                     <div class="flex items-center justify-between gap-4">
                                         <span id="book-treatments-btn-label" class="font-light" data-en="Choose treatments" data-es="Elige tratamientos">Choose treatments</span>
                                         <span id="book-treatments-selected" class="text-[10px] uppercase tracking-widest opacity-60 font-semibold">0 selected</span>
                                     </div>
                                 </button>
-                                <div id="book-treatments-dropdown" class="hidden absolute left-0 right-0 mt-2 bg-white border border-[#E9E0D2] rounded-xl shadow-2xl max-h-72 overflow-y-auto p-4 z-[60]">
+                                <div id="book-treatments-dropdown" class="hidden absolute left-0 right-0 mt-2 bg-white border border-[#EDE1E7] rounded-xl shadow-2xl max-h-72 overflow-y-auto p-4 z-[60]">
                                     <div id="book-treatments-options" class="space-y-6"></div>
                                 </div>
                             </div>
@@ -131,12 +145,12 @@
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="min-w-0 overflow-hidden">
-                                <label class="block uppercase text-[10px] tracking-widest text-[#B59A6D] font-bold mb-4" data-en="2. Select Date" data-es="2. Selecciona una Fecha">2. Select Date</label>
-                                <input type="date" id="book-date" class="booking-field p-4 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-sm text-[#5D534A]" style="width:100%;max-width:100%;" required>
+                                <label class="block uppercase text-[10px] tracking-widest text-[#B76E88] font-bold mb-4" data-en="2. Select Date" data-es="2. Selecciona una Fecha">2. Select Date</label>
+                                <input type="date" id="book-date" class="booking-field p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm text-[#2A2330]" style="width:100%;max-width:100%;" required>
                             </div>
                             <div class="min-w-0">
-                                <label class="block uppercase text-[10px] tracking-widest text-[#B59A6D] font-bold mb-4" data-en="3. Preferred Time" data-es="3. Horario Preferido">3. Preferred Time</label>
-                                <select id="book-time" class="booking-field p-4 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-sm text-[#5D534A]" required>
+                                <label class="block uppercase text-[10px] tracking-widest text-[#B76E88] font-bold mb-4" data-en="3. Preferred Time" data-es="3. Horario Preferido">3. Preferred Time</label>
+                                <select id="book-time" class="booking-field p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm text-[#2A2330]" required>
                                     <option value="" disabled selected data-en="Choose a time..." data-es="Elige una hora...">Choose a time...</option>
                                     <option value="10:00">10:00 AM</option>
                                     <option value="11:30">11:30 AM</option>
@@ -145,7 +159,7 @@
                                 </select>
                             </div>
                         </div>
-                        <button type="submit" class="w-full bg-[#B59A6D] text-white py-5 uppercase text-xs tracking-widest font-bold hover:bg-[#9E865E] transition shadow-md">
+                        <button type="submit" class="w-full bg-[#B76E88] text-white py-5 uppercase text-xs tracking-widest font-bold hover:bg-[#9C5570] transition shadow-md">
                             <span data-en="Request Appointment" data-es="Solicitar Cita">Request Appointment</span>
                         </button>
                     </form>
@@ -156,15 +170,24 @@
 
     <div id="success-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-6">
         <div class="bg-white p-10 md:p-12 max-w-sm w-full rounded-2xl shadow-2xl text-center transform scale-95 opacity-0" id="success-content">
-            <div class="w-16 h-16 bg-[#F7F3ED] rounded-full flex items-center justify-center mx-auto mb-6">
-                <span class="text-[#B59A6D] text-3xl">✓</span>
+            <div class="w-16 h-16 bg-[#FBF0F3] rounded-full flex items-center justify-center mx-auto mb-6">
+                <span class="text-[#B76E88] text-3xl">✓</span>
             </div>
-            <h3 class="text-2xl italic mb-4 text-[#5D534A]" data-en="Booking Received" data-es="Cita Recibida">Booking Received</h3>
-            <p class="text-sm font-light opacity-70 mb-8 leading-relaxed" 
-               data-en="Your clinical request has been saved. We will vet the details and contact you shortly." 
-               data-es="Su solicitud clínica ha sido guardada. Validaremos los detalles y nos contactaremos pronto.">
-               Your clinical request has been saved. We will vet the details and contact you shortly.
+            <h3 class="text-2xl italic mb-4 text-[#2A2330]" data-en="Booking Received" data-es="Cita Recibida">Booking Received</h3>
+            <p class="text-sm font-light opacity-70 mb-4 leading-relaxed"
+               data-en="Your clinical request has been saved. We will review the details and contact you shortly with a confirmation."
+               data-es="Su solicitud ha sido guardada. Revisaremos los detalles y le contactaremos pronto con una confirmación.">
+               Su solicitud ha sido guardada. Revisaremos los detalles y le contactaremos pronto con una confirmación.
             </p>
+            <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-left">
+                <p class="text-xs text-amber-800 leading-relaxed font-medium">
+                    📧 <span data-en="Important:" data-es="Importante:">Importante:</span>
+                    <span data-en=" Stay attentive to your email inbox. Our response may arrive in your spam or junk folder — be sure to check it so you don't miss your appointment confirmation."
+                          data-es=" Esté atento a su correo electrónico. Nuestra respuesta puede llegar a la carpeta de correo no deseado o spam — revísela para no perderse la confirmación de su cita.">
+                        Esté atento a su correo electrónico. Nuestra respuesta puede llegar a la carpeta de correo no deseado o spam — revísela para no perderse la confirmación de su cita.
+                    </span>
+                </p>
+            </div>
             <button onclick="closeSuccessModal()" class="btn-gold w-full py-4 uppercase text-[10px] tracking-widest font-bold">
                 <span data-en="Continue" data-es="Continuar">Continue</span>
             </button>
@@ -173,32 +196,32 @@
 
     <div id="profile-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[110] hidden flex items-center justify-center p-6">
         <div class="bg-white p-8 md:p-10 max-w-lg w-full rounded-2xl shadow-2xl">
-            <h3 class="text-2xl italic mb-2 text-[#5D534A]" data-en="Complete Your Profile" data-es="Completa tu Perfil">Complete Your Profile</h3>
+            <h3 class="text-2xl italic mb-2 text-[#2A2330]" data-en="Complete Your Profile" data-es="Completa tu Perfil">Complete Your Profile</h3>
             <p class="text-sm font-light opacity-70 mb-6" data-en="Please confirm your main details so we can contact you correctly." data-es="Por favor confirma tus datos principales para poder contactarte correctamente.">Please confirm your main details so we can contact you correctly.</p>
             <form id="profile-form" class="space-y-5">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block uppercase text-[10px] tracking-widest text-[#B59A6D] font-bold mb-2" data-en="First Name" data-es="Nombre">First Name</label>
-                        <input id="profile-first-name" type="text" class="w-full p-3 border border-[#E9E0D2] bg-[#FCFAF7] outline-none focus:border-[#B59A6D]" required>
+                        <label class="block uppercase text-[10px] tracking-widest text-[#B76E88] font-bold mb-2" data-en="First Name" data-es="Nombre">First Name</label>
+                        <input id="profile-first-name" type="text" class="w-full p-3 border border-[#EDE1E7] bg-[#FDFBFC] outline-none focus:border-[#B76E88]" required>
                     </div>
                     <div>
-                        <label class="block uppercase text-[10px] tracking-widest text-[#B59A6D] font-bold mb-2" data-en="Last Name" data-es="Apellido">Last Name</label>
-                        <input id="profile-last-name" type="text" class="w-full p-3 border border-[#E9E0D2] bg-[#FCFAF7] outline-none focus:border-[#B59A6D]" required>
+                        <label class="block uppercase text-[10px] tracking-widest text-[#B76E88] font-bold mb-2" data-en="Last Name" data-es="Apellido">Last Name</label>
+                        <input id="profile-last-name" type="text" class="w-full p-3 border border-[#EDE1E7] bg-[#FDFBFC] outline-none focus:border-[#B76E88]" required>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block uppercase text-[10px] tracking-widest text-[#B59A6D] font-bold mb-2" data-en="Date of Birth" data-es="Fecha de Nacimiento">Date of Birth</label>
-                        <input id="profile-dob" type="date" class="w-full p-3 border border-[#E9E0D2] bg-[#FCFAF7] outline-none focus:border-[#B59A6D]" required>
+                        <label class="block uppercase text-[10px] tracking-widest text-[#B76E88] font-bold mb-2" data-en="Date of Birth" data-es="Fecha de Nacimiento">Date of Birth</label>
+                        <input id="profile-dob" type="date" class="w-full p-3 border border-[#EDE1E7] bg-[#FDFBFC] outline-none focus:border-[#B76E88]" required>
                     </div>
                     <div>
-                        <label class="block uppercase text-[10px] tracking-widest text-[#B59A6D] font-bold mb-2" data-en="Phone" data-es="Teléfono">Phone</label>
-                        <input id="profile-phone" type="tel" class="w-full p-3 border border-[#E9E0D2] bg-[#FCFAF7] outline-none focus:border-[#B59A6D]" required>
+                        <label class="block uppercase text-[10px] tracking-widest text-[#B76E88] font-bold mb-2" data-en="Phone" data-es="Teléfono">Phone</label>
+                        <input id="profile-phone" type="tel" class="w-full p-3 border border-[#EDE1E7] bg-[#FDFBFC] outline-none focus:border-[#B76E88]" required>
                     </div>
                 </div>
                 <div>
-                    <label class="block uppercase text-[10px] tracking-widest text-[#B59A6D] font-bold mb-2" data-en="Sex" data-es="Sexo">Sex</label>
-                    <select id="profile-sex" class="w-full p-3 border border-[#E9E0D2] bg-[#FCFAF7] outline-none focus:border-[#B59A6D]" required>
+                    <label class="block uppercase text-[10px] tracking-widest text-[#B76E88] font-bold mb-2" data-en="Sex" data-es="Sexo">Sex</label>
+                    <select id="profile-sex" class="w-full p-3 border border-[#EDE1E7] bg-[#FDFBFC] outline-none focus:border-[#B76E88]" required>
                         <option value="" data-en="Select..." data-es="Selecciona...">Select...</option>
                         <option value="male" data-en="Male" data-es="Masculino">Male</option>
                         <option value="female" data-en="Female" data-es="Femenino">Female</option>
@@ -337,9 +360,9 @@
                         treatmentText = translateServiceTypeFallback(appt.service_type);
                     }
                     return `
-                        <div class="p-3 bg-[#FCFAF7] border border-[#E9E0D2] rounded-lg">
+                        <div class="p-3 bg-[#FDFBFC] border border-[#EDE1E7] rounded-lg">
                             <div class="flex items-start justify-between gap-3">
-                                <div class="font-semibold text-[#5D534A]">${formatDate(appt.appointment_date)} · ${formatTime(appt.appointment_time)}</div>
+                                <div class="font-semibold text-[#2A2330]">${formatDate(appt.appointment_date)} · ${formatTime(appt.appointment_time)}</div>
                                 <button onclick="cancelMyAppointment('${appt.id}')" class="text-[10px] uppercase tracking-widest text-red-500 hover:text-red-700 font-semibold" data-en="Cancel" data-es="Cancelar">Cancel</button>
                             </div>
                             <div class="mt-2"><span class="status-pill status-${String(appt.status || 'pending').toLowerCase()}">${String(appt.status || 'pending')}</span></div>
@@ -513,7 +536,7 @@
                 section.className = 'space-y-3';
 
                 const header = document.createElement('div');
-                header.className = 'text-[10px] uppercase tracking-widest opacity-60 font-semibold text-[#B59A6D]';
+                header.className = 'text-[10px] uppercase tracking-widest opacity-60 font-semibold text-[#B76E88]';
                 header.innerHTML = `<span data-en="${escapeAttr(cat.en)}" data-es="${escapeAttr(cat.es)}">${cat.en}</span>`;
                 section.appendChild(header);
 
@@ -525,9 +548,9 @@
                     row.className = 'flex items-start gap-3 cursor-pointer select-none';
 
                     row.innerHTML = `
-                        <input type="checkbox" class="book-treatment-checkbox mt-1 accent-[#B59A6D]" value="${t.id}">
+                        <input type="checkbox" class="book-treatment-checkbox mt-1 accent-[#B76E88]" value="${t.id}">
                         <div class="flex-1 min-w-0 grid grid-cols-[1fr_auto] items-start gap-x-4">
-                            <span class="text-sm text-[#5D534A] font-light leading-snug" data-en="${escapeAttr(t.en)}" data-es="${escapeAttr(t.es)}">${t.en}</span>
+                            <span class="text-sm text-[#2A2330] font-light leading-snug" data-en="${escapeAttr(t.en)}" data-es="${escapeAttr(t.es)}">${t.en}</span>
                             <span class="text-[10px] uppercase tracking-widest opacity-60 font-semibold whitespace-nowrap self-start">${t.price}</span>
                         </div>
                     `;
@@ -696,7 +719,7 @@
             const fullName = (first + ' ' + last).trim() || 'Patient';
             document.getElementById('user-name').innerText = fullName;
             const initial = (first || last || 'P').charAt(0).toUpperCase();
-            document.getElementById('user-avatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(initial)}&background=E9E0D2&color=5D534A`;
+            document.getElementById('user-avatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(initial)}&background=EDE1E7&color=2A2330`;
         }
 
         function profileIsComplete(profile) {
@@ -1025,4 +1048,4 @@
         });
     </script>
 </body>
-</html>
+</html>

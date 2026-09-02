@@ -3,59 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Piel Spa | Clinical Excellence</title>
+    <title>FS Med-Esthetics | Clinical Excellence</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;500&family=Outfit:wght@300;400;500&family=Montserrat:wght@600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Outfit:wght@300;400;500&family=Montserrat:wght@600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+    
     <style>
-        :root {
-            --soft-gold: #B76E88;      /* rosa mate (acento principal) */
-            --gold-hover: #9C5570;     /* rosa oscuro (hover/pressed) */
-            --deep-bronze: #2A2330;    /* ink ciruela casi negro (texto/títulos) */
-            --cream-bg: #FDFBFC;       /* blanco perla (fondo) */
-            --line: #EDE1E7;           /* borde/linea sutil */
-            --iris-1: #F6D9E3;         /* rosa pastel iridiscente */
-            --iris-2: #E7D6EE;         /* lila pastel iridiscente */
-            --iris-3: #DCE6F3;         /* azul pastel iridiscente */
-            --iris-gradient: linear-gradient(135deg, var(--iris-1) 0%, var(--iris-2) 50%, var(--iris-3) 100%);
-            --iris-gradient-text: linear-gradient(120deg, #D97CA0 0%, #B87CD1 50%, #7CA3D9 100%);
-        }
+        :root { --soft-gold: #B59A6D; --deep-bronze: #5D534A; --cream-bg: #FCFAF7; }
         body { font-family: 'Outfit', sans-serif; background-color: var(--cream-bg); color: var(--deep-bronze); scroll-behavior: smooth; }
         h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; }
         .logo-font { font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; }
-        .btn-gold { background-image: var(--iris-gradient); background-color: var(--soft-gold); color: var(--deep-bronze); }
-        .btn-gold:hover { background-image: none; background-color: var(--gold-hover); color: white; }
+        .btn-gold { background-color: var(--soft-gold); color: white; }
         .btn-outline { border: 1px solid var(--soft-gold); color: var(--soft-gold); }
         details > summary::-webkit-details-marker { display: none; }
-        .brand-piel {
-            font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
-            background-image: var(--iris-gradient-text); -webkit-background-clip: text; background-clip: text; color: transparent;
-        }
-        .brand-spa {
-            font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500;
-            letter-spacing: 0; text-transform: none; color: var(--deep-bronze);
-        }
     </style>
 </head>
 <body>
 
     <!-- Header Optimizado para Móviles -->
-    <header class="w-full py-4 px-4 md:px-12 flex justify-between items-center bg-white border-b border-[#EDE1E7] sticky top-0 z-50">
+    <header class="w-full py-4 px-4 md:px-12 flex justify-between items-center bg-white border-b border-[#E9E0D2] sticky top-0 z-50">
         <!-- Logo: Reducido en móvil, tamaño normal en desktop -->
-        <div class="text-[13px] md:text-xl whitespace-nowrap mr-2">
-            <span class="brand-piel">Piel</span> <span class="brand-spa">spa</span>
+        <div class="logo-font text-[11px] md:text-lg whitespace-nowrap text-[#5D534A] mr-2">
+            FS Med-Esthetics
         </div>
         
         <!-- Botones: Redujimos el gap (espacio) en móviles a gap-3 -->
         <div class="flex gap-3 md:gap-4 items-center">
             <!-- Idioma: Agregamos whitespace-nowrap para que ES / EN nunca salte de línea -->
-            <button id="lang-toggle" class="whitespace-nowrap text-[9px] md:text-[10px] tracking-widest text-[#B76E88] hover:text-[#2A2330] uppercase transition">
+            <button id="lang-toggle" class="whitespace-nowrap text-[9px] md:text-[10px] tracking-widest text-[#B59A6D] hover:text-[#5D534A] uppercase transition">
                 ES / EN
             </button>
             
             <!-- Botón Portal: Menos padding lateral (px-2) y letra más pequeña (text-[8px]) solo en móviles -->
-            <button onclick="document.getElementById('auth-modal').classList.remove('hidden')" class="btn-outline whitespace-nowrap px-2 md:px-4 py-1.5 md:py-2 uppercase text-[8px] md:text-[9px] tracking-[0.1em] hover:bg-[#B76E88] hover:text-white transition" data-en="Patient Portal" data-es="Portal del Paciente">
+            <button onclick="document.getElementById('auth-modal').classList.remove('hidden')" class="btn-outline whitespace-nowrap px-2 md:px-4 py-1.5 md:py-2 uppercase text-[8px] md:text-[9px] tracking-[0.1em] hover:bg-[#B59A6D] hover:text-white transition" data-en="Patient Portal" data-es="Portal del Paciente">
                 Patient Portal
             </button>
         </div>
@@ -65,7 +45,7 @@
     <section class="relative py-24 md:py-40 px-6 text-center flex items-center justify-center min-h-[80vh] overflow-hidden">
         
         <!-- INICIO: Background Video -->
-        <div class="absolute inset-0 w-full h-full z-0 bg-[#EDE1E7]">
+        <div class="absolute inset-0 w-full h-full z-0 bg-[#E9E0D2]">
             <video 
                 muted 
                 autoplay 
@@ -79,31 +59,31 @@
                 <source src="Aesthetic_Clinic_Video_Generation.mp4" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
-            <div class="absolute inset-0 backdrop-blur-[1px]" style="background: linear-gradient(135deg, rgba(246,217,227,0.88) 0%, rgba(231,214,238,0.88) 50%, rgba(220,230,243,0.88) 100%);"></div>
+            <div class="absolute inset-0 bg-[#FCFAF7]/85 backdrop-blur-[1px]"></div>
         </div>
         <!-- FIN: Background Video -->
 
         <!-- Contenido del Hero (z-10 para que esté sobre el video) -->
         <div class="relative z-10 w-full px-4">
-            <span class="block text-[10px] md:text-xs uppercase tracking-[0.3em] mb-6 opacity-80 text-[#B76E88] font-medium"
+            <span class="block text-[10px] md:text-xs uppercase tracking-[0.3em] mb-6 opacity-80 text-[#B59A6D] font-medium"
                   data-en="Founded by Health & Aesthetics Specialists • Premium Mobile Concierge Service"
                   data-es="Fundada por Especialistas en Salud y Estética • Servicio Concierge Móvil Premium">
                   Founded by Health &amp; Aesthetics Specialists • Premium Mobile Concierge Service
             </span>
             
-            <h1 class="text-4xl md:text-7xl lg:text-8xl mb-8 max-w-5xl mx-auto leading-tight text-[#2A2330]">
+            <h1 class="text-4xl md:text-7xl lg:text-8xl mb-8 max-w-5xl mx-auto leading-tight text-[#5D534A]">
                 <span data-en="Aesthetics Rooted in" data-es="Estética Basada en">Aesthetics Rooted in</span> <br class="hidden md:block"> 
-                <span class="italic text-[#B76E88]" data-en="Clinical Evidence" data-es="Evidencia Clínica">Clinical Evidence</span>
+                <span class="italic text-[#B59A6D]" data-en="Clinical Evidence" data-es="Evidencia Clínica">Clinical Evidence</span>
             </h1>
             
-            <p class="text-base md:text-xl max-w-2xl mx-auto opacity-90 font-light text-[#2A2330] mb-12"
+            <p class="text-base md:text-xl max-w-2xl mx-auto opacity-90 font-light text-[#5D534A] mb-12"
                data-en="Founded by health and personal care specialists from Venezuela, with deep experience in evidence-based rejuvenation — delivered through elite concierge care in New York."
                data-es="Fundada por especialistas en salud y cuidado personal de Venezuela, con amplia experiencia en rejuvenecimiento basado en evidencia — a través de atención concierge de élite en Nueva York.">
                Founded by health and personal care specialists from Venezuela, with deep experience in evidence-based rejuvenation — delivered through elite concierge care in New York.
             </p>
             
             <div class="flex flex-col md:flex-row justify-center gap-5">
-                <button onclick="document.getElementById('auth-modal').classList.remove('hidden')" class="btn-gold px-12 py-4 uppercase text-[10px] md:text-xs tracking-[0.2em] hover:bg-[#9C5570] transition shadow-lg" data-en="Book Consultation" data-es="Reservar Consulta">Book Consultation</button>
+                <button onclick="document.getElementById('auth-modal').classList.remove('hidden')" class="btn-gold px-12 py-4 uppercase text-[10px] md:text-xs tracking-[0.2em] hover:bg-[#9E865E] transition shadow-lg" data-en="Book Consultation" data-es="Reservar Consulta">Book Consultation</button>
             </div>
         </div>
     </section>
@@ -112,84 +92,84 @@
     <section id="services" class="py-20 md:py-32 bg-white px-6 md:px-12 relative z-10">
         <div class="max-w-5xl mx-auto">
             <div class="text-center mb-16">
-                <span class="block text-[10px] md:text-xs uppercase tracking-[0.3em] mb-4 text-[#B76E88]" data-en="Clinical Portfolio" data-es="Portafolio Clínico">Clinical Portfolio</span>
-                <h2 class="text-4xl md:text-5xl text-[#2A2330]" data-en="Our Services" data-es="Nuestros Servicios">Our Services</h2>
+                <span class="block text-[10px] md:text-xs uppercase tracking-[0.3em] mb-4 text-[#B59A6D]" data-en="Clinical Portfolio" data-es="Portafolio Clínico">Clinical Portfolio</span>
+                <h2 class="text-4xl md:text-5xl text-[#5D534A]" data-en="Our Services" data-es="Nuestros Servicios">Our Services</h2>
             </div>
 
-            <div class="border-t border-[#EDE1E7]">
+            <div class="border-t border-[#E9E0D2]">
 
                 <!-- ── PROCEDIMIENTOS ── -->
-                <div class="py-6 px-2 bg-[#FDFBFC] border-b border-[#B76E88]/30">
-                    <span class="block text-[10px] uppercase tracking-[0.35em] text-[#B76E88] mb-1" data-en="Procedures" data-es="Procedimientos">Procedures</span>
+                <div class="py-6 px-2 bg-[#FCFAF7] border-b border-[#B59A6D]/30">
+                    <span class="block text-[10px] uppercase tracking-[0.35em] text-[#B59A6D] mb-1" data-en="Procedures" data-es="Procedimientos">Procedures</span>
                     <p class="text-xs font-light opacity-55" data-en="Services performed by our licensed aestheticians." data-es="Servicios realizados por nuestras esteticistas certificadas.">Services performed by our licensed aestheticians.</p>
                 </div>
 
                 <!-- Tratamientos Faciales y de la Piel -->
-                <details class="group border-b border-[#EDE1E7]">
+                <details class="group border-b border-[#E9E0D2]">
                     <summary class="flex justify-between items-center py-8 md:py-10 cursor-pointer list-none hover:pl-4 transition-all duration-300">
-                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#2A2330] group-hover:text-[#B76E88] transition-colors" data-en="Facial &amp; Skin Treatments" data-es="Tratamientos Faciales y de la Piel">Facial &amp; Skin Treatments</span>
-                        <span class="text-xl md:text-2xl text-[#B76E88] group-open:rotate-45 transition-transform duration-300">+</span>
+                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#5D534A] group-hover:text-[#B59A6D] transition-colors" data-en="Facial &amp; Skin Treatments" data-es="Tratamientos Faciales y de la Piel">Facial &amp; Skin Treatments</span>
+                        <span class="text-xl md:text-2xl text-[#B59A6D] group-open:rotate-45 transition-transform duration-300">+</span>
                     </summary>
-                    <div class="pb-10 pt-2 pl-4 border-l border-[#B76E88] space-y-5">
+                    <div class="pb-10 pt-2 pl-4 border-l border-[#B59A6D] space-y-5">
                         <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Facials" data-es="Faciales">Facials</h4>
+                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B59A6D] mb-1" data-en="Facials" data-es="Faciales">Facials</h4>
                             <p class="text-sm font-light opacity-80" data-en="Cleansing, exfoliation, hydration and application of facial masks." data-es="Limpieza, exfoliación, hidratación y aplicación de mascarillas faciales.">Cleansing, exfoliation, hydration and application of facial masks.</p>
                         </div>
                         <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Extractions" data-es="Extracciones">Extractions</h4>
+                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B59A6D] mb-1" data-en="Extractions" data-es="Extracciones">Extractions</h4>
                             <p class="text-sm font-light opacity-80" data-en="Manual removal of blackheads (comedones) and whiteheads." data-es="Eliminación manual de puntos negros (comedones) y puntos blancos.">Manual removal of blackheads (comedones) and whiteheads.</p>
                         </div>
                         <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Advanced" data-es="Avanzada">Advanced</h4>
+                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B59A6D] mb-1" data-en="Advanced" data-es="Avanzada">Advanced</h4>
                             <p class="text-sm font-light opacity-80" data-en="Microdermabrasion and dermaplaning (to remove fine hair and dead skin cells)." data-es="Microdermoabrasión y dermaplaning (para remover vello fino y células muertas).">Microdermabrasion and dermaplaning (to remove fine hair and dead skin cells).</p>
                         </div>
                         <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Chemical Peels" data-es="Peels Químicos">Chemical Peels</h4>
+                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B59A6D] mb-1" data-en="Chemical Peels" data-es="Peels Químicos">Chemical Peels</h4>
                             <p class="text-sm font-light opacity-80" data-en="Superficial chemical exfoliation." data-es="Exfoliación química superficial.">Superficial chemical exfoliation.</p>
                         </div>
                         <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Device-Based Treatments" data-es="Tratamientos con Aparatología">Device-Based Treatments</h4>
+                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B59A6D] mb-1" data-en="Device-Based Treatments" data-es="Tratamientos con Aparatología">Device-Based Treatments</h4>
                             <p class="text-sm font-light opacity-80" data-en="Galvanic and faradic currents, LED light therapy, and high-frequency currents." data-es="Uso de corrientes galvánicas y farádicas, tratamientos LED (terapia de luz) y corrientes de alta frecuencia.">Galvanic and faradic currents, LED light therapy, and high-frequency currents.</p>
                         </div>
                         <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Massage" data-es="Masajes">Massage</h4>
+                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B59A6D] mb-1" data-en="Massage" data-es="Masajes">Massage</h4>
                             <p class="text-sm font-light opacity-80" data-en="Facial, neck and shoulder massage, and manual lymphatic drainage." data-es="Masaje facial, de cuello y hombros, y drenaje linfático manual.">Facial, neck and shoulder massage, and manual lymphatic drainage.</p>
                         </div>
                     </div>
                 </details>
 
                 <!-- Depilación y Vello -->
-                <details class="group border-b border-[#EDE1E7]">
+                <details class="group border-b border-[#E9E0D2]">
                     <summary class="flex justify-between items-center py-8 md:py-10 cursor-pointer list-none hover:pl-4 transition-all duration-300">
-                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#2A2330] group-hover:text-[#B76E88] transition-colors" data-en="Hair Removal" data-es="Depilación y Vello">Hair Removal</span>
-                        <span class="text-xl md:text-2xl text-[#B76E88] group-open:rotate-45 transition-transform duration-300">+</span>
+                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#5D534A] group-hover:text-[#B59A6D] transition-colors" data-en="Hair Removal" data-es="Depilación y Vello">Hair Removal</span>
+                        <span class="text-xl md:text-2xl text-[#B59A6D] group-open:rotate-45 transition-transform duration-300">+</span>
                     </summary>
-                    <div class="pb-10 pt-2 pl-4 border-l border-[#B76E88] space-y-5">
+                    <div class="pb-10 pt-2 pl-4 border-l border-[#B59A6D] space-y-5">
                         <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Waxing" data-es="Depilación con Cera (Waxing)">Waxing</h4>
+                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B59A6D] mb-1" data-en="Waxing" data-es="Depilación con Cera (Waxing)">Waxing</h4>
                             <p class="text-sm font-light opacity-80" data-en="Hot or cold wax for face and body (including bikini area)." data-es="Cera caliente o fría para rostro y cuerpo (incluyendo bikini, según capacitación).">Hot or cold wax for face and body (including bikini area).</p>
                         </div>
                         <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Laser Hair Removal" data-es="Depilación Láser">Laser Hair Removal</h4>
+                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B59A6D] mb-1" data-en="Laser Hair Removal" data-es="Depilación Láser">Laser Hair Removal</h4>
                             <p class="text-sm font-light opacity-80" data-en="Advanced laser hair reduction treatments." data-es="Tratamientos avanzados de reducción de vello con láser.">Advanced laser hair reduction treatments.</p>
                         </div>
                     </div>
                 </details>
 
                 <!-- ── CONSEJERÍA EN ── -->
-                <div class="py-6 px-2 bg-[#FDFBFC] border-b border-[#B76E88]/30 mt-8">
-                    <span class="block text-[10px] uppercase tracking-[0.35em] text-[#B76E88] mb-1" data-en="Advisory" data-es="Consejería">Advisory</span>
-                    <h3 class="text-2xl md:text-3xl font-light text-[#2A2330] mb-2" data-en="Counseling In" data-es="Consejería en">Counseling In</h3>
+                <div class="py-6 px-2 bg-[#FCFAF7] border-b border-[#B59A6D]/30 mt-8">
+                    <span class="block text-[10px] uppercase tracking-[0.35em] text-[#B59A6D] mb-1" data-en="Advisory" data-es="Consejería">Advisory</span>
+                    <h3 class="text-2xl md:text-3xl font-light text-[#5D534A] mb-2" data-en="Counseling In" data-es="Consejería en">Counseling In</h3>
                     <p class="text-xs font-light opacity-55 max-w-xl" data-en="Drawing on our extensive expertise and specialized knowledge, we offer professional advisory in:" data-es="Dada nuestra amplia experiencia y conocimientos especializados, ofrecemos consejería profesional en:">Drawing on our extensive expertise and specialized knowledge, we offer professional advisory in:</p>
                 </div>
 
                 <!-- Neuromodulators (Botox) -->
-                <details class="group border-b border-[#EDE1E7]">
+                <details class="group border-b border-[#E9E0D2]">
                     <summary class="flex justify-between items-center py-8 md:py-10 cursor-pointer list-none hover:pl-4 transition-all duration-300">
-                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#2A2330] group-hover:text-[#B76E88] transition-colors" data-en="Neuromodulators (Botox)" data-es="Neuromoduladores (Botox)">Neuromodulators (Botox)</span>
-                        <span class="text-xl md:text-2xl text-[#B76E88] group-open:rotate-45 transition-transform duration-300">+</span>
+                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#5D534A] group-hover:text-[#B59A6D] transition-colors" data-en="Neuromodulators (Botox)" data-es="Neuromoduladores (Botox)">Neuromodulators (Botox)</span>
+                        <span class="text-xl md:text-2xl text-[#B59A6D] group-open:rotate-45 transition-transform duration-300">+</span>
                     </summary>
-                    <div class="pb-10 pt-2 pl-4 border-l border-[#B76E88]">
+                    <div class="pb-10 pt-2 pl-4 border-l border-[#B59A6D]">
                         <p class="text-sm opacity-80 leading-relaxed font-light mb-4" data-en="Dynamic muscle relaxation and therapeutic contouring." data-es="Relajación muscular dinámica y contorno terapéutico.">Dynamic muscle relaxation and therapeutic contouring.</p>
                         <ul class="space-y-2 text-sm font-light opacity-70">
                             <li data-en="• Upper Face Rejuvenation" data-es="• Rejuvenecimiento de la Parte Superior del Rostro">• Upper Face Rejuvenation</li>
@@ -202,12 +182,12 @@
                 </details>
 
                 <!-- Dermal Fillers (Hyaluronic Acid) -->
-                <details class="group border-b border-[#EDE1E7]">
+                <details class="group border-b border-[#E9E0D2]">
                     <summary class="flex justify-between items-center py-8 md:py-10 cursor-pointer list-none hover:pl-4 transition-all duration-300">
-                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#2A2330] group-hover:text-[#B76E88] transition-colors" data-en="Dermal Fillers (Hyaluronic Acid)" data-es="Rellenos Dérmicos (Ácido Hialurónico)">Dermal Fillers (Hyaluronic Acid)</span>
-                        <span class="text-xl md:text-2xl text-[#B76E88] group-open:rotate-45 transition-transform duration-300">+</span>
+                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#5D534A] group-hover:text-[#B59A6D] transition-colors" data-en="Dermal Fillers (Hyaluronic Acid)" data-es="Rellenos Dérmicos (Ácido Hialurónico)">Dermal Fillers (Hyaluronic Acid)</span>
+                        <span class="text-xl md:text-2xl text-[#B59A6D] group-open:rotate-45 transition-transform duration-300">+</span>
                     </summary>
-                    <div class="pb-10 pt-2 pl-4 border-l border-[#B76E88]">
+                    <div class="pb-10 pt-2 pl-4 border-l border-[#B59A6D]">
                         <p class="text-sm opacity-80 leading-relaxed font-light mb-4" data-en="Structural restoration, projection, and volumetric balance." data-es="Restauración estructural, proyección y equilibrio volumétrico.">Structural restoration, projection, and volumetric balance.</p>
                         <ul class="space-y-2 text-sm font-light opacity-70">
                             <li data-en="• Lip Augmentation" data-es="• Aumento de Labios">• Lip Augmentation</li>
@@ -219,12 +199,12 @@
                 </details>
 
                 <!-- Biostimulators (Collagen Inducers) -->
-                <details class="group border-b border-[#EDE1E7]">
+                <details class="group border-b border-[#E9E0D2]">
                     <summary class="flex justify-between items-center py-8 md:py-10 cursor-pointer list-none hover:pl-4 transition-all duration-300">
-                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#2A2330] group-hover:text-[#B76E88] transition-colors" data-en="Biostimulators (Collagen Inducers)" data-es="Bioestimuladores (Inductores de Colágeno)">Biostimulators (Collagen Inducers)</span>
-                        <span class="text-xl md:text-2xl text-[#B76E88] group-open:rotate-45 transition-transform duration-300">+</span>
+                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#5D534A] group-hover:text-[#B59A6D] transition-colors" data-en="Biostimulators (Collagen Inducers)" data-es="Bioestimuladores (Inductores de Colágeno)">Biostimulators (Collagen Inducers)</span>
+                        <span class="text-xl md:text-2xl text-[#B59A6D] group-open:rotate-45 transition-transform duration-300">+</span>
                     </summary>
-                    <div class="pb-10 pt-2 pl-4 border-l border-[#B76E88]">
+                    <div class="pb-10 pt-2 pl-4 border-l border-[#B59A6D]">
                         <p class="text-sm opacity-80 leading-relaxed font-light mb-4" data-en="Deep, long-term rejuvenation through neocollagenesis." data-es="Rejuvenecimiento profundo a largo plazo mediante neocolagénesis.">Deep, long-term rejuvenation through neocollagenesis.</p>
                         <ul class="space-y-2 text-sm font-light opacity-70">
                             <li data-en="• Sculptra (Poly-L-Lactic Acid)" data-es="• Sculptra (Ácido Poliláctico)">• Sculptra (Poly-L-Lactic Acid)</li>
@@ -234,12 +214,12 @@
                 </details>
 
                 <!-- Regenerative Aesthetics & Lasers -->
-                <details class="group border-b border-[#EDE1E7]">
+                <details class="group border-b border-[#E9E0D2]">
                     <summary class="flex justify-between items-center py-8 md:py-10 cursor-pointer list-none hover:pl-4 transition-all duration-300">
-                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#2A2330] group-hover:text-[#B76E88] transition-colors" data-en="Regenerative Aesthetics &amp; Lasers" data-es="Estética Regenerativa y Láseres">Regenerative Aesthetics &amp; Lasers</span>
-                        <span class="text-xl md:text-2xl text-[#B76E88] group-open:rotate-45 transition-transform duration-300">+</span>
+                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#5D534A] group-hover:text-[#B59A6D] transition-colors" data-en="Regenerative Aesthetics &amp; Lasers" data-es="Estética Regenerativa y Láseres">Regenerative Aesthetics &amp; Lasers</span>
+                        <span class="text-xl md:text-2xl text-[#B59A6D] group-open:rotate-45 transition-transform duration-300">+</span>
                     </summary>
-                    <div class="pb-10 pt-2 pl-4 border-l border-[#B76E88]">
+                    <div class="pb-10 pt-2 pl-4 border-l border-[#B59A6D]">
                         <p class="text-sm opacity-80 leading-relaxed font-light mb-4" data-en="Improving skin quality, texture, and cellular healing." data-es="Mejora de la calidad, textura y curación de la piel a nivel celular.">Improving skin quality, texture, and cellular healing.</p>
                         <ul class="space-y-2 text-sm font-light opacity-70">
                             <li data-en="• Exosomes Therapy" data-es="• Terapia con Exosomas">• Exosomes Therapy</li>
@@ -256,15 +236,15 @@
     </section>
 
     <!-- Philosophy Section -->
-    <section class="py-24 px-6 md:px-12 bg-white text-center border-t border-[#EDE1E7]">
+    <section class="py-24 px-6 md:px-12 bg-white text-center border-t border-[#E9E0D2]">
         <div class="max-w-4xl mx-auto">
-            <h2 class="text-3xl md:text-4xl mb-8 text-[#2A2330] italic" data-en="Our Clinical Philosophy" data-es="Nuestra Filosofía Clínica">Our Clinical Philosophy</h2>
+            <h2 class="text-3xl md:text-4xl mb-8 text-[#5D534A] italic" data-en="Our Clinical Philosophy" data-es="Nuestra Filosofía Clínica">Our Clinical Philosophy</h2>
             <p class="text-base md:text-lg font-light opacity-80 leading-relaxed mb-12"
                data-en="Our philosophy is rooted in applying our deep expertise in health, aesthetics, and skin science to provide strictly evidence-based treatments. We reject unproven trends and unfounded practices; our goal is to guide our clients to invest wisely in real results, optimizing their natural beauty without losing their unique essence."
                data-es="Nuestra filosofía se basa en aplicar nuestro profundo conocimiento en salud, estética y ciencia de la piel para ofrecer tratamientos fundamentados estrictamente en la evidencia. Rechazamos las modas sin respaldo científico; nuestro objetivo es guiar a nuestros clientes para que inviertan sabiamente en resultados reales, optimizando su naturalidad sin perder su esencia.">
                Our philosophy is rooted in applying our deep expertise in health, aesthetics, and skin science to provide strictly evidence-based treatments. We reject unproven trends and unfounded practices; our goal is to guide our clients to invest wisely in real results, optimizing their natural beauty without losing their unique essence.
             </p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-[#B76E88] text-sm uppercase tracking-widest font-semibold">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-[#B59A6D] text-sm uppercase tracking-widest font-semibold">
                 <div><span>✓</span> <span data-en="Specialized Expertise" data-es="Experiencia Especializada">Specialized Expertise</span></div>
                 <div><span>✓</span> <span data-en="Evidence-Based" data-es="Basado en Evidencia">Evidence-Based</span></div>
                 <div><span>✓</span> <span data-en="Personalized Care" data-es="Atención Personalizada">Personalized Care</span></div>
@@ -273,30 +253,30 @@
     </section>
 
     <!-- Footer -->
-    <footer class="bg-[#2A2330] text-[#FDFBFC] pt-20 pb-10 px-6 md:px-12">
+    <footer class="bg-[#5D534A] text-[#FCFAF7] pt-20 pb-10 px-6 md:px-12">
         <div class="max-w-6xl mx-auto grid md:grid-cols-3 gap-12 mb-16">
             <div>
-                <div class="text-2xl mb-6"><span class="brand-piel">Piel</span> <span class="brand-spa" style="color:white">spa</span></div>
+                <div class="logo-font text-xl mb-6 text-white">FS Med-Esthetics</div>
                 <p class="font-light opacity-70 text-sm leading-relaxed" data-en="Clinical excellence in natural rejuvenation. Safe, ethical, and evidence-based aesthetic treatments." data-es="Excelencia clínica en rejuvenecimiento natural. Tratamientos estéticos seguros, éticos y basados en evidencia.">Clinical excellence in natural rejuvenation. Safe, ethical, and evidence-based aesthetic treatments.</p>
             </div>
             <div>
-                <h4 class="text-xl mb-6 italic text-[#B76E88]" data-en="Contact Us" data-es="Contáctanos">Contact Us</h4>
+                <h4 class="text-xl mb-6 italic text-[#B59A6D]" data-en="Contact Us" data-es="Contáctanos">Contact Us</h4>
                 <p class="font-light opacity-70 text-sm mb-4">fsmedesthetics@gmail.com</p>
-                <button onclick="document.getElementById('contact-modal').classList.remove('hidden')" class="border border-[#B76E88] text-[#B76E88] px-6 py-2 uppercase text-[10px] tracking-widest hover:bg-[#B76E88] hover:text-white transition" data-en="Send Message" data-es="Enviar Mensaje">Send Message</button>
+                <button onclick="document.getElementById('contact-modal').classList.remove('hidden')" class="border border-[#B59A6D] text-[#B59A6D] px-6 py-2 uppercase text-[10px] tracking-widest hover:bg-[#B59A6D] hover:text-white transition" data-en="Send Message" data-es="Enviar Mensaje">Send Message</button>
             </div>
             <div>
-                <h4 class="text-xl mb-6 italic text-[#B76E88]" data-en="Patient Portal" data-es="Portal del Paciente">Patient Portal</h4>
+                <h4 class="text-xl mb-6 italic text-[#B59A6D]" data-en="Patient Portal" data-es="Portal del Paciente">Patient Portal</h4>
                 <p class="font-light opacity-70 text-sm mb-4" data-en="Manage your appointments and clinical gallery securely." data-es="Gestione sus citas y galería clínica de forma segura.">Manage your appointments and clinical gallery securely.</p>
-                <button onclick="document.getElementById('auth-modal').classList.remove('hidden')" class="bg-[#B76E88] text-white px-6 py-2 uppercase text-[10px] tracking-widest hover:bg-white hover:text-[#2A2330] transition" data-en="Login / Book" data-es="Ingresar / Agendar">Login / Book</button>
+                <button onclick="document.getElementById('auth-modal').classList.remove('hidden')" class="bg-[#B59A6D] text-white px-6 py-2 uppercase text-[10px] tracking-widest hover:bg-white hover:text-[#5D534A] transition" data-en="Login / Book" data-es="Ingresar / Agendar">Login / Book</button>
             </div>
         </div>
         <div class="border-t border-white/10 pt-8 flex flex-col items-center gap-4">
             <div class="text-[10px] uppercase tracking-widest opacity-40">
-                &copy; 2026 Piel Spa LLC. All Rights Reserved.
+                &copy; 2026 FS Med-Esthetics LLC. All Rights Reserved.
             </div>
             
             <a href="admin-login.html" 
-               class="text-[9px] uppercase tracking-widest opacity-20 hover:opacity-100 hover:text-[#B76E88] transition duration-500"
+               class="text-[9px] uppercase tracking-widest opacity-20 hover:opacity-100 hover:text-[#B59A6D] transition duration-500"
                data-en="Provider & Staff Access" 
                data-es="Acceso para Personal y Proveedores">
                 Provider & Staff Access
@@ -307,14 +287,14 @@
     <!-- MODAL DE CONTACTO -->
     <div id="contact-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-[100] p-6 backdrop-blur-sm">
         <div class="bg-white p-8 md:p-12 max-w-md w-full rounded-xl shadow-2xl relative">
-            <button onclick="document.getElementById('contact-modal').classList.add('hidden')" class="absolute top-4 right-6 text-2xl text-gray-400 hover:text-[#B76E88] transition">&times;</button>
-            <h2 class="text-3xl font-light mb-2 text-[#2A2330] text-center uppercase tracking-widest" data-en="Contact Us" data-es="Contáctanos">Contact Us</h2>
+            <button onclick="document.getElementById('contact-modal').classList.add('hidden')" class="absolute top-4 right-6 text-2xl text-gray-400 hover:text-[#B59A6D] transition">&times;</button>
+            <h2 class="text-3xl font-light mb-2 text-[#5D534A] text-center uppercase tracking-widest" data-en="Contact Us" data-es="Contáctanos">Contact Us</h2>
             <p class="text-center text-[10px] uppercase tracking-widest opacity-40 mb-8" data-en="Send us a message" data-es="Envíenos un mensaje">Send us a message</p>
             
             <form id="contact-form" class="space-y-4">
-                <input type="text" id="contact-name" placeholder="Name" required class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm">
-                <input type="email" id="contact-email" placeholder="Email" required class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm">
-                <textarea id="contact-message" placeholder="Message" rows="4" required class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm"></textarea>
+                <input type="text" id="contact-name" placeholder="Name" required class="w-full p-4 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-sm">
+                <input type="email" id="contact-email" placeholder="Email" required class="w-full p-4 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-sm">
+                <textarea id="contact-message" placeholder="Message" rows="4" required class="w-full p-4 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-sm"></textarea>
                 <button id="contact-submit" type="submit" class="btn-gold w-full py-4 uppercase text-xs tracking-widest transition hover:opacity-90" data-en="Send Message" data-es="Enviar Mensaje">Send Message</button>
             </form>
         </div>
@@ -323,24 +303,24 @@
   <!-- MODAL DE AUTH (LOGIN / REGISTRO / BOOKING) -->
   <div id="auth-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-[100] p-6 backdrop-blur-sm overflow-y-auto">
     <div class="bg-white p-8 md:p-10 max-w-md w-full rounded-xl shadow-2xl relative my-auto">
-        <button onclick="document.getElementById('auth-modal').classList.add('hidden')" class="absolute top-4 right-6 text-2xl text-gray-400 hover:text-[#B76E88] transition">&times;</button>
+        <button onclick="document.getElementById('auth-modal').classList.add('hidden')" class="absolute top-4 right-6 text-2xl text-gray-400 hover:text-[#B59A6D] transition">&times;</button>
         <!-- TAB TOGGLE: Sign In / New Patient -->
-        <div class="flex rounded-xl border border-[#EDE1E7] mb-6 overflow-hidden">
+        <div class="flex rounded-xl border border-[#E9E0D2] mb-6 overflow-hidden">
             <button id="tab-signin" onclick="setAuthTab('login')"
-                class="flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-[#2A2330] text-white">
+                class="flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-[#5D534A] text-white">
                 <span data-en="Sign In" data-es="Iniciar Sesión">Sign In</span>
             </button>
             <button id="tab-signup" onclick="setAuthTab('signup')"
-                class="flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-white text-[#2A2330] opacity-50 hover:opacity-100">
+                class="flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-white text-[#5D534A] opacity-50 hover:opacity-100">
                 <span data-en="✦ New Patient" data-es="✦ Nuevo Paciente">✦ New Patient</span>
             </button>
         </div>
 
-        <h2 id="auth-title" class="text-3xl font-light mb-2 text-[#2A2330] text-center uppercase tracking-widest hidden" data-en="Login" data-es="Ingresar">Login</h2>
+        <h2 id="auth-title" class="text-3xl font-light mb-2 text-[#5D534A] text-center uppercase tracking-widest hidden" data-en="Login" data-es="Ingresar">Login</h2>
 
         <!-- TEXTO EXPLICATIVO PARA AGENDAR -->
-        <div class="bg-[#FDFBFC] border border-[#EDE1E7] p-3 rounded text-center mb-6 mt-2 hidden">
-            <p id="auth-subtitle" class="text-[11px] uppercase tracking-wider text-[#B76E88] font-semibold"
+        <div class="bg-[#FCFAF7] border border-[#E9E0D2] p-3 rounded text-center mb-6 mt-2 hidden">
+            <p id="auth-subtitle" class="text-[11px] uppercase tracking-wider text-[#B59A6D] font-semibold"
                data-en="Log in or register to book your consultation"
                data-es="Inicia sesión o regístrate para agendar tu cita">
                Log in or register to book your consultation
@@ -351,12 +331,12 @@
             <!-- CAMPOS EXCLUSIVOS DE REGISTRO (Ocultos en Login) -->
             <div id="signup-fields" class="hidden space-y-4">
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="text" id="auth-firstname" placeholder="First Name / Nombre" class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm">
-                    <input type="text" id="auth-lastname" placeholder="Last Name / Apellido" class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm">
+                    <input type="text" id="auth-firstname" placeholder="First Name / Nombre" class="w-full p-4 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-sm">
+                    <input type="text" id="auth-lastname" placeholder="Last Name / Apellido" class="w-full p-4 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-sm">
                 </div>
                 <!-- Teléfono con Código de País (TODA LATAM + USA + ESPAÑA) -->
                 <div class="flex gap-2">
-                    <select id="auth-phone-code" class="w-[35%] p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-xs text-[#2A2330]">
+                    <select id="auth-phone-code" class="w-[35%] p-4 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-xs text-[#5D534A]">
                         <option value="+1" selected>🇺🇸/🇨🇦 +1</option>
                         <option value="+52">🇲🇽 +52</option>
                         <option value="+57">🇨🇴 +57</option>
@@ -379,24 +359,24 @@
                         <option value="+1">🇩🇴 +1</option>
                         <option value="+34">🇪🇸 +34</option>
                     </select>
-                    <input type="tel" id="auth-phone" placeholder="Phone / Teléfono" class="w-[65%] p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm">
+                    <input type="tel" id="auth-phone" placeholder="Phone / Teléfono" class="w-[65%] p-4 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-sm">
                 </div>
 
                 <!-- NUEVO: Preferencias de Contacto -->
-                <div class="bg-[#FDFBFC] border border-[#EDE1E7] p-4 rounded-lg">
-                    <label class="block text-[9px] uppercase tracking-widest text-[#B76E88] font-bold mb-3" data-en="Preferred Contact Method" data-es="Método de Contacto Preferido">Preferred Contact Method</label>
-                    <div class="grid grid-cols-2 gap-3 text-xs text-[#2A2330] font-light">
-                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B76E88] transition">
-                            <input type="checkbox" value="WhatsApp" class="contact-method accent-[#B76E88]"> WhatsApp
+                <div class="bg-[#FCFAF7] border border-[#E9E0D2] p-4 rounded-lg">
+                    <label class="block text-[9px] uppercase tracking-widest text-[#B59A6D] font-bold mb-3" data-en="Preferred Contact Method" data-es="Método de Contacto Preferido">Preferred Contact Method</label>
+                    <div class="grid grid-cols-2 gap-3 text-xs text-[#5D534A] font-light">
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B59A6D] transition">
+                            <input type="checkbox" value="WhatsApp" class="contact-method accent-[#B59A6D]"> WhatsApp
                         </label>
-                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B76E88] transition">
-                            <input type="checkbox" value="SMS" class="contact-method accent-[#B76E88]"> SMS
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B59A6D] transition">
+                            <input type="checkbox" value="SMS" class="contact-method accent-[#B59A6D]"> SMS
                         </label>
-                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B76E88] transition">
-                            <input type="checkbox" value="Llamada" class="contact-method accent-[#B76E88]"> <span data-en="Phone Call" data-es="Llamada">Phone Call</span>
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B59A6D] transition">
+                            <input type="checkbox" value="Llamada" class="contact-method accent-[#B59A6D]"> <span data-en="Phone Call" data-es="Llamada">Phone Call</span>
                         </label>
-                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B76E88] transition">
-                            <input type="checkbox" value="Email" class="contact-method accent-[#B76E88]"> Email
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B59A6D] transition">
+                            <input type="checkbox" value="Email" class="contact-method accent-[#B59A6D]"> Email
                         </label>
                     </div>
                 </div>
@@ -405,20 +385,20 @@
                     <div class="flex flex-col">
                         <label class="text-[8px] uppercase tracking-widest opacity-40 ml-1 mb-1" data-en="Date of Birth (MM/DD/YYYY)" data-es="Fecha de Nac. (MM/DD/AAAA)">Date of Birth (MM/DD/YYYY)</label>
                         <div class="flex gap-1">
-                            <select id="auth-dob-month" onchange="updateDOB()" class="w-[42%] p-3 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-xs text-[#2A2330]">
+                            <select id="auth-dob-month" onchange="updateDOB()" class="w-[42%] p-3 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-xs text-[#5D534A]">
                                 <option value="" disabled selected>Month</option>
                                 <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
                                 <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
                                 <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
                                 <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
                             </select>
-                            <input type="number" id="auth-dob-day" placeholder="DD" min="1" max="31" onchange="updateDOB()" class="w-[27%] p-3 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-xs text-[#2A2330]">
-                            <input type="number" id="auth-dob-year" placeholder="YYYY" min="1920" max="2015" onchange="updateDOB()" class="w-[31%] p-3 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-xs text-[#2A2330]">
+                            <input type="number" id="auth-dob-day" placeholder="DD" min="1" max="31" onchange="updateDOB()" class="w-[27%] p-3 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-xs text-[#5D534A]">
+                            <input type="number" id="auth-dob-year" placeholder="YYYY" min="1920" max="2015" onchange="updateDOB()" class="w-[31%] p-3 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-xs text-[#5D534A]">
                         </div>
                         <input type="hidden" id="auth-dob">
                     </div>
                     <div class="flex flex-col justify-end">
-                        <select id="auth-sex" class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm text-[#2A2330]">
+                        <select id="auth-sex" class="w-full p-4 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-sm text-[#5D534A]">
                             <option value="" disabled selected data-en="Sex" data-es="Sexo">Sex</option>
                             <option value="male" data-en="Male" data-es="Masculino">Male</option>
                             <option value="female" data-en="Female" data-es="Femenino">Female</option>
@@ -428,29 +408,29 @@
             </div>
 
             <!-- CAMPOS SIEMPRE VISIBLES -->
-            <input type="email" id="auth-email" placeholder="Email" class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm">
+            <input type="email" id="auth-email" placeholder="Email" class="w-full p-4 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-sm">
             <div class="relative">
-                <input type="password" id="auth-password" placeholder="Password" class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm pr-12">
-                <button type="button" onclick="togglePassword('auth-password','eye-password')" tabindex="-1" class="absolute right-4 top-1/2 -translate-y-1/2 text-[#2A2330] opacity-40 hover:opacity-80 transition">
+                <input type="password" id="auth-password" placeholder="Password" class="w-full p-4 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-sm pr-12">
+                <button type="button" onclick="togglePassword('auth-password','eye-password')" tabindex="-1" class="absolute right-4 top-1/2 -translate-y-1/2 text-[#5D534A] opacity-40 hover:opacity-80 transition">
                     <span id="eye-password"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></span>
                 </button>
             </div>
             
             <!-- CONFIRMAR CONTRASEÑA (Solo Registro) -->
             <div class="relative hidden" id="confirm-password-wrapper">
-                <input type="password" id="auth-confirm-password" placeholder="Confirm Password / Confirmar Contraseña" class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm pr-12">
-                <button type="button" onclick="togglePassword('auth-confirm-password','eye-confirm')" tabindex="-1" class="absolute right-4 top-1/2 -translate-y-1/2 text-[#2A2330] opacity-40 hover:opacity-80 transition">
+                <input type="password" id="auth-confirm-password" placeholder="Confirm Password / Confirmar Contraseña" class="w-full p-4 border border-[#E9E0D2] outline-none focus:border-[#B59A6D] bg-[#FCFAF7] text-sm pr-12">
+                <button type="button" onclick="togglePassword('auth-confirm-password','eye-confirm')" tabindex="-1" class="absolute right-4 top-1/2 -translate-y-1/2 text-[#5D534A] opacity-40 hover:opacity-80 transition">
                     <span id="eye-confirm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></span>
                 </button>
             </div>
             
             <div class="text-right" id="forgot-password-container">
-                <button onclick="handleForgotPassword()" class="text-[10px] uppercase tracking-widest opacity-60 hover:text-[#B76E88]" data-en="Forgot Password?" data-es="¿Olvidó su contraseña?">Forgot Password?</button>
+                <button onclick="handleForgotPassword()" class="text-[10px] uppercase tracking-widest opacity-60 hover:text-[#B59A6D]" data-en="Forgot Password?" data-es="¿Olvidó su contraseña?">Forgot Password?</button>
             </div>
 
             <!-- TÉRMINOS Y CONDICIONES (Solo Registro) -->
             <div id="tos-container" class="hidden flex items-start gap-3 mt-4">
-                <input type="checkbox" id="tos-check" class="mt-1 accent-[#B76E88]">
+                <input type="checkbox" id="tos-check" class="mt-1 accent-[#B59A6D]">
                 <label for="tos-check" class="text-[10px] uppercase tracking-widest opacity-60 text-left leading-relaxed">
                     <span data-en="I agree to the Terms of Service and Consent to clinical data storage." data-es="Acepto los Términos de Servicio y consiento el almacenamiento de datos clínicos.">I agree to the Terms of Service and Consent to clinical data storage.</span>
                 </label>
@@ -466,7 +446,7 @@
             </button>
 
             <!-- BOTÓN DE GOOGLE -->
-            <button onclick="loginWithGoogle()" class="w-full py-3 border border-[#EDE1E7] mb-4 flex justify-center items-center gap-3 hover:bg-[#FDFBFC] transition rounded-lg mt-2">
+            <button onclick="loginWithGoogle()" class="w-full py-3 border border-[#E9E0D2] mb-4 flex justify-center items-center gap-3 hover:bg-[#FCFAF7] transition rounded-lg mt-2">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-4 h-4" alt="Google">
                 <span class="text-[10px] uppercase tracking-widest opacity-80 font-bold" data-en="Continue with Google" data-es="Continuar con Google">Continue with Google</span>
             </button>
@@ -569,11 +549,11 @@
             const tabSignUp = document.getElementById('tab-signup');
             if (!tabSignIn || !tabSignUp) return;
             if (isSignUp) {
-                tabSignIn.className = 'flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-white text-[#2A2330] opacity-50 hover:opacity-100';
-                tabSignUp.className = 'flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-[#B76E88] text-white';
+                tabSignIn.className = 'flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-white text-[#5D534A] opacity-50 hover:opacity-100';
+                tabSignUp.className = 'flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-[#B59A6D] text-white';
             } else {
-                tabSignIn.className = 'flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-[#2A2330] text-white';
-                tabSignUp.className = 'flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-white text-[#2A2330] opacity-50 hover:opacity-100';
+                tabSignIn.className = 'flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-[#5D534A] text-white';
+                tabSignUp.className = 'flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-white text-[#5D534A] opacity-50 hover:opacity-100';
             }
         }
 
