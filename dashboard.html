@@ -59,9 +59,13 @@
                 <span class="mr-4 text-xl">🏠</span>
                 <span class="block uppercase text-[10px] tracking-widest font-bold" data-en="Dashboard" data-es="Resumen">Dashboard</span>
             </a>
-            <a onclick="switchView('booking-view', this)" class="nav-item flex items-center px-6 py-4">
+            <a onclick="switchView('booking-view', this)" class="nav-item hidden items-center px-6 py-4">
                 <span class="mr-4 text-xl">📅</span>
                 <span class="block uppercase text-[10px] tracking-widest font-bold" data-en="Book Now" data-es="Agendar Cita">Book Now</span>
+            </a>
+            <a onclick="switchView('messages-view', this)" class="nav-item flex items-center px-6 py-4">
+                <span class="mr-4 text-xl">📬</span>
+                <span class="block uppercase text-[10px] tracking-widest font-bold" data-en="Messages" data-es="Mensajes">Messages</span>
             </a>
         </nav>
         <div class="p-6 border-t border-[#EDE1E7]">
@@ -99,10 +103,10 @@
                     <div class="bg-white border-l-4 border-[#B76E88] p-6 shadow-sm rounded-r-lg">
                         <h3 class="uppercase text-[10px] tracking-widest text-[#B76E88] font-bold mb-2" data-en="Follow-up Reminder" data-es="Recordatorio de Seguimiento">Follow-up Reminder</h3>
                         <p id="followup-message" class="text-sm font-light opacity-80 mb-4">...</p>
-                        <button id="followup-cta" onclick="switchView('booking-view', document.querySelectorAll('.nav-item')[1])" class="btn-gold px-6 py-3 uppercase text-[10px] tracking-widest" data-en="Schedule Now" data-es="Agendar Ahora">Schedule Now</button>
+                        <button id="followup-cta" onclick="switchView('booking-view', document.querySelectorAll('.nav-item')[1])" class="hidden btn-gold px-6 py-3 uppercase text-[10px] tracking-widest" data-en="Schedule Now" data-es="Agendar Ahora">Schedule Now</button>
                     </div>
                     <div class="bg-white p-6 rounded-xl border border-[#EDE1E7] shadow-sm">
-                        <h3 class="uppercase text-[10px] tracking-widest text-[#B76E88] font-bold mb-4" data-en="Your Next Visit" data-es="Tu Próxima Cita">Your Next Visit</h3>
+                        <h3 class="uppercase text-[10px] tracking-widest text-[#B76E88] font-bold mb-4" data-en="Your Last Visit" data-es="Tu Última Cita">Your Last Visit</h3>
                         <div class="space-y-2 text-sm opacity-80">
                             <p>📅 <span id="next-visit-date">—</span></p>
                             <p>🕒 <span id="next-visit-time">—</span></p>
@@ -117,6 +121,17 @@
                             <div id="upcoming-list" class="space-y-2 text-xs opacity-80"></div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div id="messages-view" class="hidden max-w-3xl mx-auto">
+                <div class="text-center mb-10">
+                    <h2 class="text-4xl text-[#2A2330]" data-en="Messages" data-es="Mensajes">Messages</h2>
+                    <p class="font-light opacity-70 mt-2" data-en="Recommendations and updates from your provider will appear here." data-es="Aquí verás las recomendaciones y novedades de tu proveedor.">Recommendations and updates from your provider will appear here.</p>
+                </div>
+                <div id="messages-list" class="space-y-4"></div>
+                <div id="messages-empty" class="bg-white border border-[#EDE1E7] rounded-xl shadow-sm p-10 text-center opacity-60">
+                    <p class="text-sm font-light" data-en="You don't have any messages yet." data-es="Aún no tienes mensajes.">You don't have any messages yet.</p>
                 </div>
             </div>
 
@@ -300,7 +315,7 @@
             return labels.join(', ');
         }
 
-        let nextAppointment = null;
+        let lastAppointment = null;
         let upcomingAppointments = [];
         let followUpDaysSince = null;
 
@@ -326,27 +341,20 @@
 
             if (!dateEl || !timeEl || !treatmentsEl || !listEl || !nextStatusEl) return;
 
-            if (!nextAppointment) {
+            // El campo de Treatment se deja en blanco por ahora (se configurará más adelante).
+            treatmentsEl.innerText = '—';
+
+            if (!lastAppointment) {
                 dateEl.innerText = '—';
                 timeEl.innerText = '—';
-                treatmentsEl.innerText = currentLang === 'en' ? 'No scheduled appointments' : 'No tienes citas agendadas';
                 nextStatusEl.className = 'status-pill status-cancelled';
                 nextStatusEl.innerText = currentLang === 'en' ? 'none' : 'sin cita';
             } else {
-                dateEl.innerText = formatDate(nextAppointment.appointment_date);
-                timeEl.innerText = formatTime(nextAppointment.appointment_time);
-                const st = String(nextAppointment.status || 'pending').toLowerCase();
+                dateEl.innerText = formatDate(lastAppointment.appointment_date);
+                timeEl.innerText = formatTime(lastAppointment.appointment_time);
+                const st = String(lastAppointment.status || 'pending').toLowerCase();
                 nextStatusEl.className = `status-pill status-${st}`;
                 nextStatusEl.innerText = st;
-
-                const ids = nextAppointment.service_type_ids;
-                if (Array.isArray(ids) && ids.length) {
-                    treatmentsEl.innerText = formatTreatments(ids, currentLang);
-                } else if (nextAppointment.service_type) {
-                    treatmentsEl.innerText = translateServiceTypeFallback(nextAppointment.service_type);
-                } else {
-                    treatmentsEl.innerText = '—';
-                }
             }
 
             if (!upcomingAppointments.length) {
@@ -378,11 +386,13 @@
             const ctaEl = document.getElementById('followup-cta');
             if (!msgEl || !ctaEl) return;
 
+            // El botón "Schedule Now" queda oculto (booking deshabilitado por ahora); solo mostramos el mensaje.
+            ctaEl.classList.add('hidden');
+
             if (followUpDaysSince == null) {
                 msgEl.innerText = currentLang === 'en'
-                    ? "You do not have previous clinical visits yet. Book your first consultation to start your treatment plan."
-                    : "Aún no tienes consultas clínicas previas. Agenda tu primera consulta para iniciar tu plan de tratamiento.";
-                ctaEl.classList.remove('hidden');
+                    ? "You do not have previous clinical visits yet."
+                    : "Aún no tienes consultas clínicas previas.";
                 return;
             }
 
@@ -391,7 +401,6 @@
                 msgEl.innerText = currentLang === 'en'
                     ? `Your last treatment was ${followUpDaysSince} day(s) ago. Recommended follow-up in about ${daysLeft} day(s).`
                     : `Tu último tratamiento fue hace ${followUpDaysSince} día(s). Seguimiento recomendado en aproximadamente ${daysLeft} día(s).`;
-                ctaEl.classList.add('hidden');
                 return;
             }
 
@@ -399,7 +408,6 @@
             msgEl.innerText = currentLang === 'en'
                 ? `It has been ${weeks} week(s) since your treatment. Perfect time for a touch-up.`
                 : `Han pasado ${weeks} semana(s) desde tu tratamiento. Momento ideal para un retoque.`;
-            ctaEl.classList.remove('hidden');
         }
 
         function formatDate(dateStr) {
@@ -419,7 +427,7 @@
         async function loadAppointmentsOverview() {
             const { data: { user }, error: authError } = await _supabase.auth.getUser();
             if (authError || !user) {
-                nextAppointment = null;
+                lastAppointment = null;
                 upcomingAppointments = [];
                 syncNextVisitDisplay();
                 followUpDaysSince = null;
@@ -435,8 +443,8 @@
                 .order('appointment_time', { ascending: true });
 
             if (error) {
-                console.error('Load next appointment error:', error);
-                nextAppointment = null;
+                console.error('Load appointments error:', error);
+                lastAppointment = null;
                 upcomingAppointments = [];
                 syncNextVisitDisplay();
             } else {
@@ -446,7 +454,15 @@
                     const dt = new Date(appt.appointment_date + 'T' + appt.appointment_time);
                     return !Number.isNaN(dt.getTime()) && dt >= now;
                 });
-                nextAppointment = upcomingAppointments.find(a => String(a.status || '').toLowerCase() !== 'cancelled') || null;
+
+                // "Your Last Visit": el registro más reciente en el pasado (no cancelado).
+                // Los datos vienen ordenados ascendente, así que el último de la lista es el más reciente.
+                const pastAppointments = (data || []).filter(appt => {
+                    if (!appt.appointment_date || !appt.appointment_time) return false;
+                    const dt = new Date(appt.appointment_date + 'T' + appt.appointment_time);
+                    return !Number.isNaN(dt.getTime()) && dt < now && String(appt.status || '').toLowerCase() !== 'cancelled';
+                });
+                lastAppointment = pastAppointments.length ? pastAppointments[pastAppointments.length - 1] : null;
                 syncNextVisitDisplay();
             }
 
@@ -469,6 +485,46 @@
             const diffMs = nowDate.getTime() - lastVisit.getTime();
             followUpDaysSince = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
             syncFollowUpReminderDisplay();
+        }
+
+        // --- MESSAGES / BUZÓN (placeholder: aún no hay UI de admin para enviarlos) ---
+        async function loadMessages() {
+            const listEl = document.getElementById('messages-list');
+            const emptyEl = document.getElementById('messages-empty');
+            if (!listEl || !emptyEl) return;
+
+            const { data: { user }, error: authError } = await _supabase.auth.getUser();
+            if (authError || !user) return;
+
+            const { data, error } = await _supabase
+                .from('patient_messages')
+                .select('id, subject, body, created_at, read_at')
+                .eq('patient_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error || !data || !data.length) {
+                listEl.innerHTML = '';
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+
+            emptyEl.classList.add('hidden');
+            listEl.innerHTML = data.map(msg => `
+                <div class="bg-white border border-[#EDE1E7] rounded-xl shadow-sm p-6">
+                    <div class="flex items-start justify-between gap-4 mb-2">
+                        <h4 class="text-lg italic text-[#2A2330]">${escapeHtmlMsg(msg.subject || (currentLang === 'en' ? 'Message' : 'Mensaje'))}</h4>
+                        <span class="text-[10px] uppercase tracking-widest opacity-50 whitespace-nowrap">${formatDate(String(msg.created_at || '').split('T')[0])}</span>
+                    </div>
+                    <p class="text-sm font-light opacity-80 leading-relaxed">${escapeHtmlMsg(msg.body)}</p>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtmlMsg(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
         }
 
         window.cancelMyAppointment = async (appointmentId) => {
@@ -592,6 +648,7 @@
         function switchView(viewId, navElement) {
             document.getElementById('dashboard-view').classList.add('hidden');
             document.getElementById('booking-view').classList.add('hidden');
+            document.getElementById('messages-view').classList.add('hidden');
             document.getElementById(viewId).classList.remove('hidden');
 
             if(navElement) {
@@ -1008,6 +1065,7 @@
 
             loadPatientProfile();
             loadAppointmentsOverview();
+            loadMessages();
             document.getElementById('book-date').addEventListener('change', updateAvailableTimes);
             document.getElementById('profile-form').addEventListener('submit', async (event) => {
                 event.preventDefault();
