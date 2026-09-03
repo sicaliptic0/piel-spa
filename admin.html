@@ -909,7 +909,7 @@
         // --- CORE NAVIGATION & AUTH ---
         async function checkAdmin() {
             const { data: { user } } = await _supabase.auth.getUser();
-            const admins = ['samuel.galviz@gmail.com', 'freddyjosevp@gmail.com']; // Updated email
+            const admins = ['samuel.galviz@gmail.com', 'freddyjosevp@gmail.com', 'pielspanyc@gmail.com']; // Updated email
             if (!user || !admins.includes(user.email)) { window.location.href = 'index.html'; return; }
             fetchPatients();
             refreshPendingBadge(); // Show pending count on sidebar from the start
