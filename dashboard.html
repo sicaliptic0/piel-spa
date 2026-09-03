@@ -1038,7 +1038,28 @@
             submitBtn.disabled = false;
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        // Redirige al cuestionario de historia clínica si el paciente aún no lo ha completado.
+        async function checkIntakeStatus() {
+            const { data: { user }, error: authError } = await _supabase.auth.getUser();
+            if (authError || !user) return true;
+
+            const { data } = await _supabase
+                .from('admission_history')
+                .select('intake_completed_at')
+                .eq('patient_id', user.id)
+                .maybeSingle();
+
+            if (!data || !data.intake_completed_at) {
+                window.location.href = 'intake.html';
+                return false;
+            }
+            return true;
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const canStay = await checkIntakeStatus();
+            if (!canStay) return;
+
             updateLanguage();
             renderTreatmentDropdownOptions();
             syncTreatmentsSelectedSummary();

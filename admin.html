@@ -170,6 +170,8 @@
                 </button>
                 <div id="admission-section" class="hidden border-t border-[#EDE1E7] p-4 space-y-4">
 
+                    <p class="text-[9px] uppercase tracking-widest opacity-40" id="adm-source-note">Cuestionario completado por el paciente. Puedes editar cualquier campo.</p>
+
                     <!-- Escalas -->
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div>
@@ -200,12 +202,13 @@
                                 <option value="">—</option>
                                 <option value="oily">Grasa</option>
                                 <option value="dry">Seca</option>
-                                <option value="mixed">Mixta</option>
+                                <option value="combination">Mixta</option>
+                                <option value="normal">Normal</option>
                                 <option value="sensitive">Sensible</option>
                             </select>
                         </div>
                         <div>
-                            <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Escala de Merz</label>
+                            <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Escala de Merz (General)</label>
                             <select id="adm-merz" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
                                 <option value="">—</option>
                                 <option value="0">0 · Sin alteración</option>
@@ -217,28 +220,117 @@
                         </div>
                     </div>
 
-                    <!-- Motivo de Consulta -->
-                    <div>
-                        <label class="text-[9px] uppercase font-bold opacity-40 mb-2 block">Motivo de Consulta</label>
-                        <div class="flex flex-wrap gap-4">
-                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#B76E88]" value="wrinkles"> Arrugas</label>
-                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#B76E88]" value="spots"> Manchas</label>
-                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#B76E88]" value="texture"> Textura</label>
-                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#B76E88]" value="fillers"> Rellenos</label>
-                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#B76E88]" value="sagging"> Flacidez</label>
-                            <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="adm-reason accent-[#B76E88]" value="other"> Otros</label>
+                    <!-- Escalas Merz por sub-área -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div>
+                            <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Merz · Surco Nasogeniano</label>
+                            <select id="adm-merz-nasolabial" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                                <option value="">—</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Merz · Líneas de Marioneta</label>
+                            <select id="adm-merz-marionette" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                                <option value="">—</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Merz · Volumen Tercio Medio</label>
+                            <select id="adm-merz-midface" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                                <option value="">—</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Merz · Cejas / Frente</label>
+                            <select id="adm-merz-brow" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                                <option value="">—</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+                            </select>
                         </div>
                     </div>
 
-                    <!-- Examen Físico -->
+                    <!-- Contacto de Emergencia + Tamizaje -->
+                    <details class="border border-[#EDE1E7] rounded-lg">
+                        <summary class="px-3 py-2 text-[9px] uppercase font-bold text-[#B76E88] cursor-pointer">Contacto de Emergencia y Dirección</summary>
+                        <div class="p-3 pt-1 space-y-3">
+                            <input type="text" id="adm-address" placeholder="Dirección física" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                <input type="text" id="adm-ec-name" placeholder="Nombre" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                                <input type="text" id="adm-ec-relationship" placeholder="Relación" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                                <input type="tel" id="adm-ec-phone" placeholder="Teléfono" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                            </div>
+                            <div>
+                                <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">¿Embarazada / Lactando / Buscando concebir?</label>
+                                <select id="adm-pregnancy" style="padding:8px;font-size:12px;width:100%;max-width:220px;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                                    <option value="">—</option>
+                                    <option value="yes">Sí</option>
+                                    <option value="no">No</option>
+                                </select>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Motivo de Consulta -->
+                    <details class="border border-[#EDE1E7] rounded-lg" open>
+                        <summary class="px-3 py-2 text-[9px] uppercase font-bold text-[#B76E88] cursor-pointer">Motivo de Consulta</summary>
+                        <div class="p-3 pt-1 space-y-3">
+                            <div class="flex flex-wrap gap-x-4 gap-y-2" id="adm-reasons-list"></div>
+                            <div id="adm-reasons-other-container" class="space-y-2"></div>
+                            <button type="button" onclick="addAdmOtherRow('adm-reasons-other-container')" class="text-[9px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1 rounded-full hover:bg-[#B76E88] hover:text-white transition">+ Otro motivo</button>
+                            <div>
+                                <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Evento Próximo (2–4 semanas)</label>
+                                <input type="date" id="adm-event-date" style="padding:8px;font-size:12px;width:100%;max-width:220px;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Antecedentes Médicos -->
+                    <details class="border border-[#EDE1E7] rounded-lg">
+                        <summary class="px-3 py-2 text-[9px] uppercase font-bold text-[#B76E88] cursor-pointer">Antecedentes Médicos</summary>
+                        <div class="p-3 pt-1 space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2" id="adm-medical-list"></div>
+                            <div id="adm-medical-other-container" class="space-y-2"></div>
+                            <button type="button" onclick="addAdmOtherRow('adm-medical-other-container')" class="text-[9px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1 rounded-full hover:bg-[#B76E88] hover:text-white transition">+ Otra condición</button>
+                        </div>
+                    </details>
+
+                    <!-- Medicamentos y Alergias -->
+                    <details class="border border-[#EDE1E7] rounded-lg">
+                        <summary class="px-3 py-2 text-[9px] uppercase font-bold text-[#B76E88] cursor-pointer">Medicamentos, Suplementos y Alergias</summary>
+                        <div class="p-3 pt-1 space-y-3">
+                            <label class="text-[9px] uppercase font-bold opacity-40 block">Anticoagulantes / AINEs / Suplementos</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2" id="adm-blood-thinners-list"></div>
+                            <label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" id="adm-isotretinoin" class="accent-[#B76E88]"> Isotretinoína oral en últimos 6–12 meses</label>
+                            <label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" id="adm-topical-retinoid" class="accent-[#B76E88]"> Retinoides tópicos en últimos 7 días</label>
+                            <label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" id="adm-photo-antibiotics" class="accent-[#B76E88]"> Antibióticos fotosensibilizantes</label>
+                            <label class="text-[9px] uppercase font-bold opacity-40 block pt-2">Alergias</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2" id="adm-allergies-list"></div>
+                            <div id="adm-allergies-other-container" class="space-y-2"></div>
+                            <button type="button" onclick="addAdmOtherRow('adm-allergies-other-container')" class="text-[9px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1 rounded-full hover:bg-[#B76E88] hover:text-white transition">+ Otra alergia</button>
+                        </div>
+                    </details>
+
+                    <!-- Antecedentes Quirúrgicos -->
+                    <details class="border border-[#EDE1E7] rounded-lg">
+                        <summary class="px-3 py-2 text-[9px] uppercase font-bold text-[#B76E88] cursor-pointer">Antecedentes Quirúrgicos</summary>
+                        <div class="p-3 pt-1 space-y-3">
+                            <label class="text-[9px] uppercase font-bold opacity-40 block">Cirugías Faciales / Cabeza y Cuello</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2" id="adm-surgical-facial-list"></div>
+                            <label class="text-[9px] uppercase font-bold opacity-40 block pt-2">Cirugías Generales y Corporales</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2" id="adm-surgical-general-list"></div>
+                            <div id="adm-surgical-other-container" class="space-y-2"></div>
+                            <button type="button" onclick="addAdmOtherSurgicalRow()" class="text-[9px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1 rounded-full hover:bg-[#B76E88] hover:text-white transition">+ Otra cirugía</button>
+                        </div>
+                    </details>
+
+                    <!-- Examen Físico (texto libre, legado) -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                             <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Cicatrices / Manchas (Localización y cantidad)</label>
                             <textarea id="adm-scars" rows="3" placeholder="Ej: Cicatriz mejilla derecha x1, Melasma frontal..." style="width:100%;padding:8px;font-size:12px;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;resize:vertical;"></textarea>
                         </div>
                         <div>
-                            <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Antecedentes Personales</label>
-                            <textarea id="adm-personal-history" rows="3" placeholder="Alergias, enfermedades, medicamentos, cirugías previas..." style="width:100%;padding:8px;font-size:12px;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;resize:vertical;"></textarea>
+                            <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Notas Personales Adicionales</label>
+                            <textarea id="adm-personal-history" rows="3" placeholder="Cualquier nota que no encaje en las categorías de arriba..." style="width:100%;padding:8px;font-size:12px;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;resize:vertical;"></textarea>
                         </div>
                     </div>
 
@@ -248,17 +340,26 @@
                             <label class="text-[9px] uppercase font-bold opacity-40">Antecedentes Estéticos</label>
                             <button type="button" onclick="addAestheticRow()" class="text-[9px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1 rounded-full hover:bg-[#B76E88] hover:text-white transition">+ Agregar</button>
                         </div>
-                        <div id="aesthetic-header-row" class="grid gap-2 mb-1 px-1 hidden md:grid" style="grid-template-columns: 2fr 2fr 1fr 2fr auto;">
+                        <div id="aesthetic-header-row" class="grid gap-2 mb-1 px-1 hidden md:grid" style="grid-template-columns: 1.6fr 1.3fr 1.3fr 1.4fr 1.4fr auto;">
                             <span class="text-[8px] uppercase tracking-widest opacity-40 font-bold">Procedimiento</span>
                             <span class="text-[8px] uppercase tracking-widest opacity-40 font-bold">Área</span>
-                            <span class="text-[8px] uppercase tracking-widest opacity-40 font-bold">Cant.</span>
-                            <span class="text-[8px] uppercase tracking-widest opacity-40 font-bold">Tiempo</span>
+                            <span class="text-[8px] uppercase tracking-widest opacity-40 font-bold">Fecha Aprox.</span>
+                            <span class="text-[8px] uppercase tracking-widest opacity-40 font-bold">Marca/Producto</span>
+                            <span class="text-[8px] uppercase tracking-widest opacity-40 font-bold">Reacciones Adversas</span>
                             <span></span>
                         </div>
                         <div id="aesthetic-history-rows" class="space-y-2">
                             <p class="aesthetic-empty text-xs opacity-30 italic text-center py-2">Sin antecedentes estéticos registrados.</p>
                         </div>
                     </div>
+
+                    <!-- Consentimiento y Firma (solo lectura) -->
+                    <details class="border border-[#EDE1E7] rounded-lg">
+                        <summary class="px-3 py-2 text-[9px] uppercase font-bold text-[#B76E88] cursor-pointer">Consentimiento y Firma (solo lectura)</summary>
+                        <div class="p-3 pt-1 space-y-2 text-xs" id="adm-consent-display">
+                            <p>Sin datos de consentimiento todavía.</p>
+                        </div>
+                    </details>
 
                     <button type="button" onclick="saveAdmissionHistory()" class="w-full bg-[#2A2330] text-white py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition shadow-md rounded-lg">Guardar Historia de Ingreso</button>
                 </div>
@@ -913,6 +1014,7 @@
             if (!user || !admins.includes(user.email)) { window.location.href = 'index.html'; return; }
             fetchPatients();
             refreshPendingBadge(); // Show pending count on sidebar from the start
+            renderAdmissionOptionLists();
         }
 
         function switchAdminView(viewId, element) {
@@ -1502,6 +1604,156 @@
         });
 
         // --- ADMISSION HISTORY ---
+        // Mismos códigos que usa intake.html, para que los datos que llena el paciente
+        // y los que edita el admin usen exactamente el mismo vocabulario.
+        const ADM_CONCERN_OPTIONS = [
+            { id: 'fine_lines_wrinkles', label: 'Líneas Finas y Arrugas' },
+            { id: 'volume_loss', label: 'Pérdida de Volumen Facial' },
+            { id: 'skin_laxity', label: 'Flacidez Cutánea' },
+            { id: 'hyperpigmentation', label: 'Hiperpigmentación / Melasma' },
+            { id: 'redness_rosacea', label: 'Enrojecimiento / Rosácea' },
+            { id: 'skin_texture', label: 'Textura de Piel / Poros' },
+            { id: 'acne_breakouts', label: 'Acné / Brotes Activos' },
+            { id: 'acne_scarring', label: 'Cicatrices de Acné' },
+            { id: 'lip_volume', label: 'Definición / Volumen Labial' },
+            { id: 'double_chin', label: 'Papada' },
+            { id: 'uneven_tone', label: 'Tono de Piel Desigual' },
+            { id: 'asymmetry', label: 'Asimetría / Balance Facial' },
+        ];
+        const ADM_MEDICAL_CONDITIONS = [
+            { id: 'hypertension', label: 'Hipertensión' },
+            { id: 'diabetes', label: 'Diabetes' },
+            { id: 'asthma_respiratory', label: 'Asma / Respiratorio' },
+            { id: 'bleeding_clotting_disorder', label: 'Trastorno de Sangrado/Coagulación' },
+            { id: 'hypothyroidism', label: 'Hipotiroidismo' },
+            { id: 'hyperthyroidism', label: 'Hipertiroidismo' },
+            { id: 'cold_sores_hsv', label: 'Herpes Labial / VHS' },
+            { id: 'neuromuscular_disorder', label: 'Trastorno Neuromuscular' },
+            { id: 'autoimmune_disorder', label: 'Trastorno Autoinmune' },
+            { id: 'keloid_hypertrophic_scarring', label: 'Queloides / Cicatrices Hipertróficas' },
+            { id: 'active_skin_condition', label: 'Condición de Piel Activa en Área a Tratar' },
+            { id: 'cancer_chemo_radiation', label: 'Cáncer / Quimio / Radiación' },
+            { id: 'anaphylaxis_severe_allergy', label: 'Anafilaxia / Alergia Severa' },
+            { id: 'vasovagal_syncope', label: 'Síncope Vasovagal' },
+            { id: 'eye_vision_condition', label: 'Condición Ocular / Visual' },
+        ];
+        const ADM_BLOOD_THINNERS = [
+            { id: 'prescription_anticoagulants', label: 'Anticoagulantes Recetados' },
+            { id: 'aspirin', label: 'Aspirina' },
+            { id: 'daily_nsaids', label: 'AINEs Diarios' },
+            { id: 'bruising_supplements', label: 'Suplementos (Omega-3, Vit. E, Ginkgo, Ajo)' },
+        ];
+        const ADM_ALLERGY_OPTIONS = [
+            { id: 'lidocaine_anesthetics', label: 'Lidocaína / Anestésicos Tópicos' },
+            { id: 'latex_nitrile', label: 'Látex / Nitrilo' },
+            { id: 'antibiotics_allergy', label: 'Antibióticos' },
+            { id: 'chlorhexidine_iodine_alcohol', label: 'Clorhexidina / Yodo / Alcohol' },
+            { id: 'albumin_milk_protein', label: 'Albúmina Humana / Proteína de Leche' },
+            { id: 'bee_wasp_stings', label: 'Picaduras de Abeja / Avispa' },
+        ];
+        const ADM_SURGICAL_FACIAL = [
+            { id: 'rhinoplasty_septoplasty', label: 'Rinoplastia / Septoplastia' },
+            { id: 'blepharoplasty', label: 'Blefaroplastia' },
+            { id: 'facelift_necklift_browlift', label: 'Lifting Facial / Cuello / Cejas' },
+            { id: 'facial_implants', label: 'Implantes Faciales' },
+            { id: 'thyroidectomy', label: 'Tiroidectomía' },
+            { id: 'maxillofacial_orthognathic', label: 'Cirugía Maxilofacial / Ortognática' },
+        ];
+        const ADM_SURGICAL_GENERAL = [
+            { id: 'cesarean_section', label: 'Cesárea' },
+            { id: 'vaginal_delivery', label: 'Partos Vaginales' },
+            { id: 'breast_augmentation_mastopexy', label: 'Aumento de Senos / Mastopexia' },
+            { id: 'liposuction', label: 'Liposucción' },
+            { id: 'fat_transfer_bbl', label: 'Transferencia de Grasa / BBL' },
+            { id: 'abdominoplasty', label: 'Abdominoplastia' },
+            { id: 'cholecystectomy_appendectomy_hernia', label: 'Colecistectomía / Apendicectomía / Hernia' },
+        ];
+        const ADM_AESTHETIC_ITEMS = [
+            { v: '', l: 'Procedimiento...' },
+            { v: 'botox', l: 'Botox' }, { v: 'dysport', l: 'Dysport' }, { v: 'xeomin', l: 'Xeomin' }, { v: 'daxxify', l: 'Daxxify' }, { v: 'jeuveau', l: 'Jeuveau' },
+            { v: 'juvederm', l: 'Juvéderm' }, { v: 'restylane', l: 'Restylane' }, { v: 'belotero', l: 'Belotero' }, { v: 'rha_collection', l: 'RHA Collection' },
+            { v: 'sculptra', l: 'Sculptra (PLLA)' }, { v: 'radiesse', l: 'Radiesse (CaHA)' },
+            { v: 'bellafill', l: 'Bellafill/Artefill' }, { v: 'silicone_biopolymers', l: 'Silicona/Biopolímeros' },
+            { v: 'pdo_threads', l: 'Hilos PDO' }, { v: 'plla_pcl_threads', l: 'Hilos PLLA/PCL' },
+            { v: 'fractional_co2', l: 'CO2 Fraccionado' }, { v: 'erbium_yag', l: 'Erbio' },
+            { v: 'clear_brilliant', l: 'Clear+Brilliant' }, { v: 'fraxel_1550', l: 'Fraxel 1550' }, { v: 'halo', l: 'Halo' }, { v: 'genesis', l: 'Genesis' },
+            { v: 'ipl_photofacial', l: 'IPL' }, { v: 'vbeam_pdl', l: 'VBeam/PDL' }, { v: 'picosure_picoway', l: 'PicoSure/PicoWay' },
+            { v: 'morpheus8', l: 'Morpheus8' }, { v: 'sylfirm_x', l: 'Sylfirm X' }, { v: 'sofwave', l: 'Sofwave' }, { v: 'ultherapy', l: 'Ultherapy' }, { v: 'thermage', l: 'Thermage' },
+            { v: 'superficial_peel', l: 'Peel Superficial' }, { v: 'medium_peel', l: 'Peel Medio' }, { v: 'deep_phenol_peel', l: 'Peel Profundo (Fenol)' },
+            { v: 'microneedling_prp', l: 'Microneedling/PRP/PRF' },
+            { v: 'vascular_occlusion', l: 'Complicación: Oclusión Vascular' }, { v: 'delayed_granulomas', l: 'Complicación: Granulomas' }, { v: 'migration_necrosis', l: 'Complicación: Migración/Necrosis' }, { v: 'biofilm_infection', l: 'Complicación: Biofilm/Infección' },
+        ];
+
+        function renderAdmCheckboxList(containerId, options, className) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = options.map(o => `
+                <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="${className} accent-[#B76E88]" value="${o.id}"> ${escapeHtml(o.label)}</label>
+            `).join('');
+        }
+
+        function renderAdmissionOptionLists() {
+            renderAdmCheckboxList('adm-reasons-list', ADM_CONCERN_OPTIONS, 'adm-reason');
+            renderAdmCheckboxList('adm-medical-list', ADM_MEDICAL_CONDITIONS, 'adm-medical');
+            renderAdmCheckboxList('adm-blood-thinners-list', ADM_BLOOD_THINNERS, 'adm-blood-thinner');
+            renderAdmCheckboxList('adm-allergies-list', ADM_ALLERGY_OPTIONS, 'adm-allergy');
+            renderAdmCheckboxList('adm-surgical-facial-list', ADM_SURGICAL_FACIAL, 'adm-surgical-facial');
+            renderAdmCheckboxList('adm-surgical-general-list', ADM_SURGICAL_GENERAL, 'adm-surgical-general');
+        }
+
+        function addAdmOtherRow(containerId, value = '') {
+            const container = document.getElementById(containerId);
+            const row = document.createElement('div');
+            row.className = 'flex gap-2 adm-other-row';
+            row.innerHTML = `
+                <input type="text" class="adm-other-input" value="${escapeHtml(value)}" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                <button type="button" onclick="this.closest('.adm-other-row').remove()" class="text-red-400 hover:text-red-600 text-xl leading-none px-1">&times;</button>
+            `;
+            container.appendChild(row);
+        }
+        function getAdmOtherValues(containerId) {
+            return Array.from(document.querySelectorAll('#' + containerId + ' .adm-other-input')).map(i => i.value.trim()).filter(Boolean);
+        }
+
+        function addAdmOtherSurgicalRow(data = {}) {
+            const container = document.getElementById('adm-surgical-other-container');
+            const row = document.createElement('div');
+            row.className = 'grid grid-cols-1 md:grid-cols-2 gap-2 adm-other-surgical-row';
+            row.innerHTML = `
+                <input type="text" class="adm-os-name" placeholder="Nombre de la cirugía" value="${escapeHtml(data.name || '')}" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                <div class="flex gap-2">
+                    <input type="text" class="adm-os-date" placeholder="Fecha aproximada" value="${escapeHtml(data.approximate_date || '')}" style="padding:8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
+                    <button type="button" onclick="this.closest('.adm-other-surgical-row').remove()" class="text-red-400 hover:text-red-600 text-xl leading-none px-1">&times;</button>
+                </div>
+            `;
+            container.appendChild(row);
+        }
+        function getAdmOtherSurgicalValues() {
+            return Array.from(document.querySelectorAll('#adm-surgical-other-container .adm-other-surgical-row')).map(row => ({
+                name: row.querySelector('.adm-os-name').value.trim(),
+                approximate_date: row.querySelector('.adm-os-date').value.trim(),
+            })).filter(r => r.name);
+        }
+
+        function renderAdmConsentDisplay(data) {
+            const el = document.getElementById('adm-consent-display');
+            if (!el) return;
+            if (!data || !data.intake_completed_at) {
+                el.innerHTML = '<p class="opacity-40">Sin datos de consentimiento todavía (el paciente no ha completado el cuestionario).</p>';
+                return;
+            }
+            const yn = (v) => v ? '✓ Sí' : '— No';
+            el.innerHTML = `
+                <p>HIPAA reconocido: <strong>${yn(data.hipaa_acknowledged)}</strong></p>
+                <p>Consentimiento de fotos clínicas: <strong>${yn(data.photo_consent_required)}</strong></p>
+                <p>Consentimiento de marketing (opcional): <strong>${yn(data.photo_consent_marketing)}</strong></p>
+                <p>Declaración de exactitud: <strong>${yn(data.accuracy_confirmed)}</strong></p>
+                <p>Firma (nombre escrito): <strong>${escapeHtml(data.signature_typed_name || '—')}</strong> ${data.signature_date ? '· ' + escapeHtml(data.signature_date) : ''}</p>
+                ${data.signature_image ? `<img src="${data.signature_image}" alt="Firma" style="max-width:220px;border:1px solid #EDE1E7;border-radius:8px;background:#fff;margin-top:6px;">` : ''}
+                <p class="pt-1 opacity-40">Cuestionario completado el ${new Date(data.intake_completed_at).toLocaleString()}.</p>
+            `;
+        }
+
         function toggleAdmissionSection() {
             const section = document.getElementById('admission-section');
             const chevron = document.getElementById('adm-chevron');
@@ -1515,65 +1767,62 @@
             if (empty) empty.remove();
 
             const fieldStyle = 'padding:6px 8px;font-size:11px;border:1px solid #EDE1E7;border-radius:6px;background:#fff;width:100%;outline-color:#B76E88;';
-            const procOptions = [
-                { v: '',               l: 'Procedimiento...' },
-                { v: 'botox',          l: 'Bótox' },
-                { v: 'fillers',        l: 'Rellenos' },
-                { v: 'biostimulators', l: 'Bioestimuladores' },
-                { v: 'threads',        l: 'Hilos' },
-                { v: 'peelings',       l: 'Peelings' },
-                { v: 'laser',          l: 'Láser' },
-            ];
-            const unitOptions = [
-                { v: 'days',   l: 'Días' },
-                { v: 'weeks',  l: 'Semanas' },
-                { v: 'months', l: 'Meses' },
-                { v: 'years',  l: 'Años' },
-            ];
+            // Compatibilidad: filas viejas usaban {procedure, area}; el cuestionario del
+            // paciente guarda {item_id, treated_area}. Aceptamos ambas formas al leer.
+            const itemId = data.item_id ?? data.procedure ?? '';
+            const area = data.treated_area ?? data.area ?? '';
 
             const rowDiv = document.createElement('div');
             rowDiv.className = 'aesthetic-row grid gap-2 items-center';
-            rowDiv.style.gridTemplateColumns = '2fr 2fr 1fr 2fr auto';
+            rowDiv.style.gridTemplateColumns = '1.6fr 1.3fr 1.3fr 1.4fr 1.4fr auto';
 
             rowDiv.innerHTML = `
-                <select class="aest-proc" style="${fieldStyle}">
-                    ${procOptions.map(o => `<option value="${o.v}" ${data.procedure === o.v ? 'selected' : ''}>${o.l}</option>`).join('')}
+                <select class="aest-item" style="${fieldStyle}">
+                    ${ADM_AESTHETIC_ITEMS.map(o => `<option value="${o.v}" ${itemId === o.v ? 'selected' : ''}>${o.l}</option>`).join('')}
                 </select>
-                <input class="aest-area" type="text" value="${escapeHtml(data.area || '')}" placeholder="Área tratada" style="${fieldStyle}">
-                <input class="aest-qty" type="number" value="${escapeHtml(String(data.quantity || ''))}" placeholder="N°" min="0" style="${fieldStyle}">
-                <div class="flex gap-1">
-                    <input class="aest-time-val" type="number" value="${escapeHtml(String(data.time_value || ''))}" placeholder="N°" min="0" style="${fieldStyle}">
-                    <select class="aest-time-unit" style="${fieldStyle}">
-                        ${unitOptions.map(o => `<option value="${o.v}" ${data.time_unit === o.v ? 'selected' : ''}>${o.l}</option>`).join('')}
-                    </select>
-                </div>
+                <input class="aest-area" type="text" value="${escapeHtml(area)}" placeholder="Área tratada" style="${fieldStyle}">
+                <input class="aest-date" type="text" value="${escapeHtml(data.approximate_date || '')}" placeholder="Fecha aprox." style="${fieldStyle}">
+                <input class="aest-brand" type="text" value="${escapeHtml(data.brand_product || '')}" placeholder="Marca/Producto" style="${fieldStyle}">
+                <input class="aest-reactions" type="text" value="${escapeHtml(data.adverse_reactions || '')}" placeholder="Reacciones adversas" style="${fieldStyle}">
                 <button type="button" onclick="this.closest('.aesthetic-row').remove()" class="text-red-400 hover:text-red-600 font-bold text-xl leading-none px-1">&times;</button>
             `;
             container.appendChild(rowDiv);
         }
 
         function getAestheticData() {
-            return Array.from(document.querySelectorAll('#aesthetic-history-rows .aesthetic-row')).map(row => ({
-                procedure:  row.querySelector('.aest-proc').value,
-                area:       row.querySelector('.aest-area').value,
-                quantity:   row.querySelector('.aest-qty').value,
-                time_value: row.querySelector('.aest-time-val').value,
-                time_unit:  row.querySelector('.aest-time-unit').value
-            })).filter(r => r.procedure || r.area);
+            return Array.from(document.querySelectorAll('#aesthetic-history-rows .aesthetic-row')).map(row => {
+                const itemId = row.querySelector('.aest-item').value;
+                const itemLabel = row.querySelector('.aest-item').selectedOptions[0]?.text || '';
+                return {
+                    item_id: itemId,
+                    item_label: itemLabel,
+                    treated_area: row.querySelector('.aest-area').value.trim(),
+                    approximate_date: row.querySelector('.aest-date').value.trim(),
+                    brand_product: row.querySelector('.aest-brand').value.trim(),
+                    adverse_reactions: row.querySelector('.aest-reactions').value.trim(),
+                };
+            }).filter(r => r.item_id || r.treated_area);
         }
 
         async function loadAdmissionHistory(patientId) {
             currentAdmissionId = null;
             // Reset fields
-            ['adm-fitzpatrick','adm-glogau','adm-skin-type','adm-merz'].forEach(id => {
+            ['adm-fitzpatrick','adm-glogau','adm-skin-type','adm-merz','adm-merz-nasolabial','adm-merz-marionette','adm-merz-midface','adm-merz-brow','adm-pregnancy'].forEach(id => {
                 const el = document.getElementById(id); if (el) el.value = '';
             });
-            ['adm-scars','adm-personal-history'].forEach(id => {
+            ['adm-scars','adm-personal-history','adm-address','adm-ec-name','adm-ec-relationship','adm-ec-phone','adm-event-date'].forEach(id => {
                 const el = document.getElementById(id); if (el) el.value = '';
             });
-            document.querySelectorAll('.adm-reason').forEach(cb => cb.checked = false);
+            ['adm-isotretinoin','adm-topical-retinoid','adm-photo-antibiotics'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.checked = false;
+            });
+            document.querySelectorAll('.adm-reason,.adm-medical,.adm-blood-thinner,.adm-allergy,.adm-surgical-facial,.adm-surgical-general').forEach(cb => cb.checked = false);
+            ['adm-reasons-other-container','adm-medical-other-container','adm-allergies-other-container','adm-surgical-other-container'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.innerHTML = '';
+            });
             const container = document.getElementById('aesthetic-history-rows');
             if (container) container.innerHTML = '<p class="aesthetic-empty text-xs opacity-30 italic text-center py-2">Sin antecedentes estéticos registrados.</p>';
+            renderAdmConsentDisplay(null);
 
             const { data } = await _supabase
                 .from('admission_history')
@@ -1589,11 +1838,41 @@
             set('adm-glogau', data.glogau);
             set('adm-skin-type', data.skin_type);
             set('adm-merz', data.merz_scale);
+            set('adm-merz-nasolabial', data.merz_nasolabial);
+            set('adm-merz-marionette', data.merz_marionette);
+            set('adm-merz-midface', data.merz_midface);
+            set('adm-merz-brow', data.merz_brow);
             set('adm-scars', data.scars_spots);
             set('adm-personal-history', data.personal_history);
+            set('adm-address', data.address);
+            set('adm-ec-name', data.emergency_contact_name);
+            set('adm-ec-relationship', data.emergency_contact_relationship);
+            set('adm-ec-phone', data.emergency_contact_phone);
+            set('adm-pregnancy', data.pregnancy_or_nursing);
+            set('adm-event-date', data.upcoming_event_date);
 
-            const reasons = Array.isArray(data.consultation_reasons) ? data.consultation_reasons : [];
-            document.querySelectorAll('.adm-reason').forEach(cb => { cb.checked = reasons.includes(cb.value); });
+            document.getElementById('adm-isotretinoin').checked = !!data.retinoid_isotretinoin_recent;
+            document.getElementById('adm-topical-retinoid').checked = !!data.retinoid_topical_recent;
+            document.getElementById('adm-photo-antibiotics').checked = !!data.photosensitizing_antibiotics;
+
+            const checkGroup = (className, values) => {
+                const safe = Array.isArray(values) ? values : [];
+                document.querySelectorAll('.' + className).forEach(cb => { cb.checked = safe.includes(cb.value); });
+            };
+            checkGroup('adm-reason', data.consultation_reasons);
+            checkGroup('adm-medical', data.medical_conditions);
+            checkGroup('adm-blood-thinner', data.blood_thinners);
+            checkGroup('adm-allergy', data.allergies);
+            checkGroup('adm-surgical-facial', data.surgical_history_facial);
+            checkGroup('adm-surgical-general', data.surgical_history_general);
+
+            (data.consultation_reasons_other || []).forEach(v => addAdmOtherRow('adm-reasons-other-container', v));
+            (data.medical_conditions_other || []).forEach(v => addAdmOtherRow('adm-medical-other-container', v));
+            (data.allergies_other || []).forEach(v => addAdmOtherRow('adm-allergies-other-container', v));
+
+            let surgicalOther = data.surgical_history_other;
+            if (typeof surgicalOther === 'string') { try { surgicalOther = JSON.parse(surgicalOther); } catch(_) { surgicalOther = []; } }
+            (Array.isArray(surgicalOther) ? surgicalOther : []).forEach(row => addAdmOtherSurgicalRow(row));
 
             let aesthetic = data.aesthetic_history;
             if (typeof aesthetic === 'string') { try { aesthetic = JSON.parse(aesthetic); } catch(_) { aesthetic = []; } }
@@ -1604,21 +1883,48 @@
             } else {
                 if (container) container.innerHTML = '<p class="aesthetic-empty text-xs opacity-30 italic text-center py-2">Sin antecedentes estéticos registrados.</p>';
             }
+
+            renderAdmConsentDisplay(data);
         }
 
         async function saveAdmissionHistory() {
             if (!currentPatientId) return;
 
-            const reasons = Array.from(document.querySelectorAll('.adm-reason:checked')).map(cb => cb.value);
+            const getChecked = (className) => Array.from(document.querySelectorAll('.' + className + ':checked')).map(cb => cb.value);
+
             const payload = {
                 patient_id:            currentPatientId,
                 fitzpatrick:           document.getElementById('adm-fitzpatrick').value || null,
                 glogau:                document.getElementById('adm-glogau').value || null,
                 skin_type:             document.getElementById('adm-skin-type').value || null,
                 merz_scale:            document.getElementById('adm-merz').value || null,
-                consultation_reasons:  reasons,
+                merz_nasolabial:       document.getElementById('adm-merz-nasolabial').value || null,
+                merz_marionette:       document.getElementById('adm-merz-marionette').value || null,
+                merz_midface:          document.getElementById('adm-merz-midface').value || null,
+                merz_brow:             document.getElementById('adm-merz-brow').value || null,
                 scars_spots:           document.getElementById('adm-scars').value.trim() || null,
                 personal_history:      document.getElementById('adm-personal-history').value.trim() || null,
+                address:               document.getElementById('adm-address').value.trim() || null,
+                emergency_contact_name: document.getElementById('adm-ec-name').value.trim() || null,
+                emergency_contact_relationship: document.getElementById('adm-ec-relationship').value.trim() || null,
+                emergency_contact_phone: document.getElementById('adm-ec-phone').value.trim() || null,
+                pregnancy_or_nursing:  document.getElementById('adm-pregnancy').value || null,
+                upcoming_event_date:   document.getElementById('adm-event-date').value || null,
+
+                consultation_reasons:       getChecked('adm-reason'),
+                consultation_reasons_other: getAdmOtherValues('adm-reasons-other-container'),
+                medical_conditions:         getChecked('adm-medical'),
+                medical_conditions_other:   getAdmOtherValues('adm-medical-other-container'),
+                blood_thinners:             getChecked('adm-blood-thinner'),
+                retinoid_isotretinoin_recent: document.getElementById('adm-isotretinoin').checked,
+                retinoid_topical_recent:      document.getElementById('adm-topical-retinoid').checked,
+                photosensitizing_antibiotics: document.getElementById('adm-photo-antibiotics').checked,
+                allergies:                  getChecked('adm-allergy'),
+                allergies_other:            getAdmOtherValues('adm-allergies-other-container'),
+                surgical_history_facial:    getChecked('adm-surgical-facial'),
+                surgical_history_general:   getChecked('adm-surgical-general'),
+                surgical_history_other:     getAdmOtherSurgicalValues(),
+
                 aesthetic_history:     getAestheticData(),
                 updated_at:            new Date().toISOString()
             };

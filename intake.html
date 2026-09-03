@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical History | Piel Spa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;500&family=Outfit:wght@300;400;500&family=Montserrat:wght@600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --iris-gradient-text: linear-gradient(120deg, #D97CA0 0%, #B87CD1 50%, #7CA3D9 100%);
+        }
+        body { font-family: 'Outfit', sans-serif; background-color: #FDFBFC; color: #2A2330; }
+        h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; }
+        .brand-piel {
+            font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
+            background-image: var(--iris-gradient-text); -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        .brand-spa {
+            font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500;
+            letter-spacing: 0; text-transform: none; color: #2A2330;
+        }
+        .btn-gold { background-color: #B76E88; color: white; transition: 0.3s; }
+        .btn-gold:hover { background-color: #9C5570; }
+        .btn-gold:disabled { opacity: 0.4; cursor: not-allowed; }
+        .field-input { width: 100%; padding: 0.9rem; border: 1px solid #EDE1E7; background: #FDFBFC; outline: none; font-size: 0.875rem; border-radius: 0.5rem; }
+        .field-input:focus { border-color: #B76E88; }
+        .check-card { border: 1px solid #EDE1E7; border-radius: 0.75rem; padding: 0.9rem 1rem; cursor: pointer; transition: 0.2s; display: flex; align-items: flex-start; gap: 0.75rem; background: #fff; }
+        .check-card:hover { border-color: #B76E88; }
+        .check-card.checked { border-color: #B76E88; background: #FBF0F3; }
+        .radio-card { border: 2px solid #EDE1E7; border-radius: 0.75rem; padding: 0.9rem; cursor: pointer; transition: 0.2s; background: #fff; }
+        .radio-card:hover { border-color: #B76E88; }
+        .radio-card.selected { border-color: #B76E88; background: #FBF0F3; }
+        details.acc-section > summary { list-style: none; cursor: pointer; }
+        details.acc-section > summary::-webkit-details-marker { display: none; }
+        details.acc-section[open] .acc-chevron { transform: rotate(180deg); }
+        .aesthetic-subform { border-left: 2px solid #B76E88; }
+        .module-screen { animation: fadein 0.25s ease; }
+        @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        #signature-pad { touch-action: none; }
+    </style>
+</head>
+<body class="min-h-screen pb-28">
+
+    <header class="w-full py-4 px-4 md:px-12 flex justify-between items-center bg-white border-b border-[#EDE1E7] sticky top-0 z-40">
+        <div class="text-[13px] md:text-xl whitespace-nowrap">
+            <span class="brand-piel">Piel</span> <span class="brand-spa">spa</span>
+        </div>
+        <button id="lang-toggle" onclick="toggleLanguage()" class="text-[9px] md:text-[10px] tracking-widest text-[#B76E88] hover:text-[#2A2330] uppercase transition">EN / ES</button>
+    </header>
+
+    <div class="max-w-2xl mx-auto px-4 md:px-6 pt-6">
+        <div class="flex justify-between items-center text-[10px] uppercase tracking-widest opacity-50 mb-2">
+            <span><span data-en="Step" data-es="Paso">Paso</span> <span id="progress-current">1</span> / 8</span>
+            <span id="progress-title" class="text-right"></span>
+        </div>
+        <div class="w-full h-1.5 bg-[#EDE1E7] rounded-full overflow-hidden">
+            <div id="progress-bar" class="h-full bg-[#B76E88] transition-all duration-300" style="width: 12.5%;"></div>
+        </div>
+    </div>
+
+    <main class="max-w-2xl mx-auto px-4 md:px-6 py-8 space-y-6">
+
+        <!-- ============ MODULE 1: DEMOGRAPHICS ============ -->
+        <div id="module-1" class="module-screen space-y-6">
+            <div>
+                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 1" data-es="Módulo 1">Module 1</span>
+                <h2 class="text-3xl text-[#2A2330]" data-en="Patient Information" data-es="Información del Paciente">Patient Information</h2>
+                <p class="text-sm font-light opacity-70 mt-1" data-en="Please confirm your details and complete a few additional items." data-es="Confirma tus datos y completa algunos campos adicionales.">Please confirm your details and complete a few additional items.</p>
+            </div>
+
+            <div class="bg-white border border-[#EDE1E7] rounded-xl p-5 space-y-2 text-sm">
+                <div class="flex justify-between border-b border-[#EDE1E7] pb-2"><span class="opacity-50 uppercase text-[10px] tracking-widest" data-en="Full Name" data-es="Nombre Completo">Full Name</span><span id="m1-full-name" class="font-medium"></span></div>
+                <div class="flex justify-between border-b border-[#EDE1E7] pb-2"><span class="opacity-50 uppercase text-[10px] tracking-widest" data-en="Date of Birth" data-es="Fecha de Nacimiento">Date of Birth</span><span id="m1-dob" class="font-medium"></span></div>
+                <div class="flex justify-between border-b border-[#EDE1E7] pb-2"><span class="opacity-50 uppercase text-[10px] tracking-widest" data-en="Sex" data-es="Sexo">Sex</span><span id="m1-sex" class="font-medium"></span></div>
+                <div class="flex justify-between border-b border-[#EDE1E7] pb-2"><span class="opacity-50 uppercase text-[10px] tracking-widest" data-en="Phone" data-es="Teléfono">Phone</span><span id="m1-phone" class="font-medium"></span></div>
+                <div class="flex justify-between"><span class="opacity-50 uppercase text-[10px] tracking-widest" data-en="Email" data-es="Correo">Email</span><span id="m1-email" class="font-medium"></span></div>
+            </div>
+
+            <div>
+                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="Physical Address" data-es="Dirección Física">Physical Address</label>
+                <input type="text" id="m1-address" class="field-input" data-en-ph="Street, City, State, ZIP" data-es-ph="Calle, Ciudad, Estado, Código Postal">
+            </div>
+
+            <div class="bg-[#FBF0F3] border border-[#EDE1E7] rounded-xl p-5">
+                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-3" data-en="Emergency Contact" data-es="Contacto de Emergencia">Emergency Contact</label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <input type="text" id="m1-ec-name" class="field-input" data-en-ph="Name" data-es-ph="Nombre">
+                    <input type="text" id="m1-ec-relationship" class="field-input" data-en-ph="Relationship" data-es-ph="Relación">
+                    <input type="tel" id="m1-ec-phone" class="field-input" data-en-ph="Phone Number" data-es-ph="Teléfono">
+                </div>
+            </div>
+
+            <div id="m1-pregnancy-block" class="hidden">
+                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="Are you currently pregnant, trying to conceive, or breastfeeding?" data-es="¿Estás actualmente embarazada, buscando concebir, o amamantando?">Are you currently pregnant, trying to conceive, or breastfeeding?</label>
+                <div class="flex gap-3">
+                    <label class="radio-card flex-1 text-center" data-group="pregnancy" data-value="yes"><input type="radio" name="m1-pregnancy" value="yes" class="hidden"><span data-en="Yes" data-es="Sí">Yes</span></label>
+                    <label class="radio-card flex-1 text-center" data-group="pregnancy" data-value="no"><input type="radio" name="m1-pregnancy" value="no" class="hidden"><span data-en="No" data-es="No">No</span></label>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ MODULE 2: CHIEF COMPLAINT ============ -->
+        <div id="module-2" class="module-screen hidden space-y-6">
+            <div>
+                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 2" data-es="Módulo 2">Module 2</span>
+                <h2 class="text-3xl text-[#2A2330]" data-en="Reason for Visit & Goals" data-es="Motivo de Consulta y Objetivos">Reason for Visit & Goals</h2>
+                <p class="text-sm font-light opacity-70 mt-1" data-en="Select all that apply." data-es="Selecciona todas las que apliquen.">Select all that apply.</p>
+            </div>
+            <div id="m2-concerns" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <input type="checkbox" id="m2-other-toggle" class="accent-[#B76E88]" onchange="document.getElementById('m2-other-container').classList.toggle('hidden', !this.checked)">
+                    <label for="m2-other-toggle" class="text-sm" data-en="Other" data-es="Otro">Other</label>
+                </div>
+                <div id="m2-other-container" class="hidden space-y-2 ml-6"></div>
+                <button type="button" onclick="addOtherRow('m2-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otro">+ Add Another</button>
+            </div>
+            <div>
+                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="Do you have an event within the next 2–4 weeks? (wedding, photo shoot, vacation)" data-es="¿Tienes algún evento en las próximas 2–4 semanas? (boda, sesión de fotos, vacaciones)">Do you have an event within the next 2–4 weeks?</label>
+                <input type="date" id="m2-event-date" class="field-input max-w-xs">
+            </div>
+        </div>
+
+        <!-- ============ MODULE 3: MEDICAL HISTORY ============ -->
+        <div id="module-3" class="module-screen hidden space-y-6">
+            <div>
+                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 3" data-es="Módulo 3">Module 3</span>
+                <h2 class="text-3xl text-[#2A2330]" data-en="Medical History" data-es="Historial Médico">Medical History</h2>
+                <p class="text-sm font-light opacity-70 mt-1" data-en="Select all conditions that apply to you." data-es="Selecciona todas las condiciones que apliquen.">Select all conditions that apply to you.</p>
+            </div>
+            <div id="m3-conditions" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <input type="checkbox" id="m3-other-toggle" class="accent-[#B76E88]" onchange="document.getElementById('m3-other-container').classList.toggle('hidden', !this.checked)">
+                    <label for="m3-other-toggle" class="text-sm" data-en="Other Medical Condition" data-es="Otra Condición Médica">Other Medical Condition</label>
+                </div>
+                <div id="m3-other-container" class="hidden space-y-2 ml-6"></div>
+                <button type="button" onclick="addOtherRow('m3-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Condition" data-es="+ Agregar Condición">+ Add Condition</button>
+            </div>
+        </div>
+
+        <!-- ============ MODULE 4: MEDICATIONS & ALLERGIES ============ -->
+        <div id="module-4" class="module-screen hidden space-y-6">
+            <div>
+                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 4" data-es="Módulo 4">Module 4</span>
+                <h2 class="text-3xl text-[#2A2330]" data-en="Medications, Supplements & Allergies" data-es="Medicamentos, Suplementos y Alergias">Medications, Supplements & Allergies</h2>
+            </div>
+
+            <div>
+                <h4 class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-3" data-en="Blood Thinners, NSAIDs & Supplements" data-es="Anticoagulantes, AINEs y Suplementos">Blood Thinners, NSAIDs & Supplements</h4>
+                <div id="m4-blood-thinners" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
+
+            <div class="bg-[#FBF0F3] border border-[#EDE1E7] rounded-xl p-5 space-y-4">
+                <h4 class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold" data-en="Retinoids & Photosensitizing Drugs" data-es="Retinoides y Fármacos Fotosensibilizantes">Retinoids & Photosensitizing Drugs</h4>
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" id="m4-isotretinoin" class="mt-1 accent-[#B76E88]">
+                    <span class="text-sm" data-en="Oral Isotretinoin (Accutane) taken within the last 6–12 months?" data-es="¿Isotretinoína oral (Accutane) tomada en los últimos 6–12 meses?">Oral Isotretinoin (Accutane) taken within the last 6–12 months?</span>
+                </label>
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" id="m4-topical-retinoid" class="mt-1 accent-[#B76E88]">
+                    <span class="text-sm" data-en="Topical Retinoids (Retin-A, Differin, Tazorac) used in the last 7 days?" data-es="¿Retinoides tópicos (Retin-A, Differin, Tazorac) usados en los últimos 7 días?">Topical Retinoids used in the last 7 days?</span>
+                </label>
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" id="m4-photo-antibiotics" class="mt-1 accent-[#B76E88]">
+                    <span class="text-sm" data-en="Photosensitizing Antibiotics (Doxycycline, Minocycline, Bactrim)" data-es="Antibióticos fotosensibilizantes (Doxiciclina, Minociclina, Bactrim)">Photosensitizing Antibiotics</span>
+                </label>
+            </div>
+
+            <div>
+                <h4 class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-3" data-en="Allergies" data-es="Alergias">Allergies</h4>
+                <div id="m4-allergies" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                <div class="mt-3">
+                    <div class="flex items-center gap-2 mb-2">
+                        <input type="checkbox" id="m4-other-toggle" class="accent-[#B76E88]" onchange="document.getElementById('m4-other-container').classList.toggle('hidden', !this.checked)">
+                        <label for="m4-other-toggle" class="text-sm" data-en="Other Allergies" data-es="Otras Alergias">Other Allergies</label>
+                    </div>
+                    <div id="m4-other-container" class="hidden space-y-2 ml-6"></div>
+                    <button type="button" onclick="addOtherRow('m4-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otra">+ Add Another</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ MODULE 5: SURGICAL HISTORY ============ -->
+        <div id="module-5" class="module-screen hidden space-y-6">
+            <div>
+                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 5" data-es="Módulo 5">Module 5</span>
+                <h2 class="text-3xl text-[#2A2330]" data-en="Surgical History" data-es="Antecedentes Quirúrgicos">Surgical History</h2>
+            </div>
+            <div>
+                <h4 class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-3" data-en="Facial / Head & Neck Surgeries" data-es="Cirugías Faciales / Cabeza y Cuello">Facial / Head & Neck Surgeries</h4>
+                <div id="m5-facial" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
+            <div>
+                <h4 class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-3" data-en="General & Body Surgeries" data-es="Cirugías Generales y Corporales">General & Body Surgeries</h4>
+                <div id="m5-general" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <input type="checkbox" id="m5-other-toggle" class="accent-[#B76E88]" onchange="document.getElementById('m5-other-container').classList.toggle('hidden', !this.checked)">
+                    <label for="m5-other-toggle" class="text-sm" data-en="Other Surgical Procedure" data-es="Otro Procedimiento Quirúrgico">Other Surgical Procedure</label>
+                </div>
+                <div id="m5-other-container" class="hidden space-y-2 ml-6"></div>
+                <button type="button" onclick="addOtherSurgicalRow()" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otra">+ Add Another</button>
+            </div>
+        </div>
+
+        <!-- ============ MODULE 6: AESTHETIC TREATMENT HISTORY ============ -->
+        <div id="module-6" class="module-screen hidden space-y-4">
+            <div>
+                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 6" data-es="Módulo 6">Module 6</span>
+                <h2 class="text-3xl text-[#2A2330]" data-en="Previous Aesthetic Treatments" data-es="Antecedentes Estéticos Previos">Previous Aesthetic Treatments</h2>
+                <p class="text-sm font-light opacity-70 mt-1" data-en="Check any you've had before. Selecting one will ask a few quick details." data-es="Marca los que te hayas hecho antes. Al seleccionar uno te pediremos algunos detalles rápidos.">Check any you've had before.</p>
+            </div>
+            <div id="m6-categories" class="space-y-3"></div>
+            <div>
+                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="Other Aesthetic Treatment" data-es="Otro Tratamiento Estético">Other Aesthetic Treatment</label>
+                <input type="text" id="m6-other-input" class="field-input" data-en-ph="Describe" data-es-ph="Describe">
+            </div>
+        </div>
+
+        <!-- ============ MODULE 7: SKIN CLASSIFICATION & SCALES ============ -->
+        <div id="module-7" class="module-screen hidden space-y-8">
+            <div>
+                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 7" data-es="Módulo 7">Module 7</span>
+                <h2 class="text-3xl text-[#2A2330]" data-en="Skin Classification" data-es="Clasificación Cutánea">Skin Classification</h2>
+            </div>
+            <div>
+                <h4 class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-3" data-en="Fitzpatrick Skin Phototype" data-es="Fototipo de Piel Fitzpatrick">Fitzpatrick Skin Phototype</h4>
+                <div id="m7-fitzpatrick" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
+            <div>
+                <h4 class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-3" data-en="Skin Type" data-es="Tipo de Piel">Skin Type</h4>
+                <div id="m7-skintype" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
+            <div>
+                <h4 class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-3" data-en="Glogau Scale of Photoaging" data-es="Escala de Glogau de Fotoenvejecimiento">Glogau Scale of Photoaging</h4>
+                <div id="m7-glogau" class="grid grid-cols-1 gap-3"></div>
+            </div>
+            <div id="m7-merz-section" class="space-y-5">
+                <h4 class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold" data-en="Merz Scale (Focused Areas)" data-es="Escala de Merz (Zonas Focalizadas)">Merz Scale (Focused Areas)</h4>
+                <div id="m7-merz-groups" class="space-y-5"></div>
+            </div>
+        </div>
+
+        <!-- ============ MODULE 8: CONSENT & SIGNATURE ============ -->
+        <div id="module-8" class="module-screen hidden space-y-6">
+            <div>
+                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 8" data-es="Módulo 8">Module 8</span>
+                <h2 class="text-3xl text-[#2A2330]" data-en="Consent & Signature" data-es="Consentimiento y Firma">Consent & Signature</h2>
+            </div>
+
+            <div class="bg-white border border-[#EDE1E7] rounded-xl p-5 max-h-40 overflow-y-auto text-xs opacity-70 leading-relaxed" data-en="Notice of Privacy Practices: We are committed to protecting the privacy of your health information in accordance with HIPAA. Your medical history, treatment records and clinical photographs are kept confidential and are only used for your care, internal quality review, and legally required purposes, unless you separately authorize additional uses below. You may request a copy of your records at any time. (Please review the full Notice of Privacy Practices provided at the clinic.)" data-es="Aviso de Prácticas de Privacidad: Nos comprometemos a proteger la privacidad de tu información de salud conforme a HIPAA. Tu historia clínica, registros de tratamiento y fotografías clínicas se mantienen confidenciales y solo se usan para tu atención, revisión interna de calidad, y fines legalmente requeridos, salvo que autorices usos adicionales abajo. Puedes solicitar una copia de tus registros en cualquier momento. (Revisa el Aviso de Prácticas de Privacidad completo disponible en la clínica.)">
+                Notice of Privacy Practices placeholder text.
+            </div>
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" id="m8-hipaa" class="mt-1 accent-[#B76E88]" required>
+                <span class="text-sm" data-en="I acknowledge and consent to the handling of my confidential medical information as described above." data-es="Reconozco y acepto el manejo de mi información médica confidencial como se describe arriba.">I acknowledge and consent to the handling of my confidential medical information as described above.</span>
+            </label>
+
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" id="m8-photo-required" class="mt-1 accent-[#B76E88]" required>
+                <span class="text-sm" data-en="Required: I consent to clinical intake and record keeping, including clinical photographs for my chart." data-es="Obligatorio: Consiento la toma de fotografías clínicas para mi expediente e historia clínica.">Required: I consent to clinical intake &amp; record keeping.</span>
+            </label>
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" id="m8-photo-marketing" class="mt-1 accent-[#B76E88]">
+                <span class="text-sm" data-en="Optional: I consent to the use of de-identified photos for social media / educational marketing." data-es="Opcional: Consiento el uso de fotos no identificables para redes sociales / marketing educativo.">Optional: de-identified social media / educational marketing.</span>
+            </label>
+
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" id="m8-accuracy" class="mt-1 accent-[#B76E88]" required>
+                <span class="text-sm" data-en="I confirm that the medical history provided above is complete, accurate, and up to date to the best of my knowledge." data-es="Confirmo que la historia médica proporcionada arriba está completa, es precisa y está actualizada a mi mejor conocimiento.">I confirm that the medical history provided above is complete and accurate.</span>
+            </label>
+
+            <div>
+                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="Type Full Name as Electronic Signature" data-es="Escribe tu Nombre Completo como Firma Electrónica">Type Full Name as Electronic Signature</label>
+                <input type="text" id="m8-signature-name" class="field-input" required>
+            </div>
+
+            <div>
+                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="Or Sign Below (optional)" data-es="O Firma Aquí Abajo (opcional)">Or Sign Below (optional)</label>
+                <canvas id="signature-pad" width="500" height="150" class="border border-[#EDE1E7] rounded-lg bg-white w-full" style="height:150px;"></canvas>
+                <button type="button" onclick="clearSignature()" class="mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="Clear" data-es="Borrar">Clear</button>
+            </div>
+        </div>
+
+    </main>
+
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-[#EDE1E7] p-4 z-40">
+        <div class="max-w-2xl mx-auto flex justify-between items-center gap-4">
+            <button id="btn-prev" onclick="goPrev()" class="px-6 py-3 uppercase text-[10px] tracking-widest font-bold border border-[#EDE1E7] text-[#2A2330] hover:border-[#B76E88] transition rounded-lg" data-en="Back" data-es="Anterior">Back</button>
+            <button id="btn-next" onclick="goNext()" class="btn-gold px-8 py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg" data-en="Next" data-es="Siguiente">Next</button>
+            <button id="btn-submit" onclick="submitIntake()" class="btn-gold hidden px-8 py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg" data-en="Submit" data-es="Enviar">Submit</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+    const SUPABASE_URL = 'https://qkjmrnqkoipdltauweub.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFram1ybnFrb2lwZGx0YXV3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTkyMjgsImV4cCI6MjA4OTA5NTIyOH0.EGqgJ9RNY9vYfuVeeEcGoMu_cIaygRq0hnyT-iE7zTw';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let currentLang = localStorage.getItem('preferredLang') || 'es';
+    let currentModule = 1;
+    const TOTAL_MODULES = 8;
+    let currentUser = null;
+    let currentAdmissionId = null;
+
+    const MODULE_TITLES = {
+        1: { en: 'Patient Information', es: 'Información del Paciente' },
+        2: { en: 'Reason & Goals', es: 'Motivo y Objetivos' },
+        3: { en: 'Medical History', es: 'Historial Médico' },
+        4: { en: 'Medications & Allergies', es: 'Medicamentos y Alergias' },
+        5: { en: 'Surgical History', es: 'Antecedentes Quirúrgicos' },
+        6: { en: 'Aesthetic History', es: 'Antecedentes Estéticos' },
+        7: { en: 'Skin Classification', es: 'Clasificación Cutánea' },
+        8: { en: 'Consent & Signature', es: 'Consentimiento y Firma' },
+    };
+
+    // ---------- OPTION DATA ----------
+    const CONCERN_OPTIONS = [
+        { id: 'fine_lines_wrinkles', en: 'Fine Lines & Wrinkles (Dynamic / Static)', es: 'Líneas Finas y Arrugas (Dinámicas / Estáticas)' },
+        { id: 'volume_loss', en: 'Loss of Facial Volume / Hollows', es: 'Pérdida de Volumen Facial / Hundimientos' },
+        { id: 'skin_laxity', en: 'Skin Laxity / Sagging (Jowls, Neck, Midface)', es: 'Flacidez Cutánea (Papada, Cuello, Tercio Medio)' },
+        { id: 'hyperpigmentation', en: 'Hyperpigmentation / Sun Damage / Melasma', es: 'Hiperpigmentación / Daño Solar / Melasma' },
+        { id: 'redness_rosacea', en: 'Redness / Broken Capillaries / Rosacea', es: 'Enrojecimiento / Capilares Rotos / Rosácea' },
+        { id: 'skin_texture', en: 'Skin Texture / Enlarged Pores / Roughness', es: 'Textura de Piel / Poros Dilatados / Aspereza' },
+        { id: 'acne_breakouts', en: 'Acne / Active Breakouts / Congested Pores', es: 'Acné / Brotes Activos / Poros Congestionados' },
+        { id: 'acne_scarring', en: 'Acne Scarring / Surgical Scars', es: 'Cicatrices de Acné / Cicatrices Quirúrgicas' },
+        { id: 'lip_volume', en: 'Lip Definition / Volume Enhancement', es: 'Definición Labial / Aumento de Volumen' },
+        { id: 'double_chin', en: 'Double Chin / Submental Fullness', es: 'Papada / Plenitud Submentoniana' },
+        { id: 'uneven_tone', en: 'Uneven Skin Tone / Dullness', es: 'Tono de Piel Desigual / Opacidad' },
+        { id: 'asymmetry', en: 'Asymmetry / Facial Balance', es: 'Asimetría / Balance Facial' },
+    ];
+
+    const MEDICAL_CONDITIONS = [
+        { id: 'hypertension', en: 'Hypertension (High Blood Pressure)', es: 'Hipertensión (Presión Arterial Alta)' },
+        { id: 'diabetes', en: 'Diabetes (Type 1 / Type 2 / Pre-diabetes)', es: 'Diabetes (Tipo 1 / Tipo 2 / Pre-diabetes)' },
+        { id: 'asthma_respiratory', en: 'Asthma / Respiratory Conditions', es: 'Asma / Condiciones Respiratorias' },
+        { id: 'bleeding_clotting_disorder', en: 'Bleeding or Clotting Disorders', es: 'Trastornos de Sangrado o Coagulación' },
+        { id: 'hypothyroidism', en: 'Hypothyroidism (Levothyroxine / Synthroid)', es: 'Hipotiroidismo (Levotiroxina / Synthroid)' },
+        { id: 'hyperthyroidism', en: 'Hyperthyroidism (Methimazole / Tapazole)', es: 'Hipertiroidismo (Metimazol / Tapazole)' },
+        { id: 'cold_sores_hsv', en: 'History of Cold Sores / HSV (Herpes Simplex)', es: 'Antecedente de Herpes Labial / VHS' },
+        { id: 'neuromuscular_disorder', en: 'Neuromuscular Disorders (Myasthenia Gravis, ALS)', es: 'Trastornos Neuromusculares (Miastenia Gravis, ELA)' },
+        { id: 'autoimmune_disorder', en: 'Autoimmune Disorders (Lupus, Rheumatoid Arthritis)', es: 'Trastornos Autoinmunes (Lupus, Artritis Reumatoide)' },
+        { id: 'keloid_hypertrophic_scarring', en: 'History of Keloids or Hypertrophic Scarring', es: 'Antecedente de Queloides o Cicatrices Hipertróficas' },
+        { id: 'active_skin_condition', en: 'Active Skin Conditions in Treatment Area', es: 'Condiciones de Piel Activas en el Área a Tratar' },
+        { id: 'cancer_chemo_radiation', en: 'History of Cancer / Chemotherapy / Radiation', es: 'Antecedente de Cáncer / Quimioterapia / Radiación' },
+        { id: 'anaphylaxis_severe_allergy', en: 'History of Anaphylaxis / Severe Allergies', es: 'Antecedente de Anafilaxia / Alergias Severas' },
+        { id: 'vasovagal_syncope', en: 'History of Vasovagal Syncope (Fainting)', es: 'Antecedente de Síncope Vasovagal (Desmayos)' },
+        { id: 'eye_vision_condition', en: 'Eye / Vision Conditions (Glaucoma, Dry Eyes)', es: 'Condiciones Oculares / Visuales (Glaucoma, Ojo Seco)' },
+    ];
+
+    const BLOOD_THINNERS = [
+        { id: 'prescription_anticoagulants', en: 'Prescription Anticoagulants (Eliquis, Xarelto, Warfarin, Plavix)', es: 'Anticoagulantes Recetados (Eliquis, Xarelto, Warfarina, Plavix)' },
+        { id: 'aspirin', en: 'Aspirin / Baby Aspirin (81mg)', es: 'Aspirina / Aspirina Infantil (81mg)' },
+        { id: 'daily_nsaids', en: 'Daily NSAIDs (Ibuprofen, Aleve)', es: 'AINEs Diarios (Ibuprofeno, Aleve)' },
+        { id: 'bruising_supplements', en: 'High-Dose Supplements (Fish Oil, Vitamin E, Ginkgo, Garlic)', es: 'Suplementos en Dosis Alta (Aceite de Pescado, Vitamina E, Ginkgo, Ajo)' },
+    ];
+
+    const ALLERGY_OPTIONS = [
+        { id: 'lidocaine_anesthetics', en: 'Lidocaine / Topical Anesthetics', es: 'Lidocaína / Anestésicos Tópicos' },
+        { id: 'latex_nitrile', en: 'Latex / Nitrile', es: 'Látex / Nitrilo' },
+        { id: 'antibiotics_allergy', en: 'Antibiotics (Neomycin, Bacitracin, Penicillin)', es: 'Antibióticos (Neomicina, Bacitracina, Penicilina)' },
+        { id: 'chlorhexidine_iodine_alcohol', en: 'Chlorhexidine / Iodine / Alcohol', es: 'Clorhexidina / Yodo / Alcohol' },
+        { id: 'albumin_milk_protein', en: "Human Albumin / Cow's Milk Protein", es: 'Albúmina Humana / Proteína de Leche de Vaca' },
+        { id: 'bee_wasp_stings', en: 'Bee / Wasp Stings', es: 'Picaduras de Abeja / Avispa' },
+    ];
+
+    const SURGICAL_FACIAL = [
+        { id: 'rhinoplasty_septoplasty', en: 'Rhinoplasty / Septoplasty', es: 'Rinoplastia / Septoplastia' },
+        { id: 'blepharoplasty', en: 'Blepharoplasty (Eyelid Surgery)', es: 'Blefaroplastia (Cirugía de Párpados)' },
+        { id: 'facelift_necklift_browlift', en: 'Facelift / Neck Lift / Brow Lift', es: 'Lifting Facial / de Cuello / de Cejas' },
+        { id: 'facial_implants', en: 'Facial Implants (Chin, Cheek, Jawline)', es: 'Implantes Faciales (Mentón, Pómulo, Mandíbula)' },
+        { id: 'thyroidectomy', en: 'Thyroidectomy (Total / Partial)', es: 'Tiroidectomía (Total / Parcial)' },
+        { id: 'maxillofacial_orthognathic', en: 'Maxillofacial / Orthognathic Surgery', es: 'Cirugía Maxilofacial / Ortognática' },
+    ];
+
+    const SURGICAL_GENERAL = [
+        { id: 'cesarean_section', en: 'Cesarean Section (C-Section)', es: 'Cesárea' },
+        { id: 'vaginal_delivery', en: 'Natural Vaginal Deliveries', es: 'Partos Vaginales Naturales' },
+        { id: 'breast_augmentation_mastopexy', en: 'Breast Augmentation / Mastopexy / Reduction', es: 'Aumento de Senos / Mastopexia / Reducción' },
+        { id: 'liposuction', en: 'Liposuction (Body / Submental)', es: 'Liposucción (Corporal / Submentoniana)' },
+        { id: 'fat_transfer_bbl', en: 'Fat Transfer / Brazilian Butt Lift (BBL)', es: 'Transferencia de Grasa / BBL' },
+        { id: 'abdominoplasty', en: 'Abdominoplasty (Tummy Tuck)', es: 'Abdominoplastia' },
+        { id: 'cholecystectomy_appendectomy_hernia', en: 'Cholecystectomy / Appendectomy / Hernia Repair', es: 'Colecistectomía / Apendicectomía / Reparación de Hernia' },
+    ];
+
+    const AESTHETIC_CATEGORIES = [
+        { header: { en: 'Neuromodulators (Neurotoxins)', es: 'Neuromoduladores (Toxina Botulínica)' },
+          items: [
+            { id: 'botox', en: 'Botox', es: 'Botox' },
+            { id: 'dysport', en: 'Dysport', es: 'Dysport' },
+            { id: 'xeomin', en: 'Xeomin', es: 'Xeomin' },
+            { id: 'daxxify', en: 'Daxxify', es: 'Daxxify' },
+            { id: 'jeuveau', en: 'Jeuveau', es: 'Jeuveau' },
+          ] },
+        { header: { en: 'Dermal Fillers (Hyaluronic Acid)', es: 'Rellenos Dérmicos (Ácido Hialurónico)' },
+          items: [
+            { id: 'juvederm', en: 'Juvéderm', es: 'Juvéderm' },
+            { id: 'restylane', en: 'Restylane', es: 'Restylane' },
+            { id: 'belotero', en: 'Belotero', es: 'Belotero' },
+            { id: 'rha_collection', en: 'RHA Collection', es: 'RHA Collection' },
+          ] },
+        { header: { en: 'Biostimulators', es: 'Bioestimuladores' },
+          items: [
+            { id: 'sculptra', en: 'Sculptra (PLLA)', es: 'Sculptra (PLLA)' },
+            { id: 'radiesse', en: 'Radiesse (CaHA)', es: 'Radiesse (CaHA)' },
+          ] },
+        { header: { en: 'Permanent / Semi-Permanent Fillers', es: 'Rellenos Permanentes / Semipermanentes' },
+          items: [
+            { id: 'bellafill', en: 'Bellafill / Artefill', es: 'Bellafill / Artefill' },
+            { id: 'silicone_biopolymers', en: 'Silicone / Biopolymers', es: 'Silicona / Biopolímeros' },
+          ] },
+        { header: { en: 'Threads', es: 'Hilos' },
+          items: [
+            { id: 'pdo_threads', en: 'PDO Threads (Lifting / Mono)', es: 'Hilos PDO (Lifting / Mono)' },
+            { id: 'plla_pcl_threads', en: 'PLLA / PCL Threads', es: 'Hilos PLLA / PCL' },
+          ] },
+        { header: { en: 'Laser — Ablative', es: 'Láser — Ablativo' },
+          items: [
+            { id: 'fractional_co2', en: 'Fractional CO2', es: 'CO2 Fraccionado' },
+            { id: 'erbium_yag', en: 'Erbium (Erbium:YAG)', es: 'Erbio (Erbium:YAG)' },
+          ] },
+        { header: { en: 'Laser — Non-Ablative', es: 'Láser — No Ablativo' },
+          items: [
+            { id: 'clear_brilliant', en: 'Clear + Brilliant', es: 'Clear + Brilliant' },
+            { id: 'fraxel_1550', en: 'Fraxel 1550', es: 'Fraxel 1550' },
+            { id: 'halo', en: 'Halo', es: 'Halo' },
+            { id: 'genesis', en: 'Genesis', es: 'Genesis' },
+          ] },
+        { header: { en: 'Laser — Vascular / Pigment', es: 'Láser — Vascular / Pigmento' },
+          items: [
+            { id: 'ipl_photofacial', en: 'IPL (Photofacial)', es: 'IPL (Fotofacial)' },
+            { id: 'vbeam_pdl', en: 'VBeam / Pulsed Dye Laser', es: 'VBeam / Láser de Colorante Pulsado' },
+            { id: 'picosure_picoway', en: 'PicoSure / PicoWay', es: 'PicoSure / PicoWay' },
+          ] },
+        { header: { en: 'Skin Tightening / Ultrasound / RF', es: 'Reafirmación / Ultrasonido / RF' },
+          items: [
+            { id: 'morpheus8', en: 'Morpheus8', es: 'Morpheus8' },
+            { id: 'sylfirm_x', en: 'Sylfirm X', es: 'Sylfirm X' },
+            { id: 'sofwave', en: 'Sofwave', es: 'Sofwave' },
+            { id: 'ultherapy', en: 'Ultherapy', es: 'Ultherapy' },
+            { id: 'thermage', en: 'Thermage', es: 'Thermage' },
+          ] },
+        { header: { en: 'Chemical Peels', es: 'Peelings Químicos' },
+          items: [
+            { id: 'superficial_peel', en: 'Superficial (Glycolic, Salicylic)', es: 'Superficial (Glicólico, Salicílico)' },
+            { id: 'medium_peel', en: 'Medium (Jessner, TCA, VI Peel)', es: 'Medio (Jessner, TCA, VI Peel)' },
+            { id: 'deep_phenol_peel', en: 'Deep (Phenol)', es: 'Profundo (Fenol)' },
+          ] },
+        { header: { en: 'Microneedling / PRP / PRF', es: 'Microneedling / PRP / PRF' },
+          items: [
+            { id: 'microneedling_prp', en: 'Microneedling / PRP / PRF', es: 'Microneedling / PRP / PRF' },
+          ] },
+        { header: { en: 'History of Filler Complications', es: 'Antecedentes de Complicaciones con Rellenos' },
+          items: [
+            { id: 'vascular_occlusion', en: 'Vascular Occlusion', es: 'Oclusión Vascular' },
+            { id: 'delayed_granulomas', en: 'Delayed Granulomas', es: 'Granulomas Tardíos' },
+            { id: 'migration_necrosis', en: 'Migration / Necrosis', es: 'Migración / Necrosis' },
+            { id: 'biofilm_infection', en: 'Biofilm / Infection', es: 'Biofilm / Infección' },
+          ] },
+    ];
+
+    const FITZPATRICK_TYPES = [
+        { id: 'I', color: '#F5D5C0', en: 'Type I — Pale white, blue/green eyes. Always burns, never tans.', es: 'Tipo I — Blanco pálido, ojos azules/verdes. Siempre se quema, nunca broncea.' },
+        { id: 'II', color: '#EEC29F', en: 'Type II — Fair skin. Burns easily, tans with difficulty.', es: 'Tipo II — Piel clara. Se quema fácil, broncea con dificultad.' },
+        { id: 'III', color: '#D8A57C', en: 'Type III — Darker white / golden fair. Mild burn, gradually tans.', es: 'Tipo III — Blanco oscuro / dorado claro. Quemadura leve, broncea gradualmente.' },
+        { id: 'IV', color: '#B87F55', en: 'Type IV — Light brown / olive. Rarely burns, tans easily.', es: 'Tipo IV — Marrón claro / oliva. Rara vez se quema, broncea fácil.' },
+        { id: 'V', color: '#8C5A34', en: 'Type V — Brown / dark brown. Very rarely burns.', es: 'Tipo V — Marrón / marrón oscuro. Muy rara vez se quema.' },
+        { id: 'VI', color: '#4A2E1E', en: 'Type VI — Deeply pigmented dark brown to black. Never burns.', es: 'Tipo VI — Marrón oscuro a negro profundamente pigmentado. Nunca se quema.' },
+    ];
+
+    const SKIN_TYPES = [
+        { id: 'oily', en: 'Oily — Shiny, enlarged pores, prone to blackheads.', es: 'Grasa — Brillante, poros dilatados, propensa a puntos negros.' },
+        { id: 'dry', en: 'Dry — Flaky, tight feeling, dull, small pores.', es: 'Seca — Descamada, sensación de tirantez, opaca, poros pequeños.' },
+        { id: 'combination', en: 'Combination — Oily T-zone, normal-to-dry cheeks.', es: 'Mixta — Zona T grasa, mejillas normales a secas.' },
+        { id: 'normal', en: 'Normal — Balanced, clear, not overly dry or oily.', es: 'Normal — Equilibrada, clara, no muy seca ni grasa.' },
+        { id: 'sensitive', en: 'Sensitive — Flushes easily, reacts with stinging/redness.', es: 'Sensible — Se enrojece fácil, reacciona con ardor/enrojecimiento.' },
+    ];
+
+    const GLOGAU_TYPES = [
+        { id: 'I', en: 'Type I (Mild) — Ages 20–30s, no wrinkles, minimal photoaging.', es: 'Tipo I (Leve) — 20 a 30 años, sin arrugas, fotoenvejecimiento mínimo.' },
+        { id: 'II', en: 'Type II (Moderate) — Ages 30–40s, wrinkles in motion, smile lines.', es: 'Tipo II (Moderado) — 30 a 40 años, arrugas en movimiento, líneas de expresión.' },
+        { id: 'III', en: 'Type III (Advanced) — Ages 50+, wrinkles at rest, visible dyschromia.', es: 'Tipo III (Avanzado) — 50+ años, arrugas en reposo, discromía visible.' },
+        { id: 'IV', en: 'Type IV (Severe) — Ages 60+, only wrinkles, deep wrinkles throughout.', es: 'Tipo IV (Severo) — 60+ años, solo arrugas, arrugas profundas en todo el rostro.' },
+    ];
+
+    const MERZ_SCALES = [
+        { key: 'nasolabial', en: 'Nasolabial Fold Scale', es: 'Escala de Surco Nasogeniano', triggers: ['skin_laxity', 'asymmetry'] },
+        { key: 'marionette', en: 'Marionette Line Scale', es: 'Escala de Líneas de Marioneta', triggers: ['skin_laxity'] },
+        { key: 'midface', en: 'Midface Volume Loss Scale', es: 'Escala de Pérdida de Volumen del Tercio Medio', triggers: ['volume_loss'] },
+        { key: 'brow', en: 'Brow Positioning / Forehead Lines Scale', es: 'Escala de Posición de Cejas / Líneas de la Frente', triggers: ['fine_lines_wrinkles'] },
+    ];
+
+    const MERZ_LEVELS = [
+        { v: 0, en: 'None', es: 'Ninguna' },
+        { v: 1, en: 'Mild', es: 'Leve' },
+        { v: 2, en: 'Moderate', es: 'Moderada' },
+        { v: 3, en: 'Severe', es: 'Severa' },
+        { v: 4, en: 'Very Severe', es: 'Muy Severa' },
+    ];
+
+    // ---------- HELPERS ----------
+    function escapeAttr(value) {
+        return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+    function t(obj) { return currentLang === 'en' ? obj.en : obj.es; }
+
+    function renderCheckGroup(containerId, options, checkboxClass) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = options.map(o => `
+            <label class="check-card" data-value="${o.id}">
+                <input type="checkbox" class="${checkboxClass} mt-0.5 accent-[#B76E88]" value="${o.id}" onchange="this.closest('.check-card').classList.toggle('checked', this.checked)">
+                <span class="text-sm" data-en="${escapeAttr(o.en)}" data-es="${escapeAttr(o.es)}">${o.en}</span>
+            </label>
+        `).join('');
+    }
+
+    function renderRadioGroup(containerId, options, groupName, colorSwatch) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = options.map(o => `
+            <label class="radio-card flex items-start gap-3" data-group="${groupName}" data-value="${o.id}">
+                <input type="radio" name="${groupName}" value="${o.id}" class="hidden mt-1">
+                ${colorSwatch ? `<span class="w-8 h-8 rounded-full flex-shrink-0 border border-black/10" style="background:${o.color}"></span>` : ''}
+                <span class="text-sm" data-en="${escapeAttr(o.en)}" data-es="${escapeAttr(o.es)}">${o.en}</span>
+            </label>
+        `).join('');
+        container.querySelectorAll('.radio-card').forEach(card => {
+            card.addEventListener('click', () => {
+                container.querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                card.querySelector('input').checked = true;
+            });
+        });
+    }
+
+    function getCheckedValues(className) {
+        return Array.from(document.querySelectorAll('.' + className + ':checked')).map(cb => cb.value);
+    }
+
+    function setCheckedValues(className, values) {
+        const safe = Array.isArray(values) ? values : [];
+        document.querySelectorAll('.' + className).forEach(cb => {
+            cb.checked = safe.includes(cb.value);
+            cb.closest('.check-card')?.classList.toggle('checked', cb.checked);
+        });
+    }
+
+    function getRadioValue(groupName) {
+        const el = document.querySelector(`input[name="${groupName}"]:checked`);
+        return el ? el.value : null;
+    }
+
+    function setRadioValue(containerId, groupName, value) {
+        if (!value) return;
+        const container = document.getElementById(containerId);
+        const target = container.querySelector(`.radio-card[data-value="${value}"]`);
+        if (target) {
+            container.querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected'));
+            target.classList.add('selected');
+            const input = target.querySelector('input');
+            if (input) input.checked = true;
+        }
+    }
+
+    function addOtherRow(containerId, value) {
+        const container = document.getElementById(containerId);
+        const row = document.createElement('div');
+        row.className = 'flex gap-2 other-row';
+        row.innerHTML = `
+            <input type="text" class="other-input field-input" value="${escapeAttr(value || '')}">
+            <button type="button" onclick="this.closest('.other-row').remove()" class="text-red-400 hover:text-red-600 text-2xl leading-none px-2">&times;</button>
+        `;
+        container.appendChild(row);
+    }
+
+    function getOtherValues(containerId) {
+        return Array.from(document.querySelectorAll('#' + containerId + ' .other-input')).map(i => i.value.trim()).filter(Boolean);
+    }
+
+    function addOtherSurgicalRow(data) {
+        const container = document.getElementById('m5-other-container');
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-1 md:grid-cols-2 gap-2 other-surgical-row';
+        row.innerHTML = `
+            <input type="text" class="os-name field-input" data-en-ph="Surgery name" data-es-ph="Nombre de la cirugía" value="${escapeAttr(data?.name || '')}">
+            <div class="flex gap-2">
+                <input type="text" class="os-date field-input" data-en-ph="Approximate date" data-es-ph="Fecha aproximada" value="${escapeAttr(data?.approximate_date || '')}">
+                <button type="button" onclick="this.closest('.other-surgical-row').remove()" class="text-red-400 hover:text-red-600 text-2xl leading-none px-2">&times;</button>
+            </div>
+        `;
+        container.appendChild(row);
+        applyPlaceholders();
+    }
+
+    function getOtherSurgicalValues() {
+        return Array.from(document.querySelectorAll('#m5-other-container .other-surgical-row')).map(row => ({
+            name: row.querySelector('.os-name').value.trim(),
+            approximate_date: row.querySelector('.os-date').value.trim(),
+        })).filter(r => r.name);
+    }
+
+    function applyPlaceholders() {
+        document.querySelectorAll('[data-en-ph]').forEach(el => {
+            el.placeholder = currentLang === 'en' ? el.getAttribute('data-en-ph') : el.getAttribute('data-es-ph');
+        });
+    }
+
+    // ---------- MODULE 6: AESTHETIC HISTORY ----------
+    function renderAestheticCategories() {
+        const container = document.getElementById('m6-categories');
+        container.innerHTML = AESTHETIC_CATEGORIES.map((cat, ci) => `
+            <details class="acc-section border border-[#EDE1E7] rounded-xl bg-white overflow-hidden">
+                <summary class="flex items-center justify-between px-4 py-3">
+                    <span class="text-sm font-medium" data-en="${escapeAttr(cat.header.en)}" data-es="${escapeAttr(cat.header.es)}">${cat.header.en}</span>
+                    <svg class="acc-chevron w-4 h-4 text-[#B76E88] transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="border-t border-[#EDE1E7] p-4 space-y-3">
+                    ${cat.items.map(it => `
+                        <div>
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" class="aesthetic-item-checkbox accent-[#B76E88]" value="${it.id}" onchange="toggleAestheticSubform(this)">
+                                <span class="text-sm" data-en="${escapeAttr(it.en)}" data-es="${escapeAttr(it.es)}">${it.en}</span>
+                            </label>
+                            <div class="aesthetic-subform hidden pl-7 mt-2 pb-1 grid grid-cols-1 md:grid-cols-2 gap-2" data-for="${it.id}">
+                                <input type="text" class="af-date field-input" data-en-ph="Approximate date" data-es-ph="Fecha aproximada">
+                                <input type="text" class="af-area field-input" data-en-ph="Treated area" data-es-ph="Área tratada">
+                                <input type="text" class="af-brand field-input" data-en-ph="Brand / product (if known)" data-es-ph="Marca / producto (si lo sabes)">
+                                <input type="text" class="af-reactions field-input" data-en-ph="Any adverse reactions?" data-es-ph="¿Alguna reacción adversa?">
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </details>
+        `).join('');
+        applyPlaceholders();
+    }
+
+    function toggleAestheticSubform(checkbox) {
+        const wrapper = checkbox.closest('label').nextElementSibling;
+        if (wrapper && wrapper.classList.contains('aesthetic-subform')) {
+            wrapper.classList.toggle('hidden', !checkbox.checked);
+        }
+    }
+
+    function getAestheticHistoryData() {
+        const rows = [];
+        document.querySelectorAll('.aesthetic-item-checkbox:checked').forEach(cb => {
+            const label = cb.closest('label').querySelector('span').innerText;
+            const subform = cb.closest('label').nextElementSibling;
+            rows.push({
+                item_id: cb.value,
+                item_label: label,
+                approximate_date: subform?.querySelector('.af-date')?.value.trim() || '',
+                treated_area: subform?.querySelector('.af-area')?.value.trim() || '',
+                brand_product: subform?.querySelector('.af-brand')?.value.trim() || '',
+                adverse_reactions: subform?.querySelector('.af-reactions')?.value.trim() || '',
+            });
+        });
+        const otherVal = document.getElementById('m6-other-input').value.trim();
+        if (otherVal) {
+            rows.push({ item_id: 'other', item_label: otherVal, approximate_date: '', treated_area: '', brand_product: '', adverse_reactions: '' });
+        }
+        return rows;
+    }
+
+    function setAestheticHistoryData(rows) {
+        const safe = Array.isArray(rows) ? rows : [];
+        safe.forEach(row => {
+            if (row.item_id === 'other') {
+                document.getElementById('m6-other-input').value = row.item_label || '';
+                return;
+            }
+            const cb = document.querySelector(`.aesthetic-item-checkbox[value="${row.item_id}"]`);
+            if (!cb) return;
+            cb.checked = true;
+            toggleAestheticSubform(cb);
+            const subform = cb.closest('label').nextElementSibling;
+            if (subform) {
+                subform.querySelector('.af-date').value = row.approximate_date || '';
+                subform.querySelector('.af-area').value = row.treated_area || '';
+                subform.querySelector('.af-brand').value = row.brand_product || '';
+                subform.querySelector('.af-reactions').value = row.adverse_reactions || '';
+            }
+        });
+    }
+
+    // ---------- MODULE 7: MERZ CONDITIONAL ----------
+    function renderMerzGroups() {
+        const concerns = getCheckedValues('concern-checkbox');
+        let applicable = MERZ_SCALES.filter(s => s.triggers.some(tr => concerns.includes(tr)));
+        if (!applicable.length) applicable = MERZ_SCALES;
+
+        const container = document.getElementById('m7-merz-groups');
+        container.innerHTML = applicable.map(scale => `
+            <div>
+                <p class="text-sm font-medium mb-2" data-en="${escapeAttr(scale.en)}" data-es="${escapeAttr(scale.es)}">${scale.en}</p>
+                <div class="grid grid-cols-5 gap-2" id="merz-${scale.key}">
+                    ${MERZ_LEVELS.map(l => `
+                        <label class="radio-card text-center py-2" data-group="merz-${scale.key}" data-value="${l.v}">
+                            <input type="radio" name="merz-${scale.key}" value="${l.v}" class="hidden">
+                            <div class="text-sm font-bold">${l.v}</div>
+                            <div class="text-[9px] uppercase tracking-widest opacity-60" data-en="${escapeAttr(l.en)}" data-es="${escapeAttr(l.es)}">${l.en}</div>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
+        container.querySelectorAll('.radio-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const group = card.dataset.group;
+                document.querySelectorAll(`.radio-card[data-group="${group}"]`).forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                card.querySelector('input').checked = true;
+            });
+        });
+        applyLanguage();
+    }
+
+    function getMerzValues() {
+        const result = {};
+        MERZ_SCALES.forEach(scale => {
+            const val = getRadioValue('merz-' + scale.key);
+            if (val !== null) result[scale.key] = parseInt(val, 10);
+        });
+        return result;
+    }
+
+    function setMerzValues(values) {
+        if (!values) return;
+        MERZ_SCALES.forEach(scale => {
+            const v = values[scale.key];
+            if (v === null || v === undefined) return;
+            const target = document.querySelector(`.radio-card[data-group="merz-${scale.key}"][data-value="${v}"]`);
+            if (target) {
+                target.classList.add('selected');
+                target.querySelector('input').checked = true;
+            }
+        });
+    }
+
+    // ---------- SIGNATURE PAD ----------
+    let sigCanvas, sigCtx, sigDrawing = false, sigHasContent = false;
+    function initSignaturePad() {
+        sigCanvas = document.getElementById('signature-pad');
+        sigCtx = sigCanvas.getContext('2d');
+        sigCtx.strokeStyle = '#2A2330';
+        sigCtx.lineWidth = 2;
+        sigCtx.lineCap = 'round';
+
+        function getPos(e) {
+            const rect = sigCanvas.getBoundingClientRect();
+            const scaleX = sigCanvas.width / rect.width;
+            const scaleY = sigCanvas.height / rect.height;
+            return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+        }
+        sigCanvas.addEventListener('pointerdown', (e) => {
+            sigDrawing = true;
+            const p = getPos(e);
+            sigCtx.beginPath();
+            sigCtx.moveTo(p.x, p.y);
+            e.preventDefault();
+        });
+        sigCanvas.addEventListener('pointermove', (e) => {
+            if (!sigDrawing) return;
+            const p = getPos(e);
+            sigCtx.lineTo(p.x, p.y);
+            sigCtx.stroke();
+            sigHasContent = true;
+            e.preventDefault();
+        });
+        window.addEventListener('pointerup', () => { sigDrawing = false; });
+    }
+    function clearSignature() {
+        sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+        sigHasContent = false;
+    }
+    function getSignatureDataUrl() {
+        return sigHasContent ? sigCanvas.toDataURL('image/png') : null;
+    }
+
+    // ---------- LANGUAGE ----------
+    function applyLanguage() {
+        document.querySelectorAll('[data-en]').forEach(el => {
+            el.innerText = el.getAttribute(`data-${currentLang}`);
+        });
+        document.getElementById('lang-toggle').innerText = currentLang === 'en' ? 'ES / EN' : 'EN / ES';
+        applyPlaceholders();
+        updateProgressUI();
+    }
+    function toggleLanguage() {
+        currentLang = currentLang === 'en' ? 'es' : 'en';
+        localStorage.setItem('preferredLang', currentLang);
+        applyLanguage();
+    }
+
+    // ---------- NAVIGATION ----------
+    function updateProgressUI() {
+        document.getElementById('progress-current').innerText = currentModule;
+        document.getElementById('progress-bar').style.width = (currentModule / TOTAL_MODULES * 100) + '%';
+        document.getElementById('progress-title').innerText = t(MODULE_TITLES[currentModule]);
+        document.getElementById('btn-prev').style.visibility = currentModule === 1 ? 'hidden' : 'visible';
+        document.getElementById('btn-next').classList.toggle('hidden', currentModule === TOTAL_MODULES);
+        document.getElementById('btn-submit').classList.toggle('hidden', currentModule !== TOTAL_MODULES);
+    }
+
+    function showModule(n) {
+        for (let i = 1; i <= TOTAL_MODULES; i++) {
+            document.getElementById('module-' + i).classList.toggle('hidden', i !== n);
+        }
+        currentModule = n;
+        if (n === 7) renderMerzGroups();
+        updateProgressUI();
+        window.scrollTo(0, 0);
+    }
+
+    function validateCurrentModule() {
+        if (currentModule === 8) {
+            const hipaa = document.getElementById('m8-hipaa').checked;
+            const photoRequired = document.getElementById('m8-photo-required').checked;
+            const accuracy = document.getElementById('m8-accuracy').checked;
+            const signatureName = document.getElementById('m8-signature-name').value.trim();
+            if (!hipaa || !photoRequired || !accuracy || !signatureName) {
+                alert(currentLang === 'en'
+                    ? 'Please accept the required consents and type your name as signature before submitting.'
+                    : 'Por favor acepta los consentimientos obligatorios y escribe tu nombre como firma antes de enviar.');
+                return false;
+            }
+        }
+        return true;
+    }
+
+    async function goNext() {
+        if (!validateCurrentModule()) return;
+        await saveProgress(false);
+        if (currentModule < TOTAL_MODULES) showModule(currentModule + 1);
+    }
+    function goPrev() {
+        if (currentModule > 1) showModule(currentModule - 1);
+    }
+
+    // ---------- COLLECT / FILL FORM STATE ----------
+    function collectFormData() {
+        return {
+            patient_id: currentUser.id,
+            address: document.getElementById('m1-address').value.trim() || null,
+            emergency_contact_name: document.getElementById('m1-ec-name').value.trim() || null,
+            emergency_contact_relationship: document.getElementById('m1-ec-relationship').value.trim() || null,
+            emergency_contact_phone: document.getElementById('m1-ec-phone').value.trim() || null,
+            pregnancy_or_nursing: getRadioValue('m1-pregnancy'),
+
+            consultation_reasons: getCheckedValues('concern-checkbox'),
+            consultation_reasons_other: getOtherValues('m2-other-container'),
+            upcoming_event_date: document.getElementById('m2-event-date').value || null,
+
+            medical_conditions: getCheckedValues('medical-checkbox'),
+            medical_conditions_other: getOtherValues('m3-other-container'),
+
+            blood_thinners: getCheckedValues('blood-thinner-checkbox'),
+            retinoid_isotretinoin_recent: document.getElementById('m4-isotretinoin').checked,
+            retinoid_topical_recent: document.getElementById('m4-topical-retinoid').checked,
+            photosensitizing_antibiotics: document.getElementById('m4-photo-antibiotics').checked,
+            allergies: getCheckedValues('allergy-checkbox'),
+            allergies_other: getOtherValues('m4-other-container'),
+
+            surgical_history_facial: getCheckedValues('surgical-facial-checkbox'),
+            surgical_history_general: getCheckedValues('surgical-general-checkbox'),
+            surgical_history_other: getOtherSurgicalValues(),
+
+            aesthetic_history: getAestheticHistoryData(),
+
+            fitzpatrick: getRadioValue('m7-fitzpatrick'),
+            skin_type: getRadioValue('m7-skintype'),
+            glogau: getRadioValue('m7-glogau'),
+            merz_nasolabial: getMerzValues().nasolabial ?? null,
+            merz_marionette: getMerzValues().marionette ?? null,
+            merz_midface: getMerzValues().midface ?? null,
+            merz_brow: getMerzValues().brow ?? null,
+
+            hipaa_acknowledged: document.getElementById('m8-hipaa').checked,
+            photo_consent_required: document.getElementById('m8-photo-required').checked,
+            photo_consent_marketing: document.getElementById('m8-photo-marketing').checked,
+            accuracy_confirmed: document.getElementById('m8-accuracy').checked,
+            signature_typed_name: document.getElementById('m8-signature-name').value.trim() || null,
+            signature_image: getSignatureDataUrl(),
+            signature_date: document.getElementById('m8-signature-name').value.trim() ? new Date().toISOString().split('T')[0] : null,
+
+            updated_at: new Date().toISOString(),
+        };
+    }
+
+    function fillFormFromData(data) {
+        if (!data) return;
+        document.getElementById('m1-address').value = data.address || '';
+        document.getElementById('m1-ec-name').value = data.emergency_contact_name || '';
+        document.getElementById('m1-ec-relationship').value = data.emergency_contact_relationship || '';
+        document.getElementById('m1-ec-phone').value = data.emergency_contact_phone || '';
+        if (data.pregnancy_or_nursing) setRadioValue('m1-pregnancy-block', 'm1-pregnancy', data.pregnancy_or_nursing);
+
+        setCheckedValues('concern-checkbox', data.consultation_reasons);
+        if (Array.isArray(data.consultation_reasons_other) && data.consultation_reasons_other.length) {
+            document.getElementById('m2-other-toggle').checked = true;
+            document.getElementById('m2-other-container').classList.remove('hidden');
+            data.consultation_reasons_other.forEach(v => addOtherRow('m2-other-container', v));
+        }
+        if (data.upcoming_event_date) document.getElementById('m2-event-date').value = data.upcoming_event_date;
+
+        setCheckedValues('medical-checkbox', data.medical_conditions);
+        if (Array.isArray(data.medical_conditions_other) && data.medical_conditions_other.length) {
+            document.getElementById('m3-other-toggle').checked = true;
+            document.getElementById('m3-other-container').classList.remove('hidden');
+            data.medical_conditions_other.forEach(v => addOtherRow('m3-other-container', v));
+        }
+
+        setCheckedValues('blood-thinner-checkbox', data.blood_thinners);
+        document.getElementById('m4-isotretinoin').checked = !!data.retinoid_isotretinoin_recent;
+        document.getElementById('m4-topical-retinoid').checked = !!data.retinoid_topical_recent;
+        document.getElementById('m4-photo-antibiotics').checked = !!data.photosensitizing_antibiotics;
+        setCheckedValues('allergy-checkbox', data.allergies);
+        if (Array.isArray(data.allergies_other) && data.allergies_other.length) {
+            document.getElementById('m4-other-toggle').checked = true;
+            document.getElementById('m4-other-container').classList.remove('hidden');
+            data.allergies_other.forEach(v => addOtherRow('m4-other-container', v));
+        }
+
+        setCheckedValues('surgical-facial-checkbox', data.surgical_history_facial);
+        setCheckedValues('surgical-general-checkbox', data.surgical_history_general);
+        let surgicalOther = data.surgical_history_other;
+        if (typeof surgicalOther === 'string') { try { surgicalOther = JSON.parse(surgicalOther); } catch(_) { surgicalOther = []; } }
+        if (Array.isArray(surgicalOther) && surgicalOther.length) {
+            document.getElementById('m5-other-toggle').checked = true;
+            document.getElementById('m5-other-container').classList.remove('hidden');
+            surgicalOther.forEach(row => addOtherSurgicalRow(row));
+        }
+
+        let aesthetic = data.aesthetic_history;
+        if (typeof aesthetic === 'string') { try { aesthetic = JSON.parse(aesthetic); } catch(_) { aesthetic = []; } }
+        setAestheticHistoryData(aesthetic);
+
+        if (data.fitzpatrick) setRadioValue('m7-fitzpatrick', 'm7-fitzpatrick', data.fitzpatrick);
+        if (data.skin_type) setRadioValue('m7-skintype', 'm7-skintype', data.skin_type);
+        if (data.glogau) setRadioValue('m7-glogau', 'm7-glogau', data.glogau);
+        setMerzValues({
+            nasolabial: data.merz_nasolabial, marionette: data.merz_marionette,
+            midface: data.merz_midface, brow: data.merz_brow,
+        });
+
+        document.getElementById('m8-hipaa').checked = !!data.hipaa_acknowledged;
+        document.getElementById('m8-photo-required').checked = !!data.photo_consent_required;
+        document.getElementById('m8-photo-marketing').checked = !!data.photo_consent_marketing;
+        document.getElementById('m8-accuracy').checked = !!data.accuracy_confirmed;
+        document.getElementById('m8-signature-name').value = data.signature_typed_name || '';
+    }
+
+    // ---------- SAVE / LOAD ----------
+    async function saveProgress(markComplete) {
+        const payload = collectFormData();
+        if (markComplete) payload.intake_completed_at = new Date().toISOString();
+
+        let error;
+        if (currentAdmissionId) {
+            ({ error } = await _supabase.from('admission_history').update(payload).eq('id', currentAdmissionId));
+        } else {
+            const { data: ins, error: ie } = await _supabase.from('admission_history').insert([payload]).select('id').single();
+            error = ie;
+            if (ins) currentAdmissionId = ins.id;
+        }
+        if (error) console.error('Save intake error:', error.message);
+        return !error;
+    }
+
+    async function submitIntake() {
+        if (!validateCurrentModule()) return;
+        const btn = document.getElementById('btn-submit');
+        btn.disabled = true;
+        btn.innerText = currentLang === 'en' ? 'Submitting...' : 'Enviando...';
+        const ok = await saveProgress(true);
+        if (ok) {
+            window.location.href = 'dashboard.html';
+        } else {
+            btn.disabled = false;
+            applyLanguage();
+            alert(currentLang === 'en' ? 'Could not save. Please try again.' : 'No se pudo guardar. Intenta de nuevo.');
+        }
+    }
+
+    function normalizeSex(value) {
+        const raw = String(value || '').trim().toLowerCase();
+        if (raw === 'male' || raw === 'masculino') return currentLang === 'en' ? 'Male' : 'Masculino';
+        if (raw === 'female' || raw === 'femenino') return currentLang === 'en' ? 'Female' : 'Femenino';
+        return raw || '—';
+    }
+
+    async function init() {
+        const { data: { user }, error: authError } = await _supabase.auth.getUser();
+        if (authError || !user) { window.location.href = 'index.html'; return; }
+        currentUser = user;
+
+        renderCheckGroup('m2-concerns', CONCERN_OPTIONS, 'concern-checkbox');
+        renderCheckGroup('m3-conditions', MEDICAL_CONDITIONS, 'medical-checkbox');
+        renderCheckGroup('m4-blood-thinners', BLOOD_THINNERS, 'blood-thinner-checkbox');
+        renderCheckGroup('m4-allergies', ALLERGY_OPTIONS, 'allergy-checkbox');
+        renderCheckGroup('m5-facial', SURGICAL_FACIAL, 'surgical-facial-checkbox');
+        renderCheckGroup('m5-general', SURGICAL_GENERAL, 'surgical-general-checkbox');
+        renderAestheticCategories();
+        renderRadioGroup('m7-fitzpatrick', FITZPATRICK_TYPES, 'm7-fitzpatrick', true);
+        renderRadioGroup('m7-skintype', SKIN_TYPES, 'm7-skintype', false);
+        renderRadioGroup('m7-glogau', GLOGAU_TYPES, 'm7-glogau', false);
+        initSignaturePad();
+
+        const { data: profile } = await _supabase.from('profiles').select('first_name, last_name, dob, sex, phone').eq('id', currentUser.id).maybeSingle();
+        document.getElementById('m1-full-name').innerText = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || '—';
+        document.getElementById('m1-dob').innerText = profile?.dob || '—';
+        document.getElementById('m1-sex').innerText = normalizeSex(profile?.sex);
+        document.getElementById('m1-phone').innerText = profile?.phone || '—';
+        document.getElementById('m1-email').innerText = currentUser.email || '—';
+        if (String(profile?.sex || '').toLowerCase().startsWith('f')) {
+            document.getElementById('m1-pregnancy-block').classList.remove('hidden');
+        }
+
+        const { data: existing } = await _supabase.from('admission_history').select('*').eq('patient_id', currentUser.id).maybeSingle();
+        if (existing) {
+            currentAdmissionId = existing.id;
+            if (existing.intake_completed_at) { window.location.href = 'dashboard.html'; return; }
+            fillFormFromData(existing);
+        }
+
+        applyLanguage();
+        showModule(1);
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
