@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
-  const fromRaw = Deno.env.get("FROM_EMAIL") ?? "noreply@fsmedesthetics.com";
+  const fromRaw = Deno.env.get("FROM_EMAIL") ?? "noreply@piel-spa.com";
   const staffEmail = Deno.env.get("BOOKING_ALERT_EMAIL") ?? "";
   const contactEmail = "info@fsmedesthetics.com";
 
