@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   const fromRaw = Deno.env.get("FROM_EMAIL") ?? "noreply@piel-spa.com";
   const staffEmail = Deno.env.get("BOOKING_ALERT_EMAIL") ?? "";
-  const contactEmail = "info@fsmedesthetics.com";
+  const contactEmail = "info@piel-spa.com";
 
   // FROM with display name for better deliverability
   const fromEmail = `Piel Spa <${fromRaw}>`;
