@@ -39,9 +39,51 @@
             font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500;
             letter-spacing: 0; text-transform: none; color: var(--deep-bronze);
         }
+        .whatsapp-float {
+            position: fixed;
+            right: max(18px, env(safe-area-inset-right));
+            bottom: max(18px, env(safe-area-inset-bottom));
+            z-index: 9999;
+            width: 58px;
+            height: 58px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #25D366;
+            color: #fff;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.22);
+            animation: wa-pulse 2.8s ease-in-out infinite;
+            transition: transform 0.25s ease, background-color 0.25s ease;
+            text-decoration: none;
+        }
+        .whatsapp-float:hover { transform: scale(1.08); background: #20BD5A; }
+        .whatsapp-float svg { width: 30px; height: 30px; }
+        @keyframes wa-pulse {
+            0%, 100% { box-shadow: 0 6px 16px rgba(0,0,0,0.22), 0 0 0 0 rgba(37,211,102,0.55); }
+            50%      { box-shadow: 0 6px 16px rgba(0,0,0,0.22), 0 0 0 16px rgba(37,211,102,0); }
+        }
+        @media (max-width: 640px) {
+            .whatsapp-float { width: 52px; height: 52px; right: 14px; bottom: 14px; }
+            .whatsapp-float svg { width: 27px; height: 27px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .whatsapp-float { animation: none; }
+        }
     </style>
 </head>
 <body>
+
+    <!-- Boton flotante de WhatsApp -->
+    <a href="https://wa.me/19295613388?text=Hola%2C%20me%20gustar%C3%ADa%20obtener%20m%C3%A1s%20informaci%C3%B3n."
+       target="_blank" rel="noopener noreferrer"
+       class="whatsapp-float"
+       aria-label="Chatea con nosotros por WhatsApp"
+       title="Chatea con nosotros por WhatsApp">
+        <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true">
+            <path d="M16.004 3C9.377 3 4 8.373 4 15c0 2.386.703 4.612 1.912 6.487L4 29l7.75-1.887A11.94 11.94 0 0 0 16.004 27C22.63 27 28 21.627 28 15S22.63 3 16.004 3zm0 21.75c-1.99 0-3.85-.55-5.44-1.5l-.39-.23-4.6 1.12 1.14-4.48-.25-.4A9.7 9.7 0 0 1 5.25 15c0-5.93 4.82-10.75 10.75-10.75S26.75 9.07 26.75 15 21.93 24.75 16 24.75zm5.98-8.06c-.33-.16-1.94-.96-2.24-1.07-.3-.11-.52-.16-.74.16-.22.33-.85 1.06-1.04 1.28-.19.22-.38.24-.71.08-.33-.16-1.38-.51-2.63-1.63-.97-.87-1.63-1.94-1.82-2.27-.19-.33-.02-.5.14-.67.14-.15.33-.38.49-.57.16-.19.22-.33.33-.55.11-.22.05-.41-.03-.57-.08-.16-.74-1.78-1.01-2.44-.27-.64-.55-.55-.74-.56-.19-.01-.41-.01-.63-.01-.22 0-.57.08-.87.41-.3.33-1.14 1.11-1.14 2.71 0 1.6 1.17 3.14 1.33 3.36.16.22 2.3 3.51 5.57 4.92.78.34 1.39.54 1.86.69.78.25 1.49.21 2.05.13.63-.09 1.94-.79 2.21-1.55.27-.76.27-1.42.19-1.55-.08-.14-.3-.22-.63-.38z"/>
+        </svg>
+    </a>
 
     <!-- Header Optimizado para Móviles -->
     <header class="w-full py-4 px-4 md:px-12 flex justify-between items-center bg-white border-b border-[#EDE1E7] sticky top-0 z-50">
@@ -283,7 +325,7 @@
             </div>
             <div>
                 <h4 class="text-xl mb-6 italic text-[#B76E88]" data-en="Contact Us" data-es="Contáctanos">Contact Us</h4>
-                <p class="font-light opacity-70 text-sm mb-4">fsmedesthetics@gmail.com</p>
+                <p class="font-light opacity-70 text-sm mb-4">info@piel-spa.com</p>
                 <button onclick="document.getElementById('contact-modal').classList.remove('hidden')" class="border border-[#B76E88] text-[#B76E88] px-6 py-2 uppercase text-[10px] tracking-widest hover:bg-[#B76E88] hover:text-white transition" data-en="Send Message" data-es="Enviar Mensaje">Send Message</button>
             </div>
             <div>
