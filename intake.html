@@ -23,8 +23,9 @@
         .btn-gold { background-color: #B76E88; color: white; transition: 0.3s; }
         .btn-gold:hover { background-color: #9C5570; }
         .btn-gold:disabled { opacity: 0.4; cursor: not-allowed; }
-        .field-input { width: 100%; padding: 0.9rem; border: 1px solid #EDE1E7; background: #FDFBFC; outline: none; font-size: 1rem; border-radius: 0.5rem; }
+        .field-input { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; padding: 0.9rem; border: 1px solid #EDE1E7; background: #FDFBFC; outline: none; font-size: 1rem; border-radius: 0.5rem; }
         .field-input:focus { border-color: #B76E88; }
+        input[type="date"].field-input { min-width: 0; }
         .check-card { border: 1px solid #EDE1E7; border-radius: 0.75rem; padding: 0.9rem 1rem; cursor: pointer; transition: 0.2s; display: flex; align-items: flex-start; gap: 0.75rem; background: #fff; }
         .check-card:hover { border-color: #B76E88; }
         .check-card.checked { border-color: #B76E88; background: #FBF0F3; }
@@ -40,6 +41,10 @@
         #signature-pad { touch-action: none; }
         .instruction-hint { background: #FBF0F3; border-left: 3px solid #B76E88; border-radius: 0.5rem; padding: 0.75rem 1rem; font-size: 0.85rem; line-height: 1.45; color: #5C4753; font-weight: 500; }
         .section-hint { font-size: 0.78rem; color: #6B5A64; font-weight: 500; margin-bottom: 0.6rem; line-height: 1.4; }
+        @media (max-width: 640px) {
+            .instruction-hint { font-size: 0.95rem; line-height: 1.5; }
+            .section-hint { font-size: 0.88rem; line-height: 1.5; }
+        }
         .field-error { border-color: #D14343 !important; border-width: 2px !important; }
         .field-error-group { border: 2px solid #D14343 !important; border-radius: 0.75rem; padding: 0.6rem; }
         .field-error-msg { color: #D14343; font-size: 0.78rem; font-weight: 600; margin-top: 0.4rem; }
@@ -48,7 +53,7 @@
 </head>
 <body class="min-h-screen pb-28">
 
-    <header class="w-full py-4 px-4 md:px-12 flex justify-between items-center bg-white border-b border-[#EDE1E7] sticky top-0 z-40">
+    <header id="intake-header" class="w-full py-4 px-4 md:px-12 flex justify-between items-center bg-white border-b border-[#EDE1E7] sticky top-0 z-40">
         <div class="text-[13px] md:text-xl whitespace-nowrap">
             <span class="brand-piel">Piel</span> <span class="brand-spa">spa</span>
         </div>
@@ -74,7 +79,7 @@
                 <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 1" data-es="Módulo 1">Module 1</span>
                 <h2 class="text-3xl text-[#2A2330]" data-en="Patient Information" data-es="Información del Paciente">Patient Information</h2>
                 <p class="text-sm font-light opacity-70 mt-1" data-en="Please confirm your details and complete a few additional items." data-es="Confirma tus datos y completa algunos campos adicionales.">Please confirm your details and complete a few additional items.</p>
-                <p class="text-[11px] uppercase tracking-widest font-semibold text-[#B76E88] mt-2" data-en="⏱ Takes about 10–15 minutes · Your progress is saved automatically as you go" data-es="⏱ Toma aproximadamente 10–15 minutos · Tu progreso se guarda automáticamente">Takes about 10–15 minutes · Your progress is saved automatically.</p>
+                <p id="m1-time-estimate" class="text-[11px] uppercase tracking-widest font-semibold text-[#B76E88] mt-2" data-en="⏱ Takes about 5 minutes" data-es="⏱ Toma aproximadamente 5 minutos">Takes about 5 minutes</p>
             </div>
 
             <div id="m1-profile-summary" class="hidden bg-white border border-[#EDE1E7] rounded-xl p-5 space-y-2 text-sm">
@@ -109,15 +114,21 @@
 
             <!-- Shown only in NEW-ACCOUNT mode (no session yet) — this is where the account is registered; it's created for real once Module 5 is submitted -->
             <div id="m1-account-fields" class="hidden bg-[#FBF0F3] border border-[#EDE1E7] rounded-xl p-5 space-y-4">
-                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold" data-en="Create Your Account" data-es="Crea tu Cuenta">Create Your Account</label>
+                <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold" data-en="Create Your Account" data-es="Crea tu Cuenta">Create Your Account</label>
+                    <p class="text-xs opacity-70 mt-1 leading-relaxed" data-en="This profile registers your most important health and contact information, helping our team make precise treatment decisions. You'll also use it later to check recommendations tied to the procedures you receive, along with other relevant updates." data-es="Este perfil registra tus datos de salud y contacto más importantes, lo que nos ayuda a tomar decisiones de tratamiento con mayor precisión. Además, podrás usarlo más adelante para consultar recomendaciones relacionadas con los procedimientos que te realices, junto con otra información relevante.">This profile registers your most important information and helps us make precise treatment decisions.</p>
+                </div>
                 <div class="grid grid-cols-2 gap-3">
                     <input type="text" id="m1-firstname" class="field-input" data-en-ph="First Name" data-es-ph="Nombre">
                     <input type="text" id="m1-lastname" class="field-input" data-en-ph="Last Name" data-es-ph="Apellido">
                 </div>
                 <div>
                     <label class="block text-[10px] uppercase tracking-widest opacity-60 mb-1" data-en="Phone" data-es="Teléfono">Phone</label>
-                    <input type="tel" id="m1-account-phone" class="field-input" inputmode="tel" data-en-ph="Phone Number (digits only)" data-es-ph="Número de Teléfono (solo dígitos)">
-                    <p class="text-[10px] opacity-50 mt-1" data-en="This will be your username and your initial password to log in." data-es="Este será tu usuario y tu contraseña inicial para iniciar sesión.">This will be your username and your initial password.</p>
+                    <div class="flex gap-2">
+                        <select id="m1-account-phone-country" class="field-input text-center" style="flex: 0 0 7rem; padding-left:0.4rem; padding-right:0.4rem;"></select>
+                        <input type="tel" id="m1-account-phone" class="field-input flex-1" inputmode="tel" data-en-ph="Phone Number" data-es-ph="Número de Teléfono">
+                    </div>
+                    <p class="text-[10px] opacity-50 mt-1" data-en="To log in, you'll only use the number (no country code) as both your username and your initial password." data-es="Para iniciar sesión usarás solo el número (sin el código de país) como tu usuario y tu contraseña inicial.">This will be your username and your initial password.</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
@@ -154,10 +165,6 @@
                         </label>
                     </div>
                 </div>
-                <div id="m1-tos-row" class="flex items-start gap-3">
-                    <input type="checkbox" id="m1-tos-check" class="mt-1 accent-[#B76E88]">
-                    <label for="m1-tos-check" class="text-[10px] uppercase tracking-widest opacity-60 leading-relaxed" data-en="I agree to the Terms of Service and consent to clinical data storage." data-es="Acepto los Términos de Servicio y consiento el almacenamiento de datos clínicos.">I agree to the Terms of Service and consent to clinical data storage.</label>
-                </div>
             </div>
 
             <div>
@@ -175,13 +182,13 @@
 
             <div class="bg-[#FBF0F3] border border-[#EDE1E7] rounded-xl p-5">
                 <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-3" data-en="Emergency Contact" data-es="Contacto de Emergencia">Emergency Contact</label>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <input type="text" id="m1-ec-name" class="field-input" data-en-ph="Name" data-es-ph="Nombre">
                     <input type="text" id="m1-ec-relationship" class="field-input" data-en-ph="Relationship" data-es-ph="Relación">
-                    <div class="flex gap-2">
-                        <select id="m1-ec-phone-country" class="field-input text-center" style="flex: 0 0 6.5rem; padding-left:0.4rem; padding-right:0.4rem;"></select>
-                        <input type="tel" id="m1-ec-phone-number" class="field-input flex-1" inputmode="tel" data-en-ph="Phone Number" data-es-ph="Teléfono">
-                    </div>
+                </div>
+                <div class="flex gap-2 mt-3">
+                    <select id="m1-ec-phone-country" class="field-input text-center" style="flex: 0 0 7rem; padding-left:0.4rem; padding-right:0.4rem;"></select>
+                    <input type="tel" id="m1-ec-phone-number" class="field-input flex-1" inputmode="tel" data-en-ph="Phone Number" data-es-ph="Teléfono">
                 </div>
             </div>
 
@@ -195,76 +202,117 @@
         </div>
 
         <!-- ============ MODULE 2: REASON, MEDICAL, MEDICATIONS & SURGICAL HISTORY (merged) ============ -->
-        <div id="module-2" class="module-screen hidden space-y-8">
+        <div id="module-2" class="module-screen hidden space-y-4">
             <div>
                 <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 2" data-es="Módulo 2">Module 2</span>
                 <h2 class="text-3xl text-[#2A2330]" data-en="Reason for Visit & Health History" data-es="Motivo de Consulta e Historial de Salud">Reason for Visit & Health History</h2>
-                <p class="instruction-hint mt-3" data-en="✅ Select one or more reasons that describe why you're consulting us today." data-es="✅ Selecciona uno o varios motivos por los cuales consultas hoy.">Select one or more reasons that describe why you're consulting us today.</p>
-            </div>
-            <div id="m2-concerns" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-            <div>
-                <div class="flex items-center gap-2 mb-2">
-                    <input type="checkbox" id="m2-other-toggle" class="accent-[#B76E88]" onchange="toggleOtherContainer(this, 'm2-other-container')">
-                    <label for="m2-other-toggle" class="text-sm" data-en="Other" data-es="Otro">Other</label>
-                </div>
-                <div id="m2-other-container" class="hidden space-y-2 ml-6"></div>
-                <button type="button" onclick="addOtherRow('m2-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otro">+ Add Another</button>
+                <p class="instruction-hint mt-3" data-en="✅ Tap each section below to open it. A number shows how many items you've selected." data-es="✅ Toca cada sección abajo para abrirla. Un número indica cuántos elementos has seleccionado.">Tap each section below to open it.</p>
             </div>
 
-            <div class="border-t border-[#EDE1E7] pt-6">
-                <h3 class="text-xl text-[#2A2330] mb-1" data-en="Medical History" data-es="Historial Médico">Medical History</h3>
-                <p class="instruction-hint mt-2 mb-4" data-en="✅ Select every condition that applies to you. If none apply, choose “None of the above” below." data-es="✅ Selecciona todas las condiciones médicas que apliquen. Si ninguna aplica, elige “Ninguna de las anteriores” abajo.">Select every condition that applies to you. If none apply, choose "None of the above" below.</p>
-                <div id="m3-conditions" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-                <div class="mt-3">
-                    <div class="flex items-center gap-2 mb-2">
-                        <input type="checkbox" id="m3-other-toggle" class="accent-[#B76E88]" onchange="toggleOtherContainer(this, 'm3-other-container')">
-                        <label for="m3-other-toggle" class="text-sm" data-en="Other Medical Condition" data-es="Otra Condición Médica">Other Medical Condition</label>
+            <details class="acc-section border border-[#EDE1E7] rounded-xl bg-white overflow-hidden" open>
+                <summary class="flex items-center justify-between gap-3 px-4 py-4">
+                    <span class="flex items-center gap-2">
+                        <span class="text-base font-semibold text-[#2A2330]" data-en="Reason for Visit" data-es="Motivo de Consulta">Reason for Visit</span>
+                        <span id="m2-badge-concerns" class="hidden bg-[#B76E88] text-white text-[10px] font-bold rounded-full px-2 py-0.5"></span>
+                    </span>
+                    <svg class="acc-chevron w-4 h-4 text-[#B76E88] transition-transform flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-4 pb-5 space-y-4 border-t border-[#EDE1E7] pt-4">
+                    <p class="instruction-hint" data-en="✅ Select one or more reasons that describe why you're consulting us today." data-es="✅ Selecciona uno o varios motivos por los cuales consultas hoy.">Select one or more reasons that describe why you're consulting us today.</p>
+                    <div id="m2-concerns" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <input type="checkbox" id="m2-other-toggle" class="accent-[#B76E88]" onchange="toggleOtherContainer(this, 'm2-other-container')">
+                            <label for="m2-other-toggle" class="text-sm" data-en="Other" data-es="Otro">Other</label>
+                        </div>
+                        <div id="m2-other-container" class="hidden space-y-2 ml-6"></div>
+                        <button type="button" onclick="addOtherRow('m2-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otro">+ Add Another</button>
                     </div>
-                    <div id="m3-other-container" class="hidden space-y-2 ml-6"></div>
-                    <button type="button" onclick="addOtherRow('m3-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Condition" data-es="+ Agregar Condición">+ Add Condition</button>
                 </div>
-            </div>
+            </details>
 
-            <div class="border-t border-[#EDE1E7] pt-6">
-                <h3 class="text-xl text-[#2A2330] mb-1" data-en="Blood Thinners & Allergies" data-es="Anticoagulantes y Alergias">Blood Thinners & Allergies</h3>
-                <p class="section-hint" data-en="Have you taken any of these in the last 7–10 days? Select one or more, or “None of the above.”" data-es="¿Ha tomado alguno de estos en los últimos 7–10 días? Selecciona uno o varios, o “Ninguna de las anteriores.”">Have you taken any of these in the last 7–10 days?</p>
-                <div id="m4-blood-thinners" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-            </div>
-
-            <div>
-                <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="⚠️ Allergies" data-es="⚠️ Alergias">⚠️ Allergies</h4>
-                <p class="section-hint" data-en="Do you have any of the following allergies? Select one or more, or “No known allergies.”" data-es="¿Presenta alguna de las siguientes alergias? Selecciona una o varias, o “Ninguna alergia conocida.”">Do you have any of the following allergies?</p>
-                <div id="m4-allergies" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-                <div class="mt-3">
-                    <div class="flex items-center gap-2 mb-2">
-                        <input type="checkbox" id="m4-other-toggle" class="accent-[#B76E88]" onchange="toggleOtherContainer(this, 'm4-other-container')">
-                        <label for="m4-other-toggle" class="text-sm" data-en="Other Allergies" data-es="Otras Alergias">Other Allergies</label>
+            <details class="acc-section border border-[#EDE1E7] rounded-xl bg-white overflow-hidden">
+                <summary class="flex items-center justify-between gap-3 px-4 py-4">
+                    <span class="flex items-center gap-2">
+                        <span class="text-base font-semibold text-[#2A2330]" data-en="Medical History" data-es="Historial Médico">Medical History</span>
+                        <span id="m2-badge-medical" class="hidden bg-[#B76E88] text-white text-[10px] font-bold rounded-full px-2 py-0.5"></span>
+                    </span>
+                    <svg class="acc-chevron w-4 h-4 text-[#B76E88] transition-transform flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-4 pb-5 space-y-4 border-t border-[#EDE1E7] pt-4">
+                    <p class="instruction-hint" data-en="✅ Select every condition that applies to you. If none apply, choose “None of the above” below." data-es="✅ Selecciona todas las condiciones médicas que apliquen. Si ninguna aplica, elige “Ninguna de las anteriores” abajo.">Select every condition that applies to you. If none apply, choose "None of the above" below.</p>
+                    <div id="m3-conditions" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <input type="checkbox" id="m3-other-toggle" class="accent-[#B76E88]" onchange="toggleOtherContainer(this, 'm3-other-container')">
+                            <label for="m3-other-toggle" class="text-sm" data-en="Other Medical Condition" data-es="Otra Condición Médica">Other Medical Condition</label>
+                        </div>
+                        <div id="m3-other-container" class="hidden space-y-2 ml-6"></div>
+                        <button type="button" onclick="addOtherRow('m3-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Condition" data-es="+ Agregar Condición">+ Add Condition</button>
                     </div>
-                    <div id="m4-other-container" class="hidden space-y-2 ml-6"></div>
-                    <button type="button" onclick="addOtherRow('m4-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otra">+ Add Another</button>
                 </div>
-            </div>
+            </details>
 
-            <div class="border-t border-[#EDE1E7] pt-6">
-                <h3 class="text-xl text-[#2A2330] mb-1" data-en="Surgical History" data-es="Antecedentes Quirúrgicos">Surgical History</h3>
-                <p class="instruction-hint mt-2 mb-4" data-en="🏥 Answer both questions below. Select every surgery that applies, or “None” if it doesn't apply to you." data-es="🏥 Responde ambas preguntas a continuación. Selecciona cada cirugía que aplique, o “Ninguna” si no aplica en tu caso.">Answer both questions below. Select every surgery that applies, or "None" if it doesn't apply to you.</p>
-                <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="Facial / Head & Neck Surgeries" data-es="Cirugías Faciales / Cabeza y Cuello">Facial / Head & Neck Surgeries</h4>
-                <p class="section-hint" data-en="Have you had any of these? Select one or more, or “None.”" data-es="¿Te has realizado alguna de estas? Selecciona una o varias, o “Ninguna.”">Have you had any of these?</p>
-                <div id="m5-facial" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-            </div>
-            <div>
-                <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="General & Body Surgeries" data-es="Cirugías Generales y Corporales">General & Body Surgeries</h4>
-                <p class="section-hint" data-en="Have you had any of these? Select one or more, or “None.”" data-es="¿Te has realizado alguna de estas? Selecciona una o varias, o “Ninguna.”">Have you had any of these?</p>
-                <div id="m5-general" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-            </div>
-            <div>
-                <div class="flex items-center gap-2 mb-2">
-                    <input type="checkbox" id="m5-other-toggle" class="accent-[#B76E88]" onchange="toggleOtherContainer(this, 'm5-other-container')">
-                    <label for="m5-other-toggle" class="text-sm" data-en="Other Surgical Procedure" data-es="Otro Procedimiento Quirúrgico">Other Surgical Procedure</label>
+            <details class="acc-section border border-[#EDE1E7] rounded-xl bg-white overflow-hidden">
+                <summary class="flex items-center justify-between gap-3 px-4 py-4">
+                    <span class="flex items-center gap-2">
+                        <span class="text-base font-semibold text-[#2A2330]" data-en="Blood Thinners & Allergies" data-es="Anticoagulantes y Alergias">Blood Thinners & Allergies</span>
+                        <span id="m2-badge-meds" class="hidden bg-[#B76E88] text-white text-[10px] font-bold rounded-full px-2 py-0.5"></span>
+                    </span>
+                    <svg class="acc-chevron w-4 h-4 text-[#B76E88] transition-transform flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-4 pb-5 space-y-4 border-t border-[#EDE1E7] pt-4">
+                    <div>
+                        <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="🩸 Blood Thinners" data-es="🩸 Anticoagulantes">🩸 Blood Thinners</h4>
+                        <p class="section-hint" data-en="Have you taken any of these in the last 7–10 days? Select one or more, or “None of the above.”" data-es="¿Ha tomado alguno de estos en los últimos 7–10 días? Selecciona uno o varios, o “Ninguna de las anteriores.”">Have you taken any of these in the last 7–10 days?</p>
+                        <div id="m4-blood-thinners" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="⚠️ Allergies" data-es="⚠️ Alergias">⚠️ Allergies</h4>
+                        <p class="section-hint" data-en="Do you have any of the following allergies? Select one or more, or “No known allergies.”" data-es="¿Presenta alguna de las siguientes alergias? Selecciona una o varias, o “Ninguna alergia conocida.”">Do you have any of the following allergies?</p>
+                        <div id="m4-allergies" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                        <div class="mt-3">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="checkbox" id="m4-other-toggle" class="accent-[#B76E88]" onchange="toggleOtherContainer(this, 'm4-other-container')">
+                                <label for="m4-other-toggle" class="text-sm" data-en="Other Allergies" data-es="Otras Alergias">Other Allergies</label>
+                            </div>
+                            <div id="m4-other-container" class="hidden space-y-2 ml-6"></div>
+                            <button type="button" onclick="addOtherRow('m4-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otra">+ Add Another</button>
+                        </div>
+                    </div>
                 </div>
-                <div id="m5-other-container" class="hidden space-y-2 ml-6"></div>
-                <button type="button" onclick="addOtherSurgicalRow()" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otra">+ Add Another</button>
-            </div>
+            </details>
+
+            <details class="acc-section border border-[#EDE1E7] rounded-xl bg-white overflow-hidden">
+                <summary class="flex items-center justify-between gap-3 px-4 py-4">
+                    <span class="flex items-center gap-2">
+                        <span class="text-base font-semibold text-[#2A2330]" data-en="Surgical History" data-es="Antecedentes Quirúrgicos">Surgical History</span>
+                        <span id="m2-badge-surgical" class="hidden bg-[#B76E88] text-white text-[10px] font-bold rounded-full px-2 py-0.5"></span>
+                    </span>
+                    <svg class="acc-chevron w-4 h-4 text-[#B76E88] transition-transform flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-4 pb-5 space-y-4 border-t border-[#EDE1E7] pt-4">
+                    <p class="instruction-hint" data-en="🏥 Answer both questions below. Select every surgery that applies, or “None” if it doesn't apply to you." data-es="🏥 Responde ambas preguntas a continuación. Selecciona cada cirugía que aplique, o “Ninguna” si no aplica en tu caso.">Answer both questions below. Select every surgery that applies, or "None" if it doesn't apply to you.</p>
+                    <div>
+                        <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="Facial / Head & Neck Surgeries" data-es="Cirugías Faciales / Cabeza y Cuello">Facial / Head & Neck Surgeries</h4>
+                        <p class="section-hint" data-en="Have you had any of these? Select one or more, or “None.”" data-es="¿Te has realizado alguna de estas? Selecciona una o varias, o “Ninguna.”">Have you had any of these?</p>
+                        <div id="m5-facial" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="General & Body Surgeries" data-es="Cirugías Generales y Corporales">General & Body Surgeries</h4>
+                        <p class="section-hint" data-en="Have you had any of these? Select one or more, or “None.”" data-es="¿Te has realizado alguna de estas? Selecciona una o varias, o “Ninguna.”">Have you had any of these?</p>
+                        <div id="m5-general" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <input type="checkbox" id="m5-other-toggle" class="accent-[#B76E88]" onchange="toggleOtherContainer(this, 'm5-other-container')">
+                            <label for="m5-other-toggle" class="text-sm" data-en="Other Surgical Procedure" data-es="Otro Procedimiento Quirúrgico">Other Surgical Procedure</label>
+                        </div>
+                        <div id="m5-other-container" class="hidden space-y-2 ml-6"></div>
+                        <button type="button" onclick="addOtherSurgicalRow()" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otra">+ Add Another</button>
+                    </div>
+                </div>
+            </details>
         </div>
 
         <!-- ============ MODULE 6: AESTHETIC TREATMENT HISTORY ============ -->
@@ -299,7 +347,6 @@
                 <div id="m7-skintype" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
             </div>
             <div>
-                <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="Glogau Scale of Photoaging" data-es="Escala de Glogau de Fotoenvejecimiento">Glogau Scale of Photoaging</h4>
                 <p class="section-hint" data-en="Compare each reference photo to your skin and select the single type that matches best." data-es="Compara cada foto de referencia con tu piel y selecciona el único tipo que más se parezca.">Compare each reference photo to your skin and select the single type that matches best.</p>
                 <div id="m7-glogau" class="grid grid-cols-1 gap-3"></div>
             </div>
@@ -362,6 +409,16 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFram1ybnFrb2lwZGx0YXV3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTkyMjgsImV4cCI6MjA4OTA5NTIyOH0.EGqgJ9RNY9vYfuVeeEcGoMu_cIaygRq0hnyT-iE7zTw';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // Embedded inside the Patient Portal modal's iframe — that outer page already has
+    // its own language toggle and X/close button, so this page's own header (logo,
+    // language toggle, exit) would just be a redundant "window inside a window". Hide
+    // it immediately (before init() runs) so it never flashes on screen; a direct,
+    // non-embedded visit (e.g. the legacy dashboard.html redirect) keeps its header.
+    if (window.self !== window.top) {
+        const header = document.getElementById('intake-header');
+        if (header) header.style.display = 'none';
+    }
+
     let currentLang = localStorage.getItem('preferredLang') || 'es';
     let currentModule = 1;
     const TOTAL_MODULES = 5;
@@ -419,7 +476,7 @@
         { id: 'hair_removal', en: 'Hair Removal', es: 'Depilación' },
         { id: 'body_laxity', en: 'Body Laxity (Abdomen, Arms, Legs, Back)', es: 'Flacidez Corporal (Abdomen, Brazos, Piernas, Espalda)' },
         { id: 'overweight_obesity', en: 'Overweight or Obesity', es: 'Sobrepeso u Obesidad' },
-        { id: 'alopecia', en: 'Alopecia (Hair Loss)', es: 'Alopecia' },
+        { id: 'alopecia', en: 'Hair Loss / Thinning', es: 'Caída o Pérdida de Cabello' },
         { id: 'yellow_teeth', en: 'Yellow / Discolored Teeth', es: 'Dientes Amarillos' },
         { id: 'keloid_scarring', en: 'Keloid Scarring', es: 'Cicatriz Queloidea' },
     ];
@@ -944,6 +1001,23 @@
         })).filter(r => r.name);
     }
 
+    // Module 2's four sub-sections are collapsible <details> — these badges give the
+    // patient a sense of progress per section without having to open every one.
+    function updateModule2Badges() {
+        const setBadge = (id, count) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (count > 0) { el.textContent = count; el.classList.remove('hidden'); }
+            else { el.classList.add('hidden'); }
+        };
+        setBadge('m2-badge-concerns', getCheckedValues('concern-checkbox').length + getOtherValues('m2-other-container').length);
+        setBadge('m2-badge-medical', getCheckedValues('medical-checkbox').length + getOtherValues('m3-other-container').length);
+        setBadge('m2-badge-meds', getCheckedValues('blood-thinner-checkbox').length + getCheckedValues('allergy-checkbox').length + getOtherValues('m4-other-container').length);
+        setBadge('m2-badge-surgical', getCheckedValues('surgical-facial-checkbox').length + getCheckedValues('surgical-general-checkbox').length + getOtherSurgicalValues().length);
+    }
+    document.addEventListener('change', (e) => { if (e.target.closest && e.target.closest('#module-2')) updateModule2Badges(); });
+    document.addEventListener('input', (e) => { if (e.target.closest && e.target.closest('#module-2')) updateModule2Badges(); });
+
     function applyPlaceholders() {
         document.querySelectorAll('[data-en-ph]').forEach(el => {
             el.placeholder = currentLang === 'en' ? el.getAttribute('data-en-ph') : el.getAttribute('data-es-ph');
@@ -1229,6 +1303,7 @@
     // the problem is.
     function setInputError(el, invalid, messageObj) {
         if (!el) return null;
+        if (invalid) { const acc = el.closest('details.acc-section'); if (acc) acc.open = true; }
         el.classList.toggle('field-error', invalid);
         let msg = el.nextElementSibling;
         if (!msg || !msg.classList.contains('field-error-msg')) {
@@ -1246,6 +1321,7 @@
     // there's no single field to point at.
     function setGroupError(containerEl, invalid, messageObj) {
         if (!containerEl) return null;
+        if (invalid) { const acc = containerEl.closest('details.acc-section'); if (acc) acc.open = true; }
         containerEl.classList.toggle('field-error-group', invalid);
         let msg = containerEl.nextElementSibling;
         if (!msg || !msg.classList.contains('field-error-msg')) {
@@ -1311,8 +1387,6 @@
                 const acctEmailVal = acctEmailEl.value.trim();
                 flag(setInputError(acctEmailEl, !acctEmailVal || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(acctEmailVal),
                     { en: 'Please enter a valid email.', es: 'Por favor ingresa un correo válido.' }));
-                flag(setGroupError(document.getElementById('m1-tos-row'), !document.getElementById('m1-tos-check').checked,
-                    { en: 'Please agree to the Terms of Service.', es: 'Por favor acepta los Términos de Servicio.' }));
             } else {
                 const dobActive = !document.getElementById('m1-dob-field').classList.contains('hidden');
                 if (dobActive) {
@@ -1566,7 +1640,12 @@
         return {
             first_name: document.getElementById('m1-firstname').value.trim(),
             last_name: document.getElementById('m1-lastname').value.trim(),
+            // `phone` (no country code) is what's used for login — it's the account's
+            // password too, per product decision. `phone_country_code` is stored
+            // separately, only for reaching the patient (WhatsApp/SMS/calls), never
+            // used for auth.
             phone: onlyDigits(document.getElementById('m1-account-phone').value),
+            phone_country_code: document.getElementById('m1-account-phone-country').value || '+1',
             dob: document.getElementById('m1-account-dob').value,
             sex: document.getElementById('m1-account-sex').value,
             email: document.getElementById('m1-account-email').value.trim(),
@@ -1695,6 +1774,8 @@
         populateSelect(document.getElementById('m1-state'), US_STATES, { valueKey: 'code', placeholder: { en: 'Select State...', es: 'Selecciona Estado...' } });
         populateSelect(document.getElementById('m1-ec-phone-country'), COUNTRY_CODES, { valueKey: 'dial', labelFn: o => `${isoToFlagEmoji(o.iso)} ${o.dial}` });
         document.getElementById('m1-ec-phone-country').value = '+1';
+        populateSelect(document.getElementById('m1-account-phone-country'), COUNTRY_CODES, { valueKey: 'dial', labelFn: o => `${isoToFlagEmoji(o.iso)} ${o.dial}` });
+        document.getElementById('m1-account-phone-country').value = '+1';
 
         if (isNewAccountMode) {
             document.getElementById('m1-account-fields').classList.remove('hidden');
@@ -1702,6 +1783,9 @@
             updatePregnancyVisibility('');
         } else {
             document.getElementById('m1-profile-summary').classList.remove('hidden');
+            const timeEstimateEl = document.getElementById('m1-time-estimate');
+            timeEstimateEl.setAttribute('data-en', '⏱ Takes about 5 minutes · Your progress is saved automatically as you go');
+            timeEstimateEl.setAttribute('data-es', '⏱ Toma aproximadamente 5 minutos · Tu progreso se guarda automáticamente');
             const { data: profile } = await _supabase.from('profiles').select('first_name, last_name, dob, sex, phone').eq('id', currentUser.id).maybeSingle();
             document.getElementById('m1-full-name').innerText = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || '—';
             document.getElementById('m1-email').innerText = currentUser.email || '—';
@@ -1744,6 +1828,7 @@
         }
 
         renderGlogauGroup();
+        updateModule2Badges();
         applyLanguage();
         showModule(1);
     }

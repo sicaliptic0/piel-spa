@@ -52,9 +52,12 @@ function renderWelcomeEmail(input: { firstName: string; phoneDigits: string; con
           Tu cuenta y tu historia clínica han sido creadas exitosamente. Ya puedes iniciar sesión en el Portal del
           Paciente en <a href="https://piel-spa.com" style="color:#B76E88;">piel-spa.com</a>.
         </p>
-        <div style="background:#FBF0F3; border:1px solid #EDE1E7; border-radius:8px; padding:16px 20px; margin:20px 0;">
-          <p style="margin:0 0 6px; font-size:13px; color:#333;"><strong>Usuario (Teléfono):</strong> ${escapeHtml(input.phoneDigits)}</p>
-          <p style="margin:0; font-size:13px; color:#333;"><strong>Contraseña inicial:</strong> ${escapeHtml(input.phoneDigits)}</p>
+        <div style="background:#FBF0F3; border:1px solid #EDE1E7; border-radius:8px; padding:16px 20px; margin:20px 0; text-align:center;">
+          <p style="margin:0 0 10px; font-size:13px; color:#333; line-height:1.5;">
+            Tu número de teléfono <strong>(sin el código de país)</strong> es a la vez tu usuario y tu contraseña para iniciar sesión:
+          </p>
+          <p style="margin:0; font-size:22px; font-weight:bold; letter-spacing:1px; color:#B76E88;">${escapeHtml(input.phoneDigits)}</p>
+          <p style="margin:10px 0 0; font-size:12px; color:#888;">Usa este mismo número en ambos campos: Teléfono y Contraseña.</p>
         </div>
         <p style="font-size:13px; color:#666; line-height:1.6;">
           Por tu seguridad, te recomendamos cambiar tu contraseña después de tu primer inicio de sesión (opcional,
@@ -100,6 +103,7 @@ Deno.serve(async (req) => {
     const intake = body?.intake ?? {};
 
     const phoneDigits = onlyDigits(account.phone);
+    const phoneCountryCode = String(account.phone_country_code || "+1").trim();
     const firstName = String(account.first_name || "").trim();
     const lastName = String(account.last_name || "").trim();
     const email = String(account.email || "").trim();
@@ -127,6 +131,7 @@ Deno.serve(async (req) => {
         dob,
         sex,
         phone: phoneDigits,
+        phone_country_code: phoneCountryCode,
         preferred_contact_methods: preferredContactMethods,
       },
     });
@@ -139,13 +144,15 @@ Deno.serve(async (req) => {
 
     const userId = created.user.id;
 
+    // profiles.phone stores the full dialable number (with country code) so staff can
+    // actually reach the patient — distinct from the bare digits used for login/password.
     const { error: profileError } = await adminClient.from("profiles").upsert({
       id: userId,
       first_name: firstName,
       last_name: lastName,
       dob,
       sex,
-      phone: phoneDigits,
+      phone: `${phoneCountryCode}${phoneDigits}`,
       email,
       is_manual_patient: false,
     });

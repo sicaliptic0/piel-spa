@@ -248,6 +248,7 @@
                             </div>
                         </div>
                         <div id="adm-age-estimate" class="hidden bg-[#FBF0F3] border border-[#EDE1E7] rounded-lg px-4 py-3 text-xs leading-relaxed"></div>
+                        <div id="adm-skin-guidance" class="hidden bg-[#FBF0F3] border border-[#EDE1E7] rounded-lg px-4 py-3 text-xs leading-relaxed space-y-2"></div>
                         <div id="adm-summary-content" class="text-sm leading-relaxed whitespace-pre-wrap"></div>
                     </div>
 
@@ -2397,6 +2398,24 @@
         const MERZ_AGE_STEP = 10;  // per severity point: 0→25, 1→35, 2→45, 3→55, 4→65
         const ADM_SKIN_TYPE_LABELS_MAP = { oily: 'Grasa', dry: 'Seca', combination: 'Mixta', normal: 'Normal', sensitive: 'Sensible' };
 
+        // General clinical reference notes, not a diagnosis — an orientation aid for
+        // the provider based on the two scales the patient self-selects in the intake.
+        const FITZPATRICK_GUIDANCE = {
+            I:   'Piel muy clara, siempre se quema y nunca broncea. Riesgo muy alto de quemadura solar, fotodaño y cáncer de piel — fotoprotección estricta. Bajo riesgo de hiperpigmentación postinflamatoria (HPI) o cicatrización queloide; suele tolerar bien láseres/IPL de mayor energía, aunque con más riesgo de eritema prolongado.',
+            II:  'Piel clara, se quema con facilidad y broncea con dificultad. Riesgo alto de quemadura solar y fotodaño. Riesgo bajo-moderado de HPI con procedimientos inflamatorios.',
+            III: 'Piel intermedia, quemadura leve, broncea gradualmente. Riesgo moderado de fotodaño y de HPI tras procedimientos agresivos (peelings, láser ablativo).',
+            IV:  'Piel oliva/marrón claro, rara vez se quema, broncea con facilidad. Riesgo moderado-alto de HPI con procedimientos inflamatorios (peelings, láser ablativo, microneedling agresivo); igualmente requiere fotoprotección.',
+            V:   'Piel marrón/marrón oscuro, muy rara vez se quema. Riesgo alto de HPI y de cicatrización queloide/hipertrófica. Precaución con láseres ablativos y de alta energía (preferir longitudes de onda más seguras, p. ej. Nd:YAG 1064nm) y realizar prueba de parche antes de procedimientos nuevos.',
+            VI:  'Piel muy oscura, prácticamente nunca se quema. Riesgo muy alto de HPI y de queloides. Extremar precaución con procedimientos térmicos/ablativos; priorizar tecnologías de bajo riesgo de discromía y prueba de parche obligatoria.',
+        };
+        const SKIN_TYPE_GUIDANCE = {
+            oily:        'Producción sebácea elevada, poros dilatados, tendencia a comedones/acné. Recomendar productos no comedogénicos y evitar oclusivos pesados; buena candidata para tratamientos de control de brillo/poro (ácido salicílico, retinoides, láser).',
+            dry:         'Barrera cutánea comprometida, tirantez y descamación. Precaución con exfoliantes agresivos o ácidos fuertes que puedan irritar aún más la barrera; priorizar hidratación y reparación de barrera antes y después de cualquier procedimiento.',
+            combination: 'Zona T grasa con mejillas normales a secas — conviene tratar por zonas en vez de un protocolo único para todo el rostro.',
+            normal:      'Piel equilibrada, buena tolerancia general a la mayoría de tratamientos y menor riesgo de reacciones adversas.',
+            sensitive:   'Alta reactividad — riesgo de eritema, ardor o irritación con activos fuertes o procedimientos agresivos. Recomendable prueba de parche, protocolos suaves, evitar fragancias/irritantes, y considerar pre-tratamiento calmante.',
+        };
+
         function estimateAestheticAge(data) {
             if (!data) return null;
             const points = [];
@@ -2423,6 +2442,21 @@
                 .map(id => admLabel(options, id));
         }
 
+        function renderSkinGuidance(data) {
+            const box = document.getElementById('adm-skin-guidance');
+            if (!box) return;
+            const parts = [];
+            if (data?.fitzpatrick && FITZPATRICK_GUIDANCE[data.fitzpatrick]) {
+                parts.push(`<div><span class="uppercase tracking-widest font-bold text-[#B76E88]">Fitzpatrick ${data.fitzpatrick}:</span> ${FITZPATRICK_GUIDANCE[data.fitzpatrick]}</div>`);
+            }
+            if (data?.skin_type && SKIN_TYPE_GUIDANCE[data.skin_type]) {
+                parts.push(`<div><span class="uppercase tracking-widest font-bold text-[#B76E88]">Piel ${ADM_SKIN_TYPE_LABELS_MAP[data.skin_type] || data.skin_type}:</span> ${SKIN_TYPE_GUIDANCE[data.skin_type]}</div>`);
+            }
+            if (!parts.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+            box.classList.remove('hidden');
+            box.innerHTML = parts.join('') + `<div class="opacity-40 text-[10px]">Orientación clínica general según las escalas seleccionadas — no reemplaza el criterio del proveedor.</div>`;
+        }
+
         function renderAdmissionSummary(data) {
             const contentEl = document.getElementById('adm-summary-content');
             const ageBox = document.getElementById('adm-age-estimate');
@@ -2432,9 +2466,11 @@
             if (!data) {
                 contentEl.innerHTML = '<p class="opacity-40 italic">El paciente todavía no ha completado el cuestionario de ingreso. Usa "Editar" para capturarlo manualmente.</p>';
                 if (ageBox) ageBox.classList.add('hidden');
+                renderSkinGuidance(null);
                 if (sourceNote) sourceNote.innerText = 'Cuestionario no completado.';
                 return;
             }
+            renderSkinGuidance(data);
             if (sourceNote) {
                 sourceNote.innerText = data.intake_completed_at
                     ? 'Cuestionario completado el ' + new Date(data.intake_completed_at).toLocaleString() + '.'

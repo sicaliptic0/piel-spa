@@ -93,11 +93,15 @@ Deno.serve(async (req) => {
 
     if (!phoneDigits) return jsonResponse({ error: "Missing phone" }, 400);
 
-    const { data: profile } = await adminClient
+    // profiles.phone stores the full dialable number (with country code), but login
+    // (and this form) only ever deals in the bare digits — match by suffix instead of
+    // exact equality so "9175551234" still finds a stored "+19175551234".
+    const { data: profiles } = await adminClient
       .from("profiles")
       .select("id, email, first_name")
-      .eq("phone", phoneDigits)
-      .maybeSingle();
+      .ilike("phone", `%${phoneDigits}`)
+      .limit(1);
+    const profile = profiles?.[0];
 
     if (!profile?.email) {
       return jsonResponse({ ok: true });
