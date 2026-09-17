@@ -54,7 +54,7 @@
         </div>
         <div class="flex items-center gap-4">
             <button id="lang-toggle" onclick="toggleLanguage()" class="text-[9px] md:text-[10px] tracking-widest text-[#B76E88] hover:text-[#2A2330] uppercase transition">EN / ES</button>
-            <button id="logout-btn" onclick="handleLogoutClick()" class="text-[9px] md:text-[10px] tracking-widest text-[#B76E88] hover:text-[#2A2330] uppercase transition" data-en="Log Out" data-es="Cerrar Sesión">Log Out</button>
+            <button id="exit-btn" onclick="handleExitClick()" class="text-2xl leading-none text-gray-400 hover:text-[#B76E88] transition" aria-label="Close">&times;</button>
         </div>
     </header>
 
@@ -77,7 +77,7 @@
                 <p class="text-[11px] uppercase tracking-widest font-semibold text-[#B76E88] mt-2" data-en="⏱ Takes about 10–15 minutes · Your progress is saved automatically as you go" data-es="⏱ Toma aproximadamente 10–15 minutos · Tu progreso se guarda automáticamente">Takes about 10–15 minutes · Your progress is saved automatically.</p>
             </div>
 
-            <div class="bg-white border border-[#EDE1E7] rounded-xl p-5 space-y-2 text-sm">
+            <div id="m1-profile-summary" class="hidden bg-white border border-[#EDE1E7] rounded-xl p-5 space-y-2 text-sm">
                 <div class="flex justify-between border-b border-[#EDE1E7] pb-2"><span class="opacity-50 uppercase text-[10px] tracking-widest" data-en="Full Name" data-es="Nombre Completo">Full Name</span><span id="m1-full-name" class="font-medium"></span></div>
                 <div id="m1-dob-row" class="flex justify-between border-b border-[#EDE1E7] pb-2"><span class="opacity-50 uppercase text-[10px] tracking-widest" data-en="Date of Birth" data-es="Fecha de Nacimiento">Date of Birth</span><span class="font-medium"><span id="m1-dob"></span> <span id="m1-age" class="opacity-50 text-xs"></span></span></div>
                 <div id="m1-sex-row" class="flex justify-between border-b border-[#EDE1E7] pb-2"><span class="opacity-50 uppercase text-[10px] tracking-widest" data-en="Sex" data-es="Sexo">Sex</span><span id="m1-sex" class="font-medium"></span></div>
@@ -85,7 +85,7 @@
                 <div class="flex justify-between"><span class="opacity-50 uppercase text-[10px] tracking-widest" data-en="Email" data-es="Correo">Email</span><span id="m1-email" class="font-medium"></span></div>
             </div>
 
-            <!-- Shown only when dob/sex/phone are missing from the profile (e.g. Google sign-up never collected them) -->
+            <!-- Shown only when dob/sex/phone are missing from an EXISTING profile (e.g. a legacy Google sign-up that never collected them) -->
             <div id="m1-missing-demographics" class="hidden bg-[#FBF0F3] border border-[#EDE1E7] rounded-xl p-5 space-y-4">
                 <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold" data-en="A few more details are needed to complete your profile" data-es="Necesitamos algunos datos más para completar tu perfil">A few more details are needed to complete your profile</label>
                 <div id="m1-dob-field" class="hidden">
@@ -104,6 +104,59 @@
                 <div id="m1-phone-field" class="hidden">
                     <label class="block text-[10px] uppercase tracking-widest opacity-60 mb-1" data-en="Phone" data-es="Teléfono">Phone</label>
                     <input type="tel" id="m1-phone-input" class="field-input" inputmode="tel" data-en-ph="Phone Number" data-es-ph="Teléfono">
+                </div>
+            </div>
+
+            <!-- Shown only in NEW-ACCOUNT mode (no session yet) — this is where the account is registered; it's created for real once Module 5 is submitted -->
+            <div id="m1-account-fields" class="hidden bg-[#FBF0F3] border border-[#EDE1E7] rounded-xl p-5 space-y-4">
+                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold" data-en="Create Your Account" data-es="Crea tu Cuenta">Create Your Account</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" id="m1-firstname" class="field-input" data-en-ph="First Name" data-es-ph="Nombre">
+                    <input type="text" id="m1-lastname" class="field-input" data-en-ph="Last Name" data-es-ph="Apellido">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase tracking-widest opacity-60 mb-1" data-en="Phone" data-es="Teléfono">Phone</label>
+                    <input type="tel" id="m1-account-phone" class="field-input" inputmode="tel" data-en-ph="Phone Number (digits only)" data-es-ph="Número de Teléfono (solo dígitos)">
+                    <p class="text-[10px] opacity-50 mt-1" data-en="This will be your username and your initial password to log in." data-es="Este será tu usuario y tu contraseña inicial para iniciar sesión.">This will be your username and your initial password.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-widest opacity-60 mb-1" data-en="Date of Birth" data-es="Fecha de Nacimiento">Date of Birth</label>
+                        <input type="date" id="m1-account-dob" class="field-input">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-widest opacity-60 mb-1" data-en="Sex" data-es="Sexo">Sex</label>
+                        <select id="m1-account-sex" class="field-input">
+                            <option value="" data-en="Select..." data-es="Selecciona...">Select...</option>
+                            <option value="female" data-en="Female" data-es="Femenino">Female</option>
+                            <option value="male" data-en="Male" data-es="Masculino">Male</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase tracking-widest opacity-60 mb-1" data-en="Email (for account recovery & updates)" data-es="Correo (para recuperación de cuenta y avisos)">Email</label>
+                    <input type="email" id="m1-account-email" class="field-input" data-en-ph="Email" data-es-ph="Correo">
+                </div>
+                <div>
+                    <label class="block text-[9px] uppercase tracking-widest text-[#B76E88] font-bold mb-3" data-en="Preferred Contact Method" data-es="Método de Contacto Preferido">Preferred Contact Method</label>
+                    <div id="m1-contact-method-group" class="grid grid-cols-2 gap-3 text-xs text-[#2A2330] font-light">
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B76E88] transition">
+                            <input type="checkbox" value="WhatsApp" class="m1-contact-method accent-[#B76E88]"> WhatsApp
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B76E88] transition">
+                            <input type="checkbox" value="SMS" class="m1-contact-method accent-[#B76E88]"> SMS
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B76E88] transition">
+                            <input type="checkbox" value="Llamada" class="m1-contact-method accent-[#B76E88]"> <span data-en="Phone Call" data-es="Llamada">Phone Call</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B76E88] transition">
+                            <input type="checkbox" value="Email" class="m1-contact-method accent-[#B76E88]"> Email
+                        </label>
+                    </div>
+                </div>
+                <div id="m1-tos-row" class="flex items-start gap-3">
+                    <input type="checkbox" id="m1-tos-check" class="mt-1 accent-[#B76E88]">
+                    <label for="m1-tos-check" class="text-[10px] uppercase tracking-widest opacity-60 leading-relaxed" data-en="I agree to the Terms of Service and consent to clinical data storage." data-es="Acepto los Términos de Servicio y consiento el almacenamiento de datos clínicos.">I agree to the Terms of Service and consent to clinical data storage.</label>
                 </div>
             </div>
 
@@ -141,11 +194,11 @@
             </div>
         </div>
 
-        <!-- ============ MODULE 2: CHIEF COMPLAINT ============ -->
-        <div id="module-2" class="module-screen hidden space-y-6">
+        <!-- ============ MODULE 2: REASON, MEDICAL, MEDICATIONS & SURGICAL HISTORY (merged) ============ -->
+        <div id="module-2" class="module-screen hidden space-y-8">
             <div>
                 <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 2" data-es="Módulo 2">Module 2</span>
-                <h2 class="text-3xl text-[#2A2330]" data-en="Reason for Visit & Goals" data-es="Motivo de Consulta y Objetivos">Reason for Visit & Goals</h2>
+                <h2 class="text-3xl text-[#2A2330]" data-en="Reason for Visit & Health History" data-es="Motivo de Consulta e Historial de Salud">Reason for Visit & Health History</h2>
                 <p class="instruction-hint mt-3" data-en="✅ Select one or more reasons that describe why you're consulting us today." data-es="✅ Selecciona uno o varios motivos por los cuales consultas hoy.">Select one or more reasons that describe why you're consulting us today.</p>
             </div>
             <div id="m2-concerns" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
@@ -157,76 +210,25 @@
                 <div id="m2-other-container" class="hidden space-y-2 ml-6"></div>
                 <button type="button" onclick="addOtherRow('m2-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otro">+ Add Another</button>
             </div>
-            <div>
-                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="Do you have an event within the next 2–4 weeks? (wedding, photo shoot, vacation)" data-es="¿Tienes algún evento en las próximas 2–4 semanas? (boda, sesión de fotos, vacaciones)">Do you have an event within the next 2–4 weeks?</label>
-                <div id="m2-event-flag-options" class="flex gap-3 max-w-xs">
-                    <label class="radio-card flex-1 text-center" data-group="m2-event-flag" data-value="yes"><input type="radio" name="m2-event-flag" value="yes" class="hidden"><span data-en="Yes" data-es="Sí">Yes</span></label>
-                    <label class="radio-card flex-1 text-center" data-group="m2-event-flag" data-value="no"><input type="radio" name="m2-event-flag" value="no" class="hidden"><span data-en="No" data-es="No">No</span></label>
-                </div>
-                <div id="m2-event-weeks-block" class="hidden mt-3 max-w-xs">
-                    <label class="block text-[10px] uppercase tracking-widest opacity-60 mb-1" data-en="How many weeks away?" data-es="¿Cuántas semanas faltan?">How many weeks away?</label>
-                    <select id="m2-event-weeks" class="field-input">
-                        <option value="2" data-en="2 weeks" data-es="2 semanas">2 weeks</option>
-                        <option value="3" data-en="3 weeks" data-es="3 semanas">3 weeks</option>
-                        <option value="4" data-en="4 weeks" data-es="4 semanas">4 weeks</option>
-                    </select>
-                </div>
-            </div>
-        </div>
 
-        <!-- ============ MODULE 3: MEDICAL HISTORY ============ -->
-        <div id="module-3" class="module-screen hidden space-y-6">
-            <div>
-                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 3" data-es="Módulo 3">Module 3</span>
-                <h2 class="text-3xl text-[#2A2330]" data-en="Medical History" data-es="Historial Médico">Medical History</h2>
-                <p class="instruction-hint mt-3" data-en="✅ Select every condition that applies to you. If none apply, choose “None of the above” below." data-es="✅ Selecciona todas las condiciones médicas que apliquen. Si ninguna aplica, elige “Ninguna de las anteriores” abajo.">Select every condition that applies to you. If none apply, choose "None of the above" below.</p>
-            </div>
-            <div id="m3-conditions" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-            <div>
-                <div class="flex items-center gap-2 mb-2">
-                    <input type="checkbox" id="m3-other-toggle" class="accent-[#B76E88]" onchange="toggleOtherContainer(this, 'm3-other-container')">
-                    <label for="m3-other-toggle" class="text-sm" data-en="Other Medical Condition" data-es="Otra Condición Médica">Other Medical Condition</label>
+            <div class="border-t border-[#EDE1E7] pt-6">
+                <h3 class="text-xl text-[#2A2330] mb-1" data-en="Medical History" data-es="Historial Médico">Medical History</h3>
+                <p class="instruction-hint mt-2 mb-4" data-en="✅ Select every condition that applies to you. If none apply, choose “None of the above” below." data-es="✅ Selecciona todas las condiciones médicas que apliquen. Si ninguna aplica, elige “Ninguna de las anteriores” abajo.">Select every condition that applies to you. If none apply, choose "None of the above" below.</p>
+                <div id="m3-conditions" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                <div class="mt-3">
+                    <div class="flex items-center gap-2 mb-2">
+                        <input type="checkbox" id="m3-other-toggle" class="accent-[#B76E88]" onchange="toggleOtherContainer(this, 'm3-other-container')">
+                        <label for="m3-other-toggle" class="text-sm" data-en="Other Medical Condition" data-es="Otra Condición Médica">Other Medical Condition</label>
+                    </div>
+                    <div id="m3-other-container" class="hidden space-y-2 ml-6"></div>
+                    <button type="button" onclick="addOtherRow('m3-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Condition" data-es="+ Agregar Condición">+ Add Condition</button>
                 </div>
-                <div id="m3-other-container" class="hidden space-y-2 ml-6"></div>
-                <button type="button" onclick="addOtherRow('m3-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Condition" data-es="+ Agregar Condición">+ Add Condition</button>
-            </div>
-        </div>
-
-        <!-- ============ MODULE 4: MEDICATIONS & ALLERGIES ============ -->
-        <div id="module-4" class="module-screen hidden space-y-6">
-            <div>
-                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 4" data-es="Módulo 4">Module 4</span>
-                <h2 class="text-3xl text-[#2A2330]" data-en="Medications, Supplements & Allergies" data-es="Medicamentos, Suplementos y Alergias">Medications, Supplements & Allergies</h2>
-                <p class="instruction-hint mt-3" data-en="💊 This section helps us prevent bleeding, sun-sensitivity, and allergic reactions during your treatment. Please answer every question below — if none apply, select “None of the above.”" data-es="💊 Esta sección nos ayuda a prevenir sangrado, sensibilidad al sol y reacciones alérgicas durante tu tratamiento. Por favor responde cada pregunta — si ninguna aplica, selecciona “Ninguna de las anteriores.”">This section helps us prevent bleeding, sun-sensitivity, and allergic reactions during your treatment.</p>
             </div>
 
-            <div>
-                <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="🩸 Blood Thinners" data-es="🩸 Anticoagulantes">🩸 Blood Thinners</h4>
+            <div class="border-t border-[#EDE1E7] pt-6">
+                <h3 class="text-xl text-[#2A2330] mb-1" data-en="Blood Thinners & Allergies" data-es="Anticoagulantes y Alergias">Blood Thinners & Allergies</h3>
                 <p class="section-hint" data-en="Have you taken any of these in the last 7–10 days? Select one or more, or “None of the above.”" data-es="¿Ha tomado alguno de estos en los últimos 7–10 días? Selecciona uno o varios, o “Ninguna de las anteriores.”">Have you taken any of these in the last 7–10 days?</p>
                 <div id="m4-blood-thinners" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-            </div>
-
-            <div id="m4-photomed-group" class="bg-[#FBF0F3] border border-[#EDE1E7] rounded-xl p-5 space-y-4">
-                <div>
-                    <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="☀️ Photosensitizing Medications" data-es="☀️ Medicamentos Fotosensibilizantes">☀️ Photosensitizing Medications</h4>
-                    <p class="section-hint mb-0" data-en="Have you recently used any of these? Select one or more, or “None of the above.”" data-es="¿Ha usado alguno de estos recientemente? Selecciona uno o varios, o “Ninguna de las anteriores.”">Have you recently used any of these?</p>
-                </div>
-                <label class="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" id="m4-isotretinoin" class="photomed-checkbox mt-1 accent-[#B76E88]">
-                    <span class="text-sm" data-en="Oral Isotretinoin (Accutane) taken within the last 6–12 months?" data-es="¿Isotretinoína oral (Accutane) tomada en los últimos 6–12 meses?">Oral Isotretinoin (Accutane) taken within the last 6–12 months?</span>
-                </label>
-                <label class="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" id="m4-topical-retinoid" class="photomed-checkbox mt-1 accent-[#B76E88]">
-                    <span class="text-sm" data-en="Topical Retinoids (Retin-A, Differin, Tazorac) used in the last 7 days?" data-es="¿Retinoides tópicos (Retin-A, Differin, Tazorac) usados en los últimos 7 días?">Topical Retinoids used in the last 7 days?</span>
-                </label>
-                <label class="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" id="m4-photo-antibiotics" class="photomed-checkbox mt-1 accent-[#B76E88]">
-                    <span class="text-sm" data-en="Photosensitizing Antibiotics (Doxycycline, Minocycline, Bactrim)" data-es="Antibióticos fotosensibilizantes (Doxiciclina, Minociclina, Bactrim)">Photosensitizing Antibiotics</span>
-                </label>
-                <label class="flex items-start gap-3 cursor-pointer border-t border-[#EDE1E7] pt-4">
-                    <input type="checkbox" id="m4-photomed-none" value="none" class="photomed-checkbox mt-1 accent-[#B76E88]">
-                    <span class="text-sm font-medium" data-en="🚫 None of the above" data-es="🚫 Ninguna de las anteriores">None of the above</span>
-                </label>
             </div>
 
             <div>
@@ -242,16 +244,10 @@
                     <button type="button" onclick="addOtherRow('m4-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otra">+ Add Another</button>
                 </div>
             </div>
-        </div>
 
-        <!-- ============ MODULE 5: SURGICAL HISTORY ============ -->
-        <div id="module-5" class="module-screen hidden space-y-6">
-            <div>
-                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 5" data-es="Módulo 5">Module 5</span>
-                <h2 class="text-3xl text-[#2A2330]" data-en="Surgical History" data-es="Antecedentes Quirúrgicos">Surgical History</h2>
-                <p class="instruction-hint mt-3" data-en="🏥 Answer both questions below. Select every surgery that applies, or “None” if it doesn't apply to you." data-es="🏥 Responde ambas preguntas a continuación. Selecciona cada cirugía que aplique, o “Ninguna” si no aplica en tu caso.">Answer both questions below. Select every surgery that applies, or "None" if it doesn't apply to you.</p>
-            </div>
-            <div>
+            <div class="border-t border-[#EDE1E7] pt-6">
+                <h3 class="text-xl text-[#2A2330] mb-1" data-en="Surgical History" data-es="Antecedentes Quirúrgicos">Surgical History</h3>
+                <p class="instruction-hint mt-2 mb-4" data-en="🏥 Answer both questions below. Select every surgery that applies, or “None” if it doesn't apply to you." data-es="🏥 Responde ambas preguntas a continuación. Selecciona cada cirugía que aplique, o “Ninguna” si no aplica en tu caso.">Answer both questions below. Select every surgery that applies, or "None" if it doesn't apply to you.</p>
                 <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="Facial / Head & Neck Surgeries" data-es="Cirugías Faciales / Cabeza y Cuello">Facial / Head & Neck Surgeries</h4>
                 <p class="section-hint" data-en="Have you had any of these? Select one or more, or “None.”" data-es="¿Te has realizado alguna de estas? Selecciona una o varias, o “Ninguna.”">Have you had any of these?</p>
                 <div id="m5-facial" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
@@ -272,9 +268,9 @@
         </div>
 
         <!-- ============ MODULE 6: AESTHETIC TREATMENT HISTORY ============ -->
-        <div id="module-6" class="module-screen hidden space-y-4">
+        <div id="module-3" class="module-screen hidden space-y-4">
             <div>
-                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 6" data-es="Módulo 6">Module 6</span>
+                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 3" data-es="Módulo 3">Module 3</span>
                 <h2 class="text-3xl text-[#2A2330]" data-en="Previous Aesthetic Treatments" data-es="Antecedentes Estéticos Previos">Previous Aesthetic Treatments</h2>
                 <p class="instruction-hint mt-3" data-en="💉 For each treatment below, answer Yes or No. If you answer Yes, a few quick follow-up questions will appear." data-es="💉 Para cada tratamiento a continuación, responde Sí o No. Si respondes Sí, aparecerán algunas preguntas rápidas adicionales.">For each treatment below, answer Yes or No.</p>
             </div>
@@ -286,9 +282,9 @@
         </div>
 
         <!-- ============ MODULE 7: SKIN CLASSIFICATION & SCALES ============ -->
-        <div id="module-7" class="module-screen hidden space-y-8">
+        <div id="module-4" class="module-screen hidden space-y-8">
             <div>
-                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 7" data-es="Módulo 7">Module 7</span>
+                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 4" data-es="Módulo 4">Module 4</span>
                 <h2 class="text-3xl text-[#2A2330]" data-en="Skin Classification" data-es="Clasificación Cutánea">Skin Classification</h2>
                 <p class="instruction-hint mt-3" data-en="🔬 This section is completed by clinical assessment. For each scale below, select the single option that best matches your skin." data-es="🔬 Esta sección se completa mediante valoración clínica. Para cada escala a continuación, selecciona la única opción que mejor describa tu piel.">This section is completed by clinical assessment. Select the single option that best matches your skin for each scale.</p>
             </div>
@@ -307,19 +303,12 @@
                 <p class="section-hint" data-en="Compare each reference photo to your skin and select the single type that matches best." data-es="Compara cada foto de referencia con tu piel y selecciona el único tipo que más se parezca.">Compare each reference photo to your skin and select the single type that matches best.</p>
                 <div id="m7-glogau" class="grid grid-cols-1 gap-3"></div>
             </div>
-            <div id="m7-merz-section" class="space-y-5">
-                <div>
-                    <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="Merz Scale (Focused Areas)" data-es="Escala de Merz (Zonas Focalizadas)">Merz Scale (Focused Areas)</h4>
-                    <p class="section-hint" data-en="For each area below, compare the reference image to your skin and select the matching severity level (0 = None to 4 = Very Severe)." data-es="Para cada zona a continuación, compara la imagen de referencia con tu piel y selecciona el nivel de severidad correspondiente (0 = Ninguna a 4 = Muy Severa).">For each area below, compare the reference image and select the matching severity level.</p>
-                </div>
-                <div id="m7-merz-groups" class="space-y-5"></div>
-            </div>
         </div>
 
-        <!-- ============ MODULE 8: CONSENT & SIGNATURE ============ -->
-        <div id="module-8" class="module-screen hidden space-y-6">
+        <!-- ============ MODULE 5: CONSENT & SIGNATURE ============ -->
+        <div id="module-5" class="module-screen hidden space-y-6">
             <div>
-                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 8" data-es="Módulo 8">Module 8</span>
+                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 5" data-es="Módulo 5">Module 5</span>
                 <h2 class="text-3xl text-[#2A2330]" data-en="Consent & Signature" data-es="Consentimiento y Firma">Consent & Signature</h2>
             </div>
 
@@ -375,12 +364,16 @@
 
     let currentLang = localStorage.getItem('preferredLang') || 'es';
     let currentModule = 1;
-    const TOTAL_MODULES = 8;
+    const TOTAL_MODULES = 5;
     let currentUser = null;
     let currentAdmissionId = null;
+    // In new-account mode (no session yet, opened as ?mode=new from the Patient Portal
+    // modal's iframe) there is no auth user or admission_history row until Module 5 is
+    // submitted — currentUser being null throughout doubles as that mode flag.
+    let isNewAccountMode = false;
     // Guards against accidental data loss: true only right before a deliberate,
     // already-confirmed navigation away from the intake (successful submit,
-    // confirmed logout, or an auth/completed-intake redirect at load time).
+    // confirmed exit, or an auth/completed-intake redirect at load time).
     let allowUnload = false;
     window.addEventListener('beforeunload', (e) => {
         if (allowUnload) return;
@@ -388,24 +381,25 @@
         e.returnValue = '';
     });
 
-    function handleLogoutClick() {
+    function handleExitClick() {
         const confirmed = confirm(currentLang === 'en'
             ? 'If you leave now, any unsaved changes on this screen will be lost. Do you want to continue?'
             : 'Si sales ahora, los cambios no guardados en esta pantalla se perderán. ¿Deseas continuar?');
         if (!confirmed) return;
         allowUnload = true;
-        _supabase.auth.signOut().finally(() => { window.location.href = 'index.html'; });
+        if (window.parent !== window) {
+            window.parent.postMessage({ type: 'close-intake-modal' }, window.location.origin);
+            return;
+        }
+        window.location.href = currentUser ? 'dashboard.html' : 'index.html';
     }
 
     const MODULE_TITLES = {
         1: { en: 'Patient Information', es: 'Información del Paciente' },
-        2: { en: 'Reason & Goals', es: 'Motivo y Objetivos' },
-        3: { en: 'Medical History', es: 'Historial Médico' },
-        4: { en: 'Medications & Allergies', es: 'Medicamentos y Alergias' },
-        5: { en: 'Surgical History', es: 'Antecedentes Quirúrgicos' },
-        6: { en: 'Aesthetic History', es: 'Antecedentes Estéticos' },
-        7: { en: 'Skin Classification', es: 'Clasificación Cutánea' },
-        8: { en: 'Consent & Signature', es: 'Consentimiento y Firma' },
+        2: { en: 'Reason & Health History', es: 'Motivo e Historial de Salud' },
+        3: { en: 'Aesthetic History', es: 'Antecedentes Estéticos' },
+        4: { en: 'Skin Classification', es: 'Clasificación Cutánea' },
+        5: { en: 'Consent & Signature', es: 'Consentimiento y Firma' },
     };
 
     // ---------- OPTION DATA ----------
@@ -604,15 +598,8 @@
         { id: 'IV', num: 4, en: 'Type IV (Severe) — Deep wrinkles across the whole face, skin looks thicker and less elastic.', es: 'Tipo IV (Severo) — Arrugas profundas en todo el rostro, piel de aspecto más grueso y menos elástico.' },
     ];
 
-    // Fixed set of exactly 4 Merz sub-scales (replaces the old trigger-based
-    // conditional set of nasolabial/marionette/midface/brow — marionette and
-    // midface are no longer patient-facing; forehead_glabella and hands are new).
-    const MERZ_SCALES = [
-        { key: 'forehead_glabella', en: 'Forehead & Frown Lines Scale', es: 'Escala de Frente y Entrecejo', image: 'images/merzfrenteyentrecejo.png' },
-        { key: 'under_eye', en: 'Under-Eye Hollows / Volume Loss Scale', es: 'Escala de Ojeras / Pérdida de Volumen y Hundimiento de Ojos', image: 'images/merzojera.png' },
-        { key: 'nasolabial', en: 'Nasolabial Fold Scale', es: 'Escala de Pliegues Nasolabiales', image: 'images/merznasolabial.png' },
-        { key: 'hands', en: 'Hands Scale', es: 'Escala de Manos', image: 'images/merzmanos.png' },
-    ];
+    // Merz scale is filled by the admin (clinical assessment), not the patient —
+    // see admin.html's clinical-history editor. No longer rendered in the intake.
 
     function getGlogauImageFilename(glogauId, sex) {
         const glogau = GLOGAU_TYPES.find(g => g.id === glogauId);
@@ -620,14 +607,6 @@
         const genderSuffix = String(sex || '').toLowerCase().startsWith('f') ? 'm' : 'h';
         return `images/g${glogau.num}${genderSuffix}.png`;
     }
-
-    const MERZ_LEVELS = [
-        { v: 0, en: 'None', es: 'Ninguna' },
-        { v: 1, en: 'Mild', es: 'Leve' },
-        { v: 2, en: 'Moderate', es: 'Moderada' },
-        { v: 3, en: 'Severe', es: 'Severa' },
-        { v: 4, en: 'Very Severe', es: 'Muy Severa' },
-    ];
 
     // ---------- SHARED UTILITIES ----------
     const US_STATES = [
@@ -708,6 +687,21 @@
         const digits = String(rawValue || '').replace(/\D/g, '');
         const rule = PHONE_DIGIT_RULES[iso] || { min: 6, max: 14 };
         return digits.length >= rule.min && digits.length <= rule.max;
+    }
+
+    // The patient's own account phone has no country-code selector (it also doubles
+    // as the login password, per product decision) — just a generic digit-count check.
+    function onlyDigits(value) {
+        return String(value || '').replace(/\D/g, '');
+    }
+    // Must match create-patient-account's syntheticEmail() — the actual auth.users
+    // identifier behind phone-based login (see that function's comment for why).
+    function syntheticEmail(phoneDigits) {
+        return `${phoneDigits}@patients.piel-spa.internal`;
+    }
+    function validateBasePhone(rawValue) {
+        const digits = onlyDigits(rawValue);
+        return digits.length >= 7 && digits.length <= 15;
     }
 
     function calculateAge(dobIso) {
@@ -816,9 +810,9 @@
     }
 
     // Generic click handler for manually-authored Sí/No (and similar) radio-card pairs
-    // that aren't built via renderRadioGroup/renderMerzGroups (e.g. m1-pregnancy,
-    // m2-event-flag). Dispatches a bubbling 'radiocard:change' event so callers can
-    // react (e.g. reveal a follow-up dropdown) without each one wiring its own listener.
+    // that aren't built via renderRadioGroup (e.g. m1-pregnancy). Dispatches a bubbling
+    // 'radiocard:change' event so callers can react (e.g. reveal a follow-up dropdown)
+    // without each one wiring its own listener.
     document.addEventListener('click', (e) => {
         const card = e.target.closest('.radio-card[data-group]');
         if (!card) return;
@@ -834,9 +828,7 @@
         const card = e.target;
         if (!card.dataset) return;
         const group = card.dataset.group || '';
-        if (group === 'm2-event-flag') {
-            document.getElementById('m2-event-weeks-block').classList.toggle('hidden', card.dataset.value !== 'yes');
-        } else if (group.startsWith('m6-cat-')) {
+        if (group.startsWith('m6-cat-')) {
             const catId = group.slice('m6-cat-'.length);
             const subform = document.querySelector(`.m6-subform[data-for="${catId}"]`);
             if (subform) subform.classList.toggle('hidden', card.dataset.value !== 'yes');
@@ -852,6 +844,9 @@
     });
 
     function getPatientSex() {
+        if (isNewAccountMode) {
+            return document.getElementById('m1-account-sex').value;
+        }
         const sexField = document.getElementById('m1-sex-field');
         if (sexField && !sexField.classList.contains('hidden')) {
             return document.getElementById('m1-sex-input').value;
@@ -1108,63 +1103,6 @@
         });
     }
 
-    // ---------- MODULE 7: MERZ SCALES ----------
-    // Rendered once (from init()), not re-rendered on every module-7 visit like the
-    // old trigger-based version — these 4 scales no longer depend on module-2
-    // answers, and rebuilding the innerHTML on every visit would wipe out any
-    // answers the patient already gave if they navigate back and forth.
-    function renderMerzGroups() {
-        const container = document.getElementById('m7-merz-groups');
-        container.innerHTML = MERZ_SCALES.map(scale => `
-            <div>
-                <p class="text-sm font-medium mb-2" data-en="${escapeAttr(scale.en)}" data-es="${escapeAttr(scale.es)}">${scale.en}</p>
-                <div class="overflow-x-auto mb-3 border border-[#EDE1E7] rounded-lg">
-                    <img src="${scale.image}" alt="${escapeAttr(scale.en)}" class="max-w-none h-auto" style="min-width:600px;">
-                </div>
-                <div class="grid grid-cols-5 gap-2" id="merz-${scale.key}">
-                    ${MERZ_LEVELS.map(l => `
-                        <label class="radio-card text-center" style="padding:0.5rem 0.3rem;" data-group="merz-${scale.key}" data-value="${l.v}">
-                            <input type="radio" name="merz-${scale.key}" value="${l.v}" class="hidden">
-                            <div class="text-sm font-bold">${l.v}</div>
-                            <div class="text-[8px] leading-tight uppercase tracking-tight opacity-60 break-words" data-en="${escapeAttr(l.en)}" data-es="${escapeAttr(l.es)}">${l.en}</div>
-                        </label>
-                    `).join('')}
-                </div>
-            </div>
-        `).join('');
-        container.querySelectorAll('.radio-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const group = card.dataset.group;
-                document.querySelectorAll(`.radio-card[data-group="${group}"]`).forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-                card.querySelector('input').checked = true;
-            });
-        });
-        applyLanguage();
-    }
-
-    function getMerzValues() {
-        const result = {};
-        MERZ_SCALES.forEach(scale => {
-            const val = getRadioValue('merz-' + scale.key);
-            if (val !== null) result[scale.key] = parseInt(val, 10);
-        });
-        return result;
-    }
-
-    function setMerzValues(values) {
-        if (!values) return;
-        MERZ_SCALES.forEach(scale => {
-            const v = values[scale.key];
-            if (v === null || v === undefined) return;
-            const target = document.querySelector(`.radio-card[data-group="merz-${scale.key}"][data-value="${v}"]`);
-            if (target) {
-                target.classList.add('selected');
-                target.querySelector('input').checked = true;
-            }
-        });
-    }
-
     // ---------- SIGNATURE PAD ----------
     let sigCanvas, sigCtx, sigDrawing = false, sigHasContent = false;
     function initSignaturePad() {
@@ -1219,6 +1157,17 @@
         localStorage.setItem('preferredLang', currentLang);
         applyLanguage();
     }
+    // When embedded in the Patient Portal modal's iframe, the parent page's own
+    // language toggle (which may be the only one visible, e.g. on mobile full-screen)
+    // pushes language changes down here live.
+    window.addEventListener('message', (event) => {
+        if (event.origin !== window.location.origin) return;
+        if (event.data?.type === 'set-lang' && (event.data.lang === 'en' || event.data.lang === 'es')) {
+            currentLang = event.data.lang;
+            localStorage.setItem('preferredLang', currentLang);
+            applyLanguage();
+        }
+    });
 
     // ---------- NAVIGATION ----------
     // Renders the 8-circle step tracker (done = filled with a check, current =
@@ -1344,23 +1293,45 @@
         const flag = (el) => { if (el && !firstInvalid) firstInvalid = el; };
 
         if (currentModule === 1) {
-            const dobActive = !document.getElementById('m1-dob-field').classList.contains('hidden');
-            if (dobActive) {
-                const el = document.getElementById('m1-dob-input');
-                flag(setInputError(el, !el.value, { en: 'Please enter your date of birth.', es: 'Por favor ingresa tu fecha de nacimiento.' }));
-            }
-            const sexActive = !document.getElementById('m1-sex-field').classList.contains('hidden');
-            if (sexActive) {
-                const el = document.getElementById('m1-sex-input');
-                flag(setInputError(el, !el.value, { en: 'Please select your sex.', es: 'Por favor selecciona tu sexo.' }));
-            }
-            const phoneActive = !document.getElementById('m1-phone-field').classList.contains('hidden');
-            if (phoneActive) {
-                const el = document.getElementById('m1-phone-input');
-                const val = el.value.trim();
-                flag(setInputError(el, !val || !validatePhoneNumber('US', val), !val
+            if (isNewAccountMode) {
+                flag(setInputError(document.getElementById('m1-firstname'), !document.getElementById('m1-firstname').value.trim(),
+                    { en: 'Please enter your first name.', es: 'Por favor ingresa tu nombre.' }));
+                flag(setInputError(document.getElementById('m1-lastname'), !document.getElementById('m1-lastname').value.trim(),
+                    { en: 'Please enter your last name.', es: 'Por favor ingresa tu apellido.' }));
+                const acctPhoneEl = document.getElementById('m1-account-phone');
+                const acctPhoneVal = acctPhoneEl.value.trim();
+                flag(setInputError(acctPhoneEl, !acctPhoneVal || !validateBasePhone(acctPhoneVal), !acctPhoneVal
                     ? { en: 'Please enter your phone number.', es: 'Por favor ingresa tu número de teléfono.' }
                     : { en: 'This phone number doesn’t look valid.', es: 'Este número de teléfono no parece válido.' }));
+                flag(setInputError(document.getElementById('m1-account-dob'), !document.getElementById('m1-account-dob').value,
+                    { en: 'Please enter your date of birth.', es: 'Por favor ingresa tu fecha de nacimiento.' }));
+                flag(setInputError(document.getElementById('m1-account-sex'), !document.getElementById('m1-account-sex').value,
+                    { en: 'Please select your sex.', es: 'Por favor selecciona tu sexo.' }));
+                const acctEmailEl = document.getElementById('m1-account-email');
+                const acctEmailVal = acctEmailEl.value.trim();
+                flag(setInputError(acctEmailEl, !acctEmailVal || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(acctEmailVal),
+                    { en: 'Please enter a valid email.', es: 'Por favor ingresa un correo válido.' }));
+                flag(setGroupError(document.getElementById('m1-tos-row'), !document.getElementById('m1-tos-check').checked,
+                    { en: 'Please agree to the Terms of Service.', es: 'Por favor acepta los Términos de Servicio.' }));
+            } else {
+                const dobActive = !document.getElementById('m1-dob-field').classList.contains('hidden');
+                if (dobActive) {
+                    const el = document.getElementById('m1-dob-input');
+                    flag(setInputError(el, !el.value, { en: 'Please enter your date of birth.', es: 'Por favor ingresa tu fecha de nacimiento.' }));
+                }
+                const sexActive = !document.getElementById('m1-sex-field').classList.contains('hidden');
+                if (sexActive) {
+                    const el = document.getElementById('m1-sex-input');
+                    flag(setInputError(el, !el.value, { en: 'Please select your sex.', es: 'Por favor selecciona tu sexo.' }));
+                }
+                const phoneActive = !document.getElementById('m1-phone-field').classList.contains('hidden');
+                if (phoneActive) {
+                    const el = document.getElementById('m1-phone-input');
+                    const val = el.value.trim();
+                    flag(setInputError(el, !val || !validatePhoneNumber('US', val), !val
+                        ? { en: 'Please enter your phone number.', es: 'Por favor ingresa tu número de teléfono.' }
+                        : { en: 'This phone number doesn’t look valid.', es: 'Este número de teléfono no parece válido.' }));
+                }
             }
 
             flag(setInputError(document.getElementById('m1-addr1'), !document.getElementById('m1-addr1').value.trim(),
@@ -1396,49 +1367,37 @@
             const hasConcern = getCheckedValues('concern-checkbox').length > 0 || getOtherValues('m2-other-container').length > 0;
             flag(setGroupError(document.getElementById('m2-concerns'), !hasConcern,
                 { en: 'Please select at least one reason for your visit.', es: 'Por favor selecciona al menos un motivo de consulta.' }));
-            flag(setGroupError(document.getElementById('m2-event-flag-options'), !getRadioValue('m2-event-flag'),
-                { en: 'Please answer Yes or No.', es: 'Por favor responde Sí o No.' }));
-        }
-        if (currentModule === 3) {
+
             const hasCondition = getCheckedValues('medical-checkbox').length > 0 || getOtherValues('m3-other-container').length > 0;
             flag(setGroupError(document.getElementById('m3-conditions'), !hasCondition,
                 { en: 'Please select at least one condition, or "None of the above".', es: 'Por favor selecciona al menos una condición, o "Ninguna de las anteriores".' }));
-        }
-        if (currentModule === 4) {
+
             flag(setGroupError(document.getElementById('m4-blood-thinners'), !getCheckedValues('blood-thinner-checkbox').length,
-                { en: 'Please answer this question, or select "None of the above".', es: 'Por favor responde esta pregunta, o selecciona "Ninguna de las anteriores".' }));
-            flag(setGroupError(document.getElementById('m4-photomed-group'), !getCheckedValues('photomed-checkbox').length,
                 { en: 'Please answer this question, or select "None of the above".', es: 'Por favor responde esta pregunta, o selecciona "Ninguna de las anteriores".' }));
             const hasAllergy = getCheckedValues('allergy-checkbox').length > 0 || getOtherValues('m4-other-container').length > 0;
             flag(setGroupError(document.getElementById('m4-allergies'), !hasAllergy,
                 { en: 'Please answer this question, or select "No known allergies".', es: 'Por favor responde esta pregunta, o selecciona "Ninguna alergia conocida".' }));
-        }
-        if (currentModule === 5) {
+
             flag(setGroupError(document.getElementById('m5-facial'), !getCheckedValues('surgical-facial-checkbox').length,
                 { en: 'Please answer this question, or select "None of the above".', es: 'Por favor responde esta pregunta, o selecciona "Ninguna de las anteriores".' }));
             flag(setGroupError(document.getElementById('m5-general'), !getCheckedValues('surgical-general-checkbox').length,
                 { en: 'Please answer this question, or select "None of the above".', es: 'Por favor responde esta pregunta, o selecciona "Ninguna de las anteriores".' }));
         }
-        if (currentModule === 6) {
+        if (currentModule === 3) {
             AESTHETIC_CATEGORIES_V2.forEach(cat => {
                 flag(setGroupError(document.getElementById('m6-yesno-' + cat.id), !getRadioValue('m6-cat-' + cat.id),
                     { en: 'Please answer Yes or No.', es: 'Por favor responde Sí o No.' }));
             });
         }
-        if (currentModule === 7) {
+        if (currentModule === 4) {
             flag(setGroupError(document.getElementById('m7-fitzpatrick'), !getRadioValue('m7-fitzpatrick'),
                 { en: 'Please select an option.', es: 'Por favor selecciona una opción.' }));
             flag(setGroupError(document.getElementById('m7-skintype'), !getRadioValue('m7-skintype'),
                 { en: 'Please select an option.', es: 'Por favor selecciona una opción.' }));
             flag(setGroupError(document.getElementById('m7-glogau'), !getRadioValue('m7-glogau'),
                 { en: 'Please select an option.', es: 'Por favor selecciona una opción.' }));
-            const merzValues = getMerzValues();
-            MERZ_SCALES.forEach(scale => {
-                flag(setGroupError(document.getElementById('merz-' + scale.key), merzValues[scale.key] === undefined,
-                    { en: 'Please select a severity level.', es: 'Por favor selecciona un nivel de severidad.' }));
-            });
         }
-        if (currentModule === 8) {
+        if (currentModule === 5) {
             flag(setGroupError(document.getElementById('m8-hipaa-row'), !document.getElementById('m8-hipaa').checked,
                 { en: 'Please accept this to continue.', es: 'Por favor acepta esto para continuar.' }));
             flag(setGroupError(document.getElementById('m8-photo-required-row'), !document.getElementById('m8-photo-required').checked,
@@ -1458,16 +1417,21 @@
 
     async function goNext() {
         if (!validateCurrentModule()) return;
-        if (currentModule === 1) await updateProfileDemographics();
-        const result = await saveProgress(false);
-        if (!result.ok) {
-            alert((currentLang === 'en'
-                ? 'Could not save your progress. Please check your connection and try again.'
-                : 'No se pudo guardar tu progreso. Verifica tu conexión e intenta de nuevo.')
-                + (result.message ? '\n\n(' + result.message + ')' : ''));
-            return;
+        // In new-account mode there's no auth user / admission_history row to save
+        // against yet — everything is held in the DOM and only submitted for real
+        // when Module 5 creates the account (see submitIntake()).
+        if (currentUser) {
+            if (currentModule === 1) await updateProfileDemographics();
+            const result = await saveProgress(false);
+            if (!result.ok) {
+                alert((currentLang === 'en'
+                    ? 'Could not save your progress. Please check your connection and try again.'
+                    : 'No se pudo guardar tu progreso. Verifica tu conexión e intenta de nuevo.')
+                    + (result.message ? '\n\n(' + result.message + ')' : ''));
+                return;
+            }
+            flashSavedIndicator();
         }
-        flashSavedIndicator();
         if (currentModule < TOTAL_MODULES) showModule(currentModule + 1);
     }
     function goPrev() {
@@ -1477,7 +1441,7 @@
     // ---------- COLLECT / FILL FORM STATE ----------
     function collectFormData() {
         return {
-            patient_id: currentUser.id,
+            ...(currentUser ? { patient_id: currentUser.id } : {}),
             address_line1: document.getElementById('m1-addr1').value.trim() || null,
             address_line2: document.getElementById('m1-addr2').value.trim() || null,
             city: document.getElementById('m1-city').value.trim() || null,
@@ -1491,16 +1455,11 @@
 
             consultation_reasons: getCheckedValues('concern-checkbox'),
             consultation_reasons_other: getOtherValues('m2-other-container'),
-            upcoming_event_flag: getRadioValue('m2-event-flag') === 'yes',
-            upcoming_event_weeks: getRadioValue('m2-event-flag') === 'yes' ? document.getElementById('m2-event-weeks').value : null,
 
             medical_conditions: getCheckedValues('medical-checkbox'),
             medical_conditions_other: getOtherValues('m3-other-container'),
 
             blood_thinners: getCheckedValues('blood-thinner-checkbox'),
-            retinoid_isotretinoin_recent: document.getElementById('m4-isotretinoin').checked,
-            retinoid_topical_recent: document.getElementById('m4-topical-retinoid').checked,
-            photosensitizing_antibiotics: document.getElementById('m4-photo-antibiotics').checked,
             allergies: getCheckedValues('allergy-checkbox'),
             allergies_other: getOtherValues('m4-other-container'),
 
@@ -1513,10 +1472,6 @@
             fitzpatrick: getRadioValue('m7-fitzpatrick'),
             skin_type: getRadioValue('m7-skintype'),
             glogau: getRadioValue('m7-glogau'),
-            merz_forehead_glabella: getMerzValues().forehead_glabella ?? null,
-            merz_under_eye: getMerzValues().under_eye ?? null,
-            merz_nasolabial: getMerzValues().nasolabial ?? null,
-            merz_hands: getMerzValues().hands ?? null,
 
             hipaa_acknowledged: document.getElementById('m8-hipaa').checked,
             photo_consent_required: document.getElementById('m8-photo-required').checked,
@@ -1549,15 +1504,6 @@
             document.getElementById('m2-other-container').classList.remove('hidden');
             data.consultation_reasons_other.forEach(v => addOtherRow('m2-other-container', v));
         }
-        if (data.upcoming_event_flag) {
-            const yesCard = document.querySelector('.radio-card[data-group="m2-event-flag"][data-value="yes"]');
-            if (yesCard) { yesCard.classList.add('selected'); yesCard.querySelector('input').checked = true; }
-            document.getElementById('m2-event-weeks-block').classList.remove('hidden');
-            if (data.upcoming_event_weeks) document.getElementById('m2-event-weeks').value = data.upcoming_event_weeks;
-        } else if (data.upcoming_event_flag === false) {
-            const noCard = document.querySelector('.radio-card[data-group="m2-event-flag"][data-value="no"]');
-            if (noCard) { noCard.classList.add('selected'); noCard.querySelector('input').checked = true; }
-        }
 
         setCheckedValues('medical-checkbox', data.medical_conditions);
         if (Array.isArray(data.medical_conditions_other) && data.medical_conditions_other.length) {
@@ -1567,9 +1513,6 @@
         }
 
         setCheckedValues('blood-thinner-checkbox', data.blood_thinners);
-        document.getElementById('m4-isotretinoin').checked = !!data.retinoid_isotretinoin_recent;
-        document.getElementById('m4-topical-retinoid').checked = !!data.retinoid_topical_recent;
-        document.getElementById('m4-photo-antibiotics').checked = !!data.photosensitizing_antibiotics;
         setCheckedValues('allergy-checkbox', data.allergies);
         if (Array.isArray(data.allergies_other) && data.allergies_other.length) {
             document.getElementById('m4-other-toggle').checked = true;
@@ -1594,10 +1537,6 @@
         if (data.fitzpatrick) setRadioValue('m7-fitzpatrick', 'm7-fitzpatrick', data.fitzpatrick);
         if (data.skin_type) setRadioValue('m7-skintype', 'm7-skintype', data.skin_type);
         if (data.glogau) setRadioValue('m7-glogau', 'm7-glogau', data.glogau);
-        setMerzValues({
-            forehead_glabella: data.merz_forehead_glabella, under_eye: data.merz_under_eye,
-            nasolabial: data.merz_nasolabial, hands: data.merz_hands,
-        });
 
         document.getElementById('m8-hipaa').checked = !!data.hipaa_acknowledged;
         document.getElementById('m8-photo-required').checked = !!data.photo_consent_required;
@@ -1623,15 +1562,63 @@
         return { ok: !error, message: error ? error.message : null };
     }
 
+    function collectAccountFields() {
+        return {
+            first_name: document.getElementById('m1-firstname').value.trim(),
+            last_name: document.getElementById('m1-lastname').value.trim(),
+            phone: onlyDigits(document.getElementById('m1-account-phone').value),
+            dob: document.getElementById('m1-account-dob').value,
+            sex: document.getElementById('m1-account-sex').value,
+            email: document.getElementById('m1-account-email').value.trim(),
+            preferred_contact_methods: Array.from(document.querySelectorAll('.m1-contact-method:checked')).map(cb => cb.value),
+        };
+    }
+
+    function exitAfterSubmit() {
+        allowUnload = true;
+        if (window.parent !== window) {
+            window.parent.postMessage({ type: 'intake-complete' }, window.location.origin);
+            return;
+        }
+        window.location.href = 'dashboard.html';
+    }
+
     async function submitIntake() {
         if (!validateCurrentModule()) return;
         const btn = document.getElementById('btn-submit');
         btn.disabled = true;
         btn.innerText = currentLang === 'en' ? 'Submitting...' : 'Enviando...';
+
+        if (isNewAccountMode) {
+            const account = collectAccountFields();
+            const { data, error } = await _supabase.functions.invoke('create-patient-account', {
+                body: { account, intake: collectFormData() },
+            });
+            if (error || data?.error) {
+                btn.disabled = false;
+                applyLanguage();
+                const alreadyRegistered = data?.error === 'phone_already_registered';
+                alert(alreadyRegistered
+                    ? (currentLang === 'en' ? 'This phone number is already registered. Please log in instead.' : 'Este número de teléfono ya está registrado. Por favor inicia sesión.')
+                    : (currentLang === 'en' ? 'Could not create your account. Please try again.' : 'No se pudo crear tu cuenta. Intenta de nuevo.'));
+                return;
+            }
+            const { error: signInError } = await _supabase.auth.signInWithPassword({ email: syntheticEmail(account.phone), password: account.phone });
+            if (signInError) {
+                btn.disabled = false;
+                applyLanguage();
+                alert(currentLang === 'en'
+                    ? 'Account created, but we could not sign you in automatically. Please log in from the Patient Portal.'
+                    : 'Cuenta creada, pero no pudimos iniciar sesión automáticamente. Por favor inicia sesión desde el Portal del Paciente.');
+                return;
+            }
+            exitAfterSubmit();
+            return;
+        }
+
         const result = await saveProgress(true);
         if (result.ok) {
-            allowUnload = true;
-            window.location.href = 'dashboard.html';
+            exitAfterSubmit();
         } else {
             btn.disabled = false;
             applyLanguage();
@@ -1679,9 +1666,15 @@
     }
 
     async function init() {
-        const { data: { user }, error: authError } = await _supabase.auth.getUser();
-        if (authError || !user) { allowUnload = true; window.location.href = 'index.html'; return; }
-        currentUser = user;
+        const { data: { user } } = await _supabase.auth.getUser();
+        // A URL fragment (not a query string) so this survives any static-host "clean
+        // URL" redirect that strips /intake.html?query — fragments are never sent to
+        // the server, so browsers always re-attach them across a redirect.
+        const newModeRequested = window.location.hash.includes('mode=new');
+
+        if (!user && !newModeRequested) { allowUnload = true; window.location.href = 'index.html'; return; }
+        currentUser = user || null;
+        isNewAccountMode = !currentUser;
 
         renderCheckGroup('m2-concerns', CONCERN_OPTIONS, 'concern-checkbox');
         renderCheckGroup('m3-conditions', MEDICAL_CONDITIONS, 'medical-checkbox');
@@ -1690,7 +1683,6 @@
         renderCheckGroup('m4-allergies', ALLERGY_OPTIONS, 'allergy-checkbox');
         enforceNoneExclusivity('blood-thinner-checkbox', 'none_blood_thinners');
         enforceNoneExclusivity('allergy-checkbox', 'none_allergies');
-        enforceNoneExclusivity('photomed-checkbox', 'none');
         renderCheckGroup('m5-facial', SURGICAL_FACIAL, 'surgical-facial-checkbox');
         renderCheckGroup('m5-general', SURGICAL_GENERAL, 'surgical-general-checkbox');
         enforceNoneExclusivity('surgical-facial-checkbox', 'none_facial_surgery');
@@ -1698,54 +1690,60 @@
         renderAestheticCategoriesV2();
         renderRadioGroup('m7-fitzpatrick', FITZPATRICK_TYPES, 'm7-fitzpatrick', true);
         renderRadioGroup('m7-skintype', SKIN_TYPES, 'm7-skintype', false);
-        renderMerzGroups();
         initSignaturePad();
 
         populateSelect(document.getElementById('m1-state'), US_STATES, { valueKey: 'code', placeholder: { en: 'Select State...', es: 'Selecciona Estado...' } });
         populateSelect(document.getElementById('m1-ec-phone-country'), COUNTRY_CODES, { valueKey: 'dial', labelFn: o => `${isoToFlagEmoji(o.iso)} ${o.dial}` });
         document.getElementById('m1-ec-phone-country').value = '+1';
 
-        const { data: profile } = await _supabase.from('profiles').select('first_name, last_name, dob, sex, phone').eq('id', currentUser.id).maybeSingle();
-        document.getElementById('m1-full-name').innerText = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || '—';
-        document.getElementById('m1-email').innerText = currentUser.email || '—';
-
-        if (profile?.dob) {
-            document.getElementById('m1-dob').innerText = profile.dob;
-            updateAgeDisplay(profile.dob, 'm1-age');
+        if (isNewAccountMode) {
+            document.getElementById('m1-account-fields').classList.remove('hidden');
+            document.getElementById('m1-account-sex').addEventListener('change', (e) => { updatePregnancyVisibility(e.target.value); renderGlogauGroup(); });
+            updatePregnancyVisibility('');
         } else {
-            document.getElementById('m1-dob-row').classList.add('hidden');
-            document.getElementById('m1-missing-demographics').classList.remove('hidden');
-            document.getElementById('m1-dob-field').classList.remove('hidden');
+            document.getElementById('m1-profile-summary').classList.remove('hidden');
+            const { data: profile } = await _supabase.from('profiles').select('first_name, last_name, dob, sex, phone').eq('id', currentUser.id).maybeSingle();
+            document.getElementById('m1-full-name').innerText = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || '—';
+            document.getElementById('m1-email').innerText = currentUser.email || '—';
+
+            if (profile?.dob) {
+                document.getElementById('m1-dob').innerText = profile.dob;
+                updateAgeDisplay(profile.dob, 'm1-age');
+            } else {
+                document.getElementById('m1-dob-row').classList.add('hidden');
+                document.getElementById('m1-missing-demographics').classList.remove('hidden');
+                document.getElementById('m1-dob-field').classList.remove('hidden');
+            }
+
+            if (profile?.sex) {
+                document.getElementById('m1-sex').innerText = normalizeSex(profile.sex);
+            } else {
+                document.getElementById('m1-sex-row').classList.add('hidden');
+                document.getElementById('m1-missing-demographics').classList.remove('hidden');
+                document.getElementById('m1-sex-field').classList.remove('hidden');
+            }
+
+            if (profile?.phone) {
+                document.getElementById('m1-phone').innerText = profile.phone;
+            } else {
+                document.getElementById('m1-phone-row').classList.add('hidden');
+                document.getElementById('m1-missing-demographics').classList.remove('hidden');
+                document.getElementById('m1-phone-field').classList.remove('hidden');
+            }
+
+            updatePregnancyVisibility(profile?.sex || '');
+            document.getElementById('m1-dob-input').addEventListener('change', (e) => updateAgeDisplay(e.target.value, 'm1-age-input-display'));
+            document.getElementById('m1-sex-input').addEventListener('change', (e) => { updatePregnancyVisibility(e.target.value); renderGlogauGroup(); });
+
+            const { data: existing } = await _supabase.from('admission_history').select('*').eq('patient_id', currentUser.id).maybeSingle();
+            if (existing) {
+                currentAdmissionId = existing.id;
+                if (existing.intake_completed_at) { allowUnload = true; window.location.href = 'dashboard.html'; return; }
+                fillFormFromData(existing);
+            }
         }
 
-        if (profile?.sex) {
-            document.getElementById('m1-sex').innerText = normalizeSex(profile.sex);
-        } else {
-            document.getElementById('m1-sex-row').classList.add('hidden');
-            document.getElementById('m1-missing-demographics').classList.remove('hidden');
-            document.getElementById('m1-sex-field').classList.remove('hidden');
-        }
-
-        if (profile?.phone) {
-            document.getElementById('m1-phone').innerText = profile.phone;
-        } else {
-            document.getElementById('m1-phone-row').classList.add('hidden');
-            document.getElementById('m1-missing-demographics').classList.remove('hidden');
-            document.getElementById('m1-phone-field').classList.remove('hidden');
-        }
-
-        updatePregnancyVisibility(profile?.sex || '');
         renderGlogauGroup();
-        document.getElementById('m1-dob-input').addEventListener('change', (e) => updateAgeDisplay(e.target.value, 'm1-age-input-display'));
-        document.getElementById('m1-sex-input').addEventListener('change', (e) => { updatePregnancyVisibility(e.target.value); renderGlogauGroup(); });
-
-        const { data: existing } = await _supabase.from('admission_history').select('*').eq('patient_id', currentUser.id).maybeSingle();
-        if (existing) {
-            currentAdmissionId = existing.id;
-            if (existing.intake_completed_at) { allowUnload = true; window.location.href = 'dashboard.html'; return; }
-            fillFormFromData(existing);
-        }
-
         applyLanguage();
         showModule(1);
     }
