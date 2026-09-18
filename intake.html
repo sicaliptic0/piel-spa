@@ -403,6 +403,22 @@
         </div>
     </div>
 
+    <!-- ============ ACCOUNT-CREATED CONFIRMATION (new-account mode only) ============ -->
+    <div id="account-created-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center p-6" style="background: linear-gradient(135deg, rgba(246,217,227,0.97) 0%, rgba(231,214,238,0.97) 50%, rgba(220,230,243,0.97) 100%);">
+        <div class="bg-white max-w-md w-full rounded-2xl shadow-2xl p-8 md:p-10 text-center">
+            <div class="mx-auto mb-6 flex items-center justify-center rounded-full bg-[#FBF0F3] border border-[#EDE1E7]" style="width:64px; height:64px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#B76E88" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <h2 class="text-3xl text-[#2A2330] mb-3" data-en="Thank You!" data-es="¡Gracias!">Thank You!</h2>
+            <p class="text-sm opacity-80 leading-relaxed mb-6" data-en="Thank you for taking the time to complete this registration — it will serve as your clinical history at Piel Spa. You can now log out." data-es="Gracias por tomarte el tiempo de completar este registro — funcionará como tu historia clínica en Piel Spa. Ya puedes cerrar sesión.">Thank you for taking the time to complete this registration — it will serve as your clinical history at Piel Spa. You can now log out.</p>
+            <div class="bg-[#FBF0F3] border border-[#EDE1E7] rounded-xl p-4 mb-6 text-left">
+                <p class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="For your next login" data-es="Para tu próximo inicio de sesión">For your next login</p>
+                <p class="text-sm" data-en="Your username and your password are both your phone number." data-es="Tu usuario y tu contraseña son ambos tu número de teléfono.">Your username and your password are both your phone number.</p>
+            </div>
+            <button onclick="handleFinalLogout()" class="btn-gold w-full py-4 uppercase text-xs tracking-widest font-bold rounded-lg" data-en="Log Out" data-es="Cerrar Sesión">Log Out</button>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
     const SUPABASE_URL = 'https://qkjmrnqkoipdltauweub.supabase.co';
@@ -1687,13 +1703,22 @@
         };
     }
 
+    async function handleFinalLogout() {
+        await _supabase.auth.signOut();
+        exitAfterSubmit();
+    }
+
     function exitAfterSubmit() {
         allowUnload = true;
         if (window.parent !== window) {
             window.parent.postMessage({ type: 'intake-complete' }, window.location.origin);
             return;
         }
-        window.location.href = 'dashboard.html';
+        // Only reached on a direct (non-embedded) visit. New-account mode has just
+        // logged the patient out on the confirmation screen (currentUser was never
+        // set in that flow), so send them to the marketing site, not a dashboard
+        // they no longer have a session for.
+        window.location.href = currentUser ? 'dashboard.html' : 'index.html';
     }
 
     async function submitIntake() {
@@ -1725,7 +1750,9 @@
                     : 'Cuenta creada, pero no pudimos iniciar sesión automáticamente. Por favor inicia sesión desde el Portal del Paciente.');
                 return;
             }
-            exitAfterSubmit();
+            allowUnload = true;
+            document.getElementById('account-created-overlay').classList.remove('hidden');
+            applyLanguage();
             return;
         }
 

@@ -95,7 +95,7 @@
            pushed below the fold by an oversized outer panel. */
         #auth-modal-panel { transition: max-width 0.2s ease; }
         #auth-modal.new-patient-mode #auth-modal-panel {
-            max-width: 1000px; width: 95vw; max-height: 90vh;
+            max-width: 1000px; width: 95vw; height: 90vh; max-height: 90vh;
             display: flex; flex-direction: column; overflow: hidden;
         }
         #auth-modal.new-patient-mode #signup-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -518,15 +518,16 @@
         }
 
         // The intake iframe (inside the "New Patient" tab) messages the parent window
-        // when the patient clicks its own X (close-intake-modal) or finishes signup
-        // (intake-complete) — it can't navigate/close the parent modal directly since
-        // it's cross-document.
+        // when the patient clicks its own X (close-intake-modal) or logs out from its
+        // own "Thank You" confirmation screen after finishing signup (intake-complete)
+        // — it can't navigate/close the parent modal directly since it's cross-document.
+        // Both just close the modal: intake-complete fires only after the patient has
+        // already logged out on the confirmation screen, so there's no session left to
+        // send them into a dashboard with — they land back on this marketing page.
         window.addEventListener('message', (event) => {
             if (event.origin !== window.location.origin) return;
-            if (event.data?.type === 'close-intake-modal') {
+            if (event.data?.type === 'close-intake-modal' || event.data?.type === 'intake-complete') {
                 document.getElementById('auth-modal').classList.add('hidden');
-            } else if (event.data?.type === 'intake-complete') {
-                window.location.href = 'dashboard.html';
             }
         });
 
