@@ -39,9 +39,6 @@
         #history-modal { display: none; }
         #history-modal.modal-open { display: block; }
         @media (min-width: 768px) { #history-modal.modal-open { display: flex; } }
-        /* Desktop-only table columns — avoids hidden + md:table-cell !important conflict */
-        .col-desktop { display: none; }
-        @media (min-width: 768px) { .col-desktop { display: table-cell; } }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -95,8 +92,8 @@
                             <tr>
                                 <th class="p-6 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('name')">Patient Name <span class="sort-icon" data-key="name"></span></th>
                                 <th class="p-6 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('age')">Age <span class="sort-icon" data-key="age"></span></th>
-                                <th class="p-6 col-desktop">Email</th>
-                                <th class="p-6 col-desktop">Phone</th>
+                                <th class="p-6">Email</th>
+                                <th class="p-6">Phone</th>
                                 <th class="p-6 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('registered')">Fecha de Creación de Usuario <span class="sort-icon" data-key="registered"></span></th>
                                 <th class="p-6">Clinic</th>
                                 <th class="p-6">Actions</th>
@@ -206,6 +203,7 @@
                 <div>
                     <h3 class="text-2xl md:text-3xl italic">Clinical History: <span id="history-patient-name" class="font-bold"></span><span id="history-patient-age" class="text-lg font-normal opacity-50 ml-3"></span></h3>
                     <p class="text-[10px] uppercase tracking-widest opacity-40">Longitudinal Medical Record</p>
+                    <p id="history-patient-contact" class="text-xs opacity-70 mt-1"></p>
                 </div>
                 <button onclick="closeHistoryModal()" class="hidden md:block text-2xl opacity-40 hover:opacity-100 ml-4 flex-shrink-0">&times;</button>
             </div>
@@ -814,6 +812,8 @@
         let currentPatientSex = null;
         let currentPatientDob = null;
         let currentPatientName = '';
+        let currentPatientEmail = null;
+        let currentPatientPhone = null;
         let currentAdmissionId = null;
         let notesById = {};
         let admissionDirty = false;
@@ -1194,7 +1194,7 @@
         // fetch instead of a per-patient round trip).
         let allPatients = [];
         let patientSortKey = 'registered';
-        let patientSortDir = 'asc';
+        let patientSortDir = 'desc'; // most recently created accounts first by default
 
         async function fetchPatients() {
             const { data, error } = await _supabase.from('profiles').select('id, first_name, last_name, dob, sex, phone, email, clinic_affiliation, created_at');
@@ -1288,7 +1288,7 @@
                 } else if (patientSortKey === 'visit') {
                     va = a.last_visit_date ? new Date(a.last_visit_date).getTime() : missingLast;
                     vb = b.last_visit_date ? new Date(b.last_visit_date).getTime() : missingLast;
-                } else { // 'registered' — the order patients signed up, oldest first by default
+                } else { // 'registered' — the order patients signed up, most recent first by default
                     va = a.created_at ? new Date(a.created_at).getTime() : missingLast;
                     vb = b.created_at ? new Date(b.created_at).getTime() : missingLast;
                 }
@@ -1315,8 +1315,8 @@
                 <tr class="border-t border-gray-50 hover:bg-gray-50 transition">
                     <td class="p-6 font-medium">${[p.last_name, p.first_name].filter(v => String(v || '').trim()).join(', ') || escapeHtml(p.email || 'Patient')}</td>
                     <td class="p-6 text-xs">${calcAge(p.dob)}</td>
-                    <td class="p-6 text-xs col-desktop">${escapeHtml(p.email || '-')}</td>
-                    <td class="p-6 text-xs col-desktop">${escapeHtml(p.phone || '-')}</td>
+                    <td class="p-6 text-xs">${escapeHtml(p.email || '-')}</td>
+                    <td class="p-6 text-xs">${escapeHtml(p.phone || '-')}</td>
                     <td class="p-6 text-xs">${formatCreatedAt(p.created_at)}</td>
                     <td class="p-6 text-xs">${clinicBadges}</td>
                     <td class="p-6">
@@ -1530,6 +1530,7 @@
                 body: {
                     patient_id: currentPatientId,
                     patient_name: currentPatientName,
+                    patient_email: currentPatientEmail,
                     visit_date: encounter.visit_date,
                     visit_time: encounter.visit_time || null,
                     recommendations: selected.map(r => ({ title: r.title, body: r.body })),
@@ -1690,15 +1691,28 @@
             const ageSpan = document.getElementById('history-patient-age');
             if (ageSpan) ageSpan.innerText = dob ? '· ' + calcAge(dob) : '';
 
-            // Load clinic affiliation for this patient
+            // Load clinic affiliation + contact info for this patient
             const { data: profileData } = await _supabase
                 .from('profiles')
-                .select('clinic_affiliation, sex')
+                .select('clinic_affiliation, sex, email, phone')
                 .eq('id', patientId)
                 .single();
 
             currentPatientClinic = Array.isArray(profileData?.clinic_affiliation) ? profileData.clinic_affiliation : [];
             currentPatientSex = profileData?.sex || null;
+            currentPatientEmail = profileData?.email || null;
+            currentPatientPhone = profileData?.phone || null;
+
+            const contactEl = document.getElementById('history-patient-contact');
+            if (contactEl) {
+                const sexLabel = currentPatientSex === 'female' ? 'Femenino' : currentPatientSex === 'male' ? 'Masculino' : currentPatientSex;
+                const parts = [
+                    profileData?.email ? `✉️ ${profileData.email}` : null,
+                    profileData?.phone ? `📱 ${profileData.phone}` : null,
+                    sexLabel ? `Sexo: ${sexLabel}` : null,
+                ].filter(Boolean);
+                contactEl.innerText = parts.join('   ·   ') || 'Sin correo/teléfono registrado.';
+            }
             const cbFs = document.getElementById('clinic-fs');
             const cbViva = document.getElementById('clinic-viva');
             const cbDivine = document.getElementById('clinic-divine');

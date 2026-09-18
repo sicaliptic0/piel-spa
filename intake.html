@@ -129,6 +129,7 @@
                         <input type="tel" id="m1-account-phone" class="field-input flex-1" inputmode="tel" data-en-ph="Phone Number" data-es-ph="Número de Teléfono">
                     </div>
                     <p class="text-[10px] opacity-50 mt-1" data-en="To log in, you'll only use the number (no country code) as both your username and your initial password." data-es="Para iniciar sesión usarás solo el número (sin el código de país) como tu usuario y tu contraseña inicial.">This will be your username and your initial password.</p>
+                    <p id="m1-account-phone-taken-msg" class="hidden text-[10px] font-semibold mt-1" style="color:#D14343;" data-en="This phone number is already registered. Please log in instead." data-es="Este número de teléfono ya está registrado. Por favor inicia sesión en vez de crear una cuenta nueva.">This phone number is already registered.</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
@@ -777,6 +778,37 @@
         return digits.length >= 7 && digits.length <= 15;
     }
 
+    // Warns the patient on Module 1 (instead of only at the final submit) that their
+    // phone number already has an account. Debounced so it only fires once they've
+    // paused typing, and re-checked from scratch on every keystroke since a still-taken
+    // warning must never linger once the number itself has changed.
+    let phoneTakenWarning = false;
+    let phoneCheckTimer = null;
+    let phoneCheckToken = 0;
+    function schedulePhoneAvailabilityCheck() {
+        const el = document.getElementById('m1-account-phone');
+        const msg = document.getElementById('m1-account-phone-taken-msg');
+        const raw = el.value.trim();
+        phoneTakenWarning = false;
+        msg.classList.add('hidden');
+        clearTimeout(phoneCheckTimer);
+        if (!validateBasePhone(raw)) { updateNextButtonState(); return; }
+        const myToken = ++phoneCheckToken;
+        phoneCheckTimer = setTimeout(async () => {
+            const digits = onlyDigits(raw);
+            try {
+                const { data } = await _supabase.functions.invoke('check-phone-available', { body: { phone: digits } });
+                if (myToken !== phoneCheckToken) return; // a newer check has since superseded this one
+                phoneTakenWarning = data?.available === false;
+                msg.classList.toggle('hidden', !phoneTakenWarning);
+            } catch (_err) {
+                // Network hiccup — fail open, don't block signup over an unreachable check.
+            } finally {
+                if (myToken === phoneCheckToken) updateNextButtonState();
+            }
+        }, 500);
+    }
+
     function calculateAge(dobIso) {
         if (!dobIso) return null;
         const dob = new Date(dobIso + 'T00:00:00');
@@ -1402,9 +1434,11 @@
                     { en: 'Please enter your last name.', es: 'Por favor ingresa tu apellido.' }));
                 const acctPhoneEl = document.getElementById('m1-account-phone');
                 const acctPhoneVal = acctPhoneEl.value.trim();
-                flag(setInputError(acctPhoneEl, !acctPhoneVal || !validateBasePhone(acctPhoneVal), !acctPhoneVal
+                flag(setInputError(acctPhoneEl, !acctPhoneVal || !validateBasePhone(acctPhoneVal) || phoneTakenWarning, !acctPhoneVal
                     ? { en: 'Please enter your phone number.', es: 'Por favor ingresa tu número de teléfono.' }
-                    : { en: 'This phone number doesn’t look valid.', es: 'Este número de teléfono no parece válido.' }));
+                    : phoneTakenWarning
+                        ? { en: 'This phone number is already registered. Please log in instead.', es: 'Este número de teléfono ya está registrado. Por favor inicia sesión.' }
+                        : { en: 'This phone number doesn’t look valid.', es: 'Este número de teléfono no parece válido.' }));
                 flag(setInputError(document.getElementById('m1-account-dob'), !document.getElementById('m1-account-dob').value,
                     { en: 'Please enter your date of birth.', es: 'Por favor ingresa tu fecha de nacimiento.' }));
                 flag(setInputError(document.getElementById('m1-account-sex'), !document.getElementById('m1-account-sex').value,
@@ -1736,9 +1770,11 @@
                 btn.disabled = false;
                 applyLanguage();
                 const alreadyRegistered = data?.error === 'phone_already_registered';
+                const detail = data?.error || error?.message || '';
                 alert(alreadyRegistered
                     ? (currentLang === 'en' ? 'This phone number is already registered. Please log in instead.' : 'Este número de teléfono ya está registrado. Por favor inicia sesión.')
-                    : (currentLang === 'en' ? 'Could not create your account. Please try again.' : 'No se pudo crear tu cuenta. Intenta de nuevo.'));
+                    : (currentLang === 'en' ? 'Could not create your account. Please try again.' : 'No se pudo crear tu cuenta. Intenta de nuevo.')
+                        + (detail ? '\n\n(' + detail + ')' : ''));
                 return;
             }
             const { error: signInError } = await _supabase.auth.signInWithPassword({ email: syntheticEmail(account.phone), password: account.phone });
@@ -1841,6 +1877,7 @@
         if (isNewAccountMode) {
             document.getElementById('m1-account-fields').classList.remove('hidden');
             document.getElementById('m1-account-sex').addEventListener('change', (e) => { updatePregnancyVisibility(e.target.value); renderGlogauGroup(); });
+            document.getElementById('m1-account-phone').addEventListener('input', schedulePhoneAvailabilityCheck);
             updatePregnancyVisibility('');
         } else {
             document.getElementById('m1-profile-summary').classList.remove('hidden');
