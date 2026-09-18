@@ -97,7 +97,7 @@
                                 <th class="p-6 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('age')">Age <span class="sort-icon" data-key="age"></span></th>
                                 <th class="p-6 col-desktop">Email</th>
                                 <th class="p-6 col-desktop">Phone</th>
-                                <th class="p-6 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('visit')">Fecha de Atención <span class="sort-icon" data-key="visit"></span></th>
+                                <th class="p-6 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('registered')">Fecha de Creación de Usuario <span class="sort-icon" data-key="registered"></span></th>
                                 <th class="p-6">Clinic</th>
                                 <th class="p-6">Actions</th>
                             </tr>
@@ -837,29 +837,29 @@
         // --- Treatments (portfolio) ---
         // Usamos IDs para poder almacenar/recuperar sin depender del texto.
         const TREATMENT_OPTIONS = [
-            { id: 'general_consultation', category: 'consultation', label: 'General Consultation', price: '$0' },
+            { id: 'general_consultation', category: 'consultation', label: 'General Consultation' },
 
-            { id: 'upper_face_rejuvenation', category: 'neuromodulators', label: 'Upper Face Rejuvenation', price: '$14 / unit' },
-            { id: 'masseter_reduction_bruxism', category: 'neuromodulators', label: 'Masseter Reduction (Bruxism)', price: '$600' },
-            { id: 'gummy_smile_correction', category: 'neuromodulators', label: 'Gummy Smile Correction', price: '$150' },
-            { id: 'nasal_profiling', category: 'neuromodulators', label: 'Nasal Profiling', price: '$200' },
-            { id: 'hyperhidrosis_treatment', category: 'neuromodulators', label: 'Hyperhidrosis Treatment', price: '$1,000' },
+            { id: 'upper_face_rejuvenation', category: 'neuromodulators', label: 'Upper Face Rejuvenation' },
+            { id: 'masseter_reduction_bruxism', category: 'neuromodulators', label: 'Masseter Reduction (Bruxism)' },
+            { id: 'gummy_smile_correction', category: 'neuromodulators', label: 'Gummy Smile Correction' },
+            { id: 'nasal_profiling', category: 'neuromodulators', label: 'Nasal Profiling' },
+            { id: 'hyperhidrosis_treatment', category: 'neuromodulators', label: 'Hyperhidrosis Treatment' },
 
-            { id: 'lip_augmentation', category: 'fillers', label: 'Lip Augmentation', price: '$700' },
-            { id: 'facial_harmonization', category: 'fillers', label: 'Facial Harmonization', price: 'From $1,500' },
-            { id: 'jawline_masculinization', category: 'fillers', label: 'Jawline Masculinization', price: 'From $1,200' },
-            { id: 'facial_feminization', category: 'fillers', label: 'Facial Feminization', price: 'From $1,200' },
+            { id: 'lip_augmentation', category: 'fillers', label: 'Lip Augmentation' },
+            { id: 'facial_harmonization', category: 'fillers', label: 'Facial Harmonization' },
+            { id: 'jawline_masculinization', category: 'fillers', label: 'Jawline Masculinization' },
+            { id: 'facial_feminization', category: 'fillers', label: 'Facial Feminization' },
 
-            { id: 'sculptra', category: 'biostimulators', label: 'Sculptra (Poly-L-Lactic Acid)', price: '$800 / vial' },
-            { id: 'radiesse', category: 'biostimulators', label: 'Radiesse (Calcium Hydroxylapatite)', price: '$800 / syringe' },
+            { id: 'sculptra', category: 'biostimulators', label: 'Sculptra (Poly-L-Lactic Acid)' },
+            { id: 'radiesse', category: 'biostimulators', label: 'Radiesse (Calcium Hydroxylapatite)' },
 
-            { id: 'exosomes_therapy_direct_injection', category: 'lasers', label: 'Exosomes Therapy (Direct Injection)', price: '$600' },
-            { id: 'microneedling_exosomes', category: 'lasers', label: 'Microneedling + Exosomes', price: '$800' },
-            { id: 'salmon_pdrn_direct_injection', category: 'lasers', label: 'Salmon PDRN (Direct Injection)', price: '$450' },
-            { id: 'microneedling_salmon_pdrn', category: 'lasers', label: 'Microneedling + Salmon PDRN', price: '$650' },
-            { id: 'nctf_skin_boosting', category: 'lasers', label: 'NCTF Skin Boosting', price: '$500' },
-            { id: 'fractional_co2_laser_resurfacing', category: 'lasers', label: 'Fractional CO2 Laser Resurfacing', price: '$1,200' },
-            { id: 'facial_cleansing', category: 'lasers', label: 'Facial Cleansing', price: '$120' },
+            { id: 'exosomes_therapy_direct_injection', category: 'lasers', label: 'Exosomes Therapy (Direct Injection)' },
+            { id: 'microneedling_exosomes', category: 'lasers', label: 'Microneedling + Exosomes' },
+            { id: 'salmon_pdrn_direct_injection', category: 'lasers', label: 'Salmon PDRN (Direct Injection)' },
+            { id: 'microneedling_salmon_pdrn', category: 'lasers', label: 'Microneedling + Salmon PDRN' },
+            { id: 'nctf_skin_boosting', category: 'lasers', label: 'NCTF Skin Boosting' },
+            { id: 'fractional_co2_laser_resurfacing', category: 'lasers', label: 'Fractional CO2 Laser Resurfacing' },
+            { id: 'facial_cleansing', category: 'lasers', label: 'Facial Cleansing' },
         ];
 
         const TREATMENT_CATEGORIES = [
@@ -872,10 +872,6 @@
 
         function getTreatmentLabelById(id) {
             return TREATMENT_OPTIONS.find(o => o.id === id)?.label || id;
-        }
-
-        function getTreatmentPriceById(id) {
-            return TREATMENT_OPTIONS.find(o => o.id === id)?.price || '';
         }
 
         function renderTreatmentsDropdownOptions(targetContainerId, checkboxClass) {
@@ -911,10 +907,7 @@
                     row.innerHTML = `
                         <input type="checkbox" class="${checkboxClass} mt-1 accent-[#B76E88]" value="${t.id}">
                         <div class="flex-1 min-w-0 w-full">
-                            <div class="flex items-start justify-between gap-3 w-full">
-                                <span class="text-sm text-[#2A2330] font-light leading-snug break-words pr-2">${t.label}</span>
-                                <span class="text-[10px] uppercase tracking-widest opacity-60 font-semibold whitespace-nowrap shrink-0">${t.price}</span>
-                            </div>
+                            <span class="text-sm text-[#2A2330] font-light leading-snug break-words">${t.label}</span>
                         </div>
                     `;
                     list.appendChild(row);
@@ -962,10 +955,7 @@
                     row.innerHTML = `
                         <input type="checkbox" class="soap-procedure-checkbox mt-1 accent-[#B76E88]" value="${t.id}">
                         <div class="flex-1 min-w-0 w-full">
-                            <div class="flex items-start justify-between gap-3 w-full">
-                                <span class="text-sm text-[#2A2330] font-light leading-snug break-words pr-2">${t.label}</span>
-                                <span class="text-[10px] uppercase tracking-widest opacity-60 font-semibold whitespace-nowrap shrink-0">${t.price}</span>
-                            </div>
+                            <span class="text-sm text-[#2A2330] font-light leading-snug break-words">${t.label}</span>
                         </div>
                     `;
                     section.appendChild(row);
@@ -1263,6 +1253,15 @@
             return d.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
         }
 
+        // Unlike last_visit_date (a plain YYYY-MM-DD), created_at is a full ISO
+        // timestamp — parse it directly instead of appending a bogus "T00:00:00".
+        function formatCreatedAt(dateStr) {
+            if (!dateStr) return '—';
+            const d = new Date(dateStr);
+            if (Number.isNaN(d.getTime())) return dateStr;
+            return d.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
         // Clicking a column header toggles asc/desc if it's already the active
         // column, otherwise switches to that column starting ascending.
         function sortPatients(key) {
@@ -1318,7 +1317,7 @@
                     <td class="p-6 text-xs">${calcAge(p.dob)}</td>
                     <td class="p-6 text-xs col-desktop">${escapeHtml(p.email || '-')}</td>
                     <td class="p-6 text-xs col-desktop">${escapeHtml(p.phone || '-')}</td>
-                    <td class="p-6 text-xs">${formatVisitDate(p.last_visit_date)}</td>
+                    <td class="p-6 text-xs">${formatCreatedAt(p.created_at)}</td>
                     <td class="p-6 text-xs">${clinicBadges}</td>
                     <td class="p-6">
                         <div class="flex items-center gap-3 flex-wrap">
