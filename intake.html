@@ -22,7 +22,7 @@
         }
         .btn-gold { background-color: #B76E88; color: white; transition: 0.3s; }
         .btn-gold:hover { background-color: #9C5570; }
-        .btn-gold:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-gold:disabled { background-color: #D8D2D5; color: #8a7f85; cursor: not-allowed; }
         .field-input { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; padding: 0.9rem; border: 1px solid #EDE1E7; background: #FDFBFC; outline: none; font-size: 1rem; border-radius: 0.5rem; }
         .field-input:focus { border-color: #B76E88; }
         input[type="date"].field-input { min-width: 0; }
@@ -1292,6 +1292,7 @@
         }
         currentModule = n;
         updateProgressUI();
+        updateNextButtonState();
         window.scrollTo(0, 0);
     }
 
@@ -1301,8 +1302,16 @@
     // every missing field by name — patients had to memorize that list and
     // then hunt for each field on their own instead of seeing exactly where
     // the problem is.
+    // When true, setInputError/setGroupError only compute+return whether a field is
+    // invalid — no red styling, no accordion auto-expand, no scrollIntoView. Used by
+    // isCurrentModuleComplete() to silently check "can Next/Submit be enabled yet?"
+    // on every keystroke without visually flagging errors the patient hasn't reached
+    // (or interrupted) yet.
+    let validationSilent = false;
+
     function setInputError(el, invalid, messageObj) {
         if (!el) return null;
+        if (validationSilent) return invalid ? el : null;
         if (invalid) { const acc = el.closest('details.acc-section'); if (acc) acc.open = true; }
         el.classList.toggle('field-error', invalid);
         let msg = el.nextElementSibling;
@@ -1321,6 +1330,7 @@
     // there's no single field to point at.
     function setGroupError(containerEl, invalid, messageObj) {
         if (!containerEl) return null;
+        if (validationSilent) return invalid ? containerEl : null;
         if (invalid) { const acc = containerEl.closest('details.acc-section'); if (acc) acc.open = true; }
         containerEl.classList.toggle('field-error-group', invalid);
         let msg = containerEl.nextElementSibling;
@@ -1483,11 +1493,35 @@
         }
 
         if (firstInvalid) {
-            firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (!validationSilent) firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return false;
         }
         return true;
     }
+
+    function isCurrentModuleComplete() {
+        validationSilent = true;
+        const result = validateCurrentModule();
+        validationSilent = false;
+        return result;
+    }
+
+    // Keeps Next/Submit disabled (and gray) until every required field on the current
+    // module is filled, instead of only revealing what's missing after a click.
+    function updateNextButtonState() {
+        const complete = isCurrentModuleComplete();
+        const nextBtn = document.getElementById('btn-next');
+        const submitBtn = document.getElementById('btn-submit');
+        if (nextBtn) nextBtn.disabled = !complete;
+        if (submitBtn) submitBtn.disabled = !complete;
+    }
+    document.addEventListener('change', updateNextButtonState);
+    document.addEventListener('input', updateNextButtonState);
+    // Radio-cards (Sí/No, Fitzpatrick, Glogau, etc.) set their underlying <input>
+    // programmatically and never fire a native 'change' — they dispatch this custom
+    // event instead (see the document 'click' handler above), so Next/Submit need to
+    // listen for it too or they'd never re-enable after picking a radio-card option.
+    document.addEventListener('radiocard:change', updateNextButtonState);
 
     async function goNext() {
         if (!validateCurrentModule()) return;
