@@ -138,10 +138,10 @@
                             <th class="px-5 py-4 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('name')">Paciente <span class="sort-icon" data-key="name"></span></th>
                             <th class="px-5 py-4 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('age')">Edad <span class="sort-icon" data-key="age"></span></th>
                             <th class="px-5 py-4">Teléfono</th>
-                            <th class="px-5 py-4">Correo</th>
+                            <th class="px-5 py-4 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('email')">Correo <span class="sort-icon" data-key="email"></span></th>
                             <th class="px-5 py-4 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('visit')">Última atención <span class="sort-icon" data-key="visit"></span></th>
                             <th class="px-5 py-4 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('registered')">Registro <span class="sort-icon" data-key="registered"></span></th>
-                            <th class="px-5 py-4">Clínica</th>
+                            <th class="px-5 py-4 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('clinic')">Clínica <span class="sort-icon" data-key="clinic"></span></th>
                             <th class="px-5 py-4">Acciones</th>
                         </tr>
                     </thead>
@@ -1447,6 +1447,14 @@
             `).join('');
         }
 
+        // Clinic names as shown in the table, joined in a fixed order, so
+        // "Piel SPA" patients group together, then "Piel SPA, Viva Skin", etc.
+        const CLINIC_LABELS = { fs: 'Piel SPA', viva: 'Viva Skin', divine: 'Divine Bliss' };
+        function clinicSortLabel(p) {
+            const aff = Array.isArray(p.clinic_affiliation) ? p.clinic_affiliation : [];
+            return Object.keys(CLINIC_LABELS).filter(k => aff.includes(k)).map(k => CLINIC_LABELS[k]).join(', ').toLowerCase();
+        }
+
         function patientMatchesSearch(p, query) {
             if (!query) return true;
             const name = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
@@ -1551,6 +1559,15 @@
                 } else if (patientSortKey === 'visit') {
                     va = a.last_visit_date ? new Date(a.last_visit_date).getTime() : missingLast;
                     vb = b.last_visit_date ? new Date(b.last_visit_date).getTime() : missingLast;
+                } else if (patientSortKey === 'email' || patientSortKey === 'clinic') {
+                    // Text columns: patients without the value always go last,
+                    // then alphabetical (A→Z or Z→A), ties broken by name.
+                    const text = p => patientSortKey === 'email' ? String(p.email || '').trim().toLowerCase() : clinicSortLabel(p);
+                    const ta = text(a), tb = text(b);
+                    if (!ta || !tb) return ta === tb ? 0 : (ta ? -1 : 1);
+                    const byText = ta.localeCompare(tb, 'es') * dir;
+                    if (byText) return byText;
+                    return `${a.last_name || ''} ${a.first_name || ''}`.localeCompare(`${b.last_name || ''} ${b.first_name || ''}`, 'es');
                 } else { // 'registered' — the order patients signed up, most recent first by default
                     va = a.created_at ? new Date(a.created_at).getTime() : missingLast;
                     vb = b.created_at ? new Date(b.created_at).getTime() : missingLast;
