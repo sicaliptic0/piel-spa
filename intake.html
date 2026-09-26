@@ -411,12 +411,12 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#B76E88" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
             </div>
             <h2 class="text-3xl text-[#2A2330] mb-3" data-en="Thank You!" data-es="¡Gracias!">Thank You!</h2>
-            <p class="text-sm opacity-80 leading-relaxed mb-6" data-en="Thank you for taking the time to complete this registration — it will serve as your clinical history at Piel Spa. You can now log out." data-es="Gracias por tomarte el tiempo de completar este registro — funcionará como tu historia clínica en Piel Spa. Ya puedes cerrar sesión.">Thank you for taking the time to complete this registration — it will serve as your clinical history at Piel Spa. You can now log out.</p>
+            <p class="text-sm opacity-80 leading-relaxed mb-6" data-en="Thank you for taking the time to complete this registration — it will serve as your clinical history at Piel Spa." data-es="Gracias por tomarte el tiempo de completar este registro — funcionará como tu historia clínica en Piel Spa.">Thank you for taking the time to complete this registration — it will serve as your clinical history at Piel Spa.</p>
             <div class="bg-[#FBF0F3] border border-[#EDE1E7] rounded-xl p-4 mb-6 text-left">
                 <p class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="For your next login" data-es="Para tu próximo inicio de sesión">For your next login</p>
                 <p class="text-sm" data-en="Your username and your password are both your phone number." data-es="Tu usuario y tu contraseña son ambos tu número de teléfono.">Your username and your password are both your phone number.</p>
             </div>
-            <button onclick="handleFinalLogout()" class="btn-gold w-full py-4 uppercase text-xs tracking-widest font-bold rounded-lg" data-en="Log Out" data-es="Cerrar Sesión">Log Out</button>
+            <button onclick="exitAfterSubmit()" class="btn-gold w-full py-4 uppercase text-xs tracking-widest font-bold rounded-lg" data-en="Finish" data-es="Finalizar">Finish</button>
         </div>
     </div>
 
@@ -424,7 +424,18 @@
     <script>
     const SUPABASE_URL = 'https://qkjmrnqkoipdltauweub.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFram1ybnFrb2lwZGx0YXV3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTkyMjgsImV4cCI6MjA4OTA5NTIyOH0.EGqgJ9RNY9vYfuVeeEcGoMu_cIaygRq0hnyT-iE7zTw';
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // A URL fragment (not a query string) so this survives any static-host "clean
+    // URL" redirect that strips /intake.html?query — fragments are never sent to
+    // the server, so browsers always re-attach them across a redirect.
+    const NEW_MODE_REQUESTED = window.location.hash.includes('mode=new');
+    // New-patient mode runs on a shared clinic device, so it must never read or
+    // write the browser's stored session: reading it sent the next patient into
+    // the previous patient's dashboard, and writing it would log the admin out.
+    const _supabase = NEW_MODE_REQUESTED
+        ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'piel-intake-new-patient' },
+        })
+        : supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // Embedded inside the Patient Portal modal's iframe — that outer page already has
     // its own language toggle and X/close button, so this page's own header (logo,
@@ -767,11 +778,6 @@
     // as the login password, per product decision) — just a generic digit-count check.
     function onlyDigits(value) {
         return String(value || '').replace(/\D/g, '');
-    }
-    // Must match create-patient-account's syntheticEmail() — the actual auth.users
-    // identifier behind phone-based login (see that function's comment for why).
-    function syntheticEmail(phoneDigits) {
-        return `${phoneDigits}@patients.piel-spa.internal`;
     }
     function validateBasePhone(rawValue) {
         const digits = onlyDigits(rawValue);
@@ -1737,21 +1743,15 @@
         };
     }
 
-    async function handleFinalLogout() {
-        await _supabase.auth.signOut();
-        exitAfterSubmit();
-    }
-
     function exitAfterSubmit() {
         allowUnload = true;
         if (window.parent !== window) {
             window.parent.postMessage({ type: 'intake-complete' }, window.location.origin);
             return;
         }
-        // Only reached on a direct (non-embedded) visit. New-account mode has just
-        // logged the patient out on the confirmation screen (currentUser was never
-        // set in that flow), so send them to the marketing site, not a dashboard
-        // they no longer have a session for.
+        // Only reached on a direct (non-embedded) visit. New-account mode never
+        // signs the patient in (currentUser stays null), so send them to the
+        // marketing site, not a dashboard they have no session for.
         window.location.href = currentUser ? 'dashboard.html' : 'index.html';
     }
 
@@ -1777,15 +1777,8 @@
                         + (detail ? '\n\n(' + detail + ')' : ''));
                 return;
             }
-            const { error: signInError } = await _supabase.auth.signInWithPassword({ email: syntheticEmail(account.phone), password: account.phone });
-            if (signInError) {
-                btn.disabled = false;
-                applyLanguage();
-                alert(currentLang === 'en'
-                    ? 'Account created, but we could not sign you in automatically. Please log in from the Patient Portal.'
-                    : 'Cuenta creada, pero no pudimos iniciar sesión automáticamente. Por favor inicia sesión desde el Portal del Paciente.');
-                return;
-            }
+            // No automatic sign-in: the patient logs in later from their own device,
+            // so nothing of theirs is left behind on the clinic's browser.
             allowUnload = true;
             document.getElementById('account-created-overlay').classList.remove('hidden');
             applyLanguage();
@@ -1842,13 +1835,10 @@
     }
 
     async function init() {
-        const { data: { user } } = await _supabase.auth.getUser();
-        // A URL fragment (not a query string) so this survives any static-host "clean
-        // URL" redirect that strips /intake.html?query — fragments are never sent to
-        // the server, so browsers always re-attach them across a redirect.
-        const newModeRequested = window.location.hash.includes('mode=new');
+        // New-patient mode ignores any existing login outright (see NEW_MODE_REQUESTED).
+        const user = NEW_MODE_REQUESTED ? null : (await _supabase.auth.getUser()).data.user;
 
-        if (!user && !newModeRequested) { allowUnload = true; window.location.href = 'index.html'; return; }
+        if (!user && !NEW_MODE_REQUESTED) { allowUnload = true; window.location.href = 'index.html'; return; }
         currentUser = user || null;
         isNewAccountMode = !currentUser;
 

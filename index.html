@@ -515,6 +515,24 @@
                 : true;
             if (!confirmed) return;
             document.getElementById('auth-modal').classList.add('hidden');
+            resetIntakeFrame();
+        }
+
+        // Swap in a blank iframe so the next "New Patient" starts from an empty
+        // form instead of the previous patient's answers or Thank-You screen.
+        // Replacing the element (rather than re-navigating it) also skips the
+        // intake's own "unsaved changes" prompt, which was already confirmed.
+        function resetIntakeFrame() {
+            const oldFrame = document.getElementById('intake-frame');
+            const freshFrame = document.createElement('iframe');
+            freshFrame.id = 'intake-frame';
+            freshFrame.title = oldFrame.title;
+            oldFrame.replaceWith(freshFrame);
+        }
+
+        function ensureIntakeFrameLoaded() {
+            const frame = document.getElementById('intake-frame');
+            if (!frame.getAttribute('src')) frame.src = 'intake.html#mode=new';
         }
 
         // The intake iframe (inside the "New Patient" tab) messages the parent window
@@ -528,6 +546,7 @@
             if (event.origin !== window.location.origin) return;
             if (event.data?.type === 'close-intake-modal' || event.data?.type === 'intake-complete') {
                 document.getElementById('auth-modal').classList.add('hidden');
+                resetIntakeFrame();
             }
         });
 
@@ -579,6 +598,9 @@
         function openAuthModal(tab) {
             document.getElementById('auth-modal').classList.remove('hidden');
             setAuthTab(tab === 'signup' ? 'signup' : 'login');
+            // setAuthTab returns early when the modal reopens on the tab it was
+            // closed on, so (re)load the freshly reset intake here too.
+            if (isSignUp) ensureIntakeFrameLoaded();
         }
 
         // 3. CAMBIAR ENTRE LOGIN Y NUEVO PACIENTE (INTAKE)
@@ -591,10 +613,7 @@
             document.getElementById('signup-view').classList.toggle('hidden', !isSignUp);
             document.getElementById('auth-modal').classList.toggle('new-patient-mode', isSignUp);
 
-            if (isSignUp) {
-                const frame = document.getElementById('intake-frame');
-                if (!frame.src) frame.src = 'intake.html#mode=new';
-            }
+            if (isSignUp) ensureIntakeFrameLoaded();
 
             const tabSignIn = document.getElementById('tab-signin');
             const tabSignUp = document.getElementById('tab-signup');
