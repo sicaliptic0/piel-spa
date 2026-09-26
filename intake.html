@@ -160,6 +160,7 @@
                 <div>
                     <label class="block text-[10px] uppercase tracking-widest opacity-60 mb-1" data-en="Email (for account recovery & updates)" data-es="Correo (para recuperación de cuenta y avisos)">Email</label>
                     <input type="email" id="m1-account-email" class="field-input" data-en-ph="Email" data-es-ph="Correo">
+                    <p id="m1-account-email-taken-msg" class="hidden text-[10px] font-semibold mt-1" style="color:#D14343;" data-en="This email is already registered to another patient." data-es="Este correo ya está registrado en otro paciente.">This email is already registered to another patient.</p>
                 </div>
             </div>
 
@@ -818,6 +819,33 @@
                 // Network hiccup — fail open, don't block signup over an unreachable check.
             } finally {
                 if (myToken === phoneCheckToken) updateNextButtonState();
+            }
+        }, 500);
+    }
+
+    // Same idea for the email: profiles.email must be unique across patients.
+    // Only a yes/no comes back (email_is_registered), never patient details.
+    let emailTakenWarning = false;
+    let emailCheckTimer = null;
+    let emailCheckToken = 0;
+    function scheduleEmailAvailabilityCheck() {
+        const raw = document.getElementById('m1-account-email').value.trim();
+        const msg = document.getElementById('m1-account-email-taken-msg');
+        emailTakenWarning = false;
+        msg.classList.add('hidden');
+        clearTimeout(emailCheckTimer);
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) { updateNextButtonState(); return; }
+        const myToken = ++emailCheckToken;
+        emailCheckTimer = setTimeout(async () => {
+            try {
+                const { data } = await _supabase.rpc('email_is_registered', { p_email: raw });
+                if (myToken !== emailCheckToken) return;
+                emailTakenWarning = data === true;
+                msg.classList.toggle('hidden', !emailTakenWarning);
+            } catch (_err) {
+                // Network hiccup — fail open; the final submit checks again.
+            } finally {
+                if (myToken === emailCheckToken) updateNextButtonState();
             }
         }, 500);
     }
@@ -1649,8 +1677,10 @@
                     { en: 'Please select your sex.', es: 'Por favor selecciona tu sexo.' }));
                 const acctEmailEl = document.getElementById('m1-account-email');
                 const acctEmailVal = acctEmailEl.value.trim();
-                flag(setInputError(acctEmailEl, !acctEmailVal || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(acctEmailVal),
-                    { en: 'Please enter a valid email.', es: 'Por favor ingresa un correo válido.' }));
+                const emailFormatOk = !!acctEmailVal && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(acctEmailVal);
+                flag(setInputError(acctEmailEl, !emailFormatOk || emailTakenWarning, !emailFormatOk
+                    ? { en: 'Please enter a valid email.', es: 'Por favor ingresa un correo válido.' }
+                    : { en: 'This email is already registered to another patient.', es: 'Este correo ya está registrado en otro paciente.' }));
             } else {
                 const dobActive = !document.getElementById('m1-dob-field').classList.contains('hidden');
                 if (dobActive) {
@@ -1955,6 +1985,17 @@
 
         if (isNewAccountMode) {
             const account = collectAccountFields();
+            // Last check right before creating the account (the live one runs
+            // half a second after typing and fails open on network errors).
+            const { data: emailTaken } = await _supabase.rpc('email_is_registered', { p_email: account.email });
+            if (emailTaken === true) {
+                btn.disabled = false;
+                applyLanguage();
+                alert(currentLang === 'en'
+                    ? 'This email is already registered to another patient. Please use a different email.'
+                    : 'Este correo ya está registrado en otro paciente. Usa un correo diferente.');
+                return;
+            }
             const { data, error } = await _supabase.functions.invoke('create-patient-account', {
                 body: { account, intake: collectFormData() },
             });
@@ -2067,6 +2108,7 @@
             document.getElementById('m1-account-fields').classList.remove('hidden');
             document.getElementById('m1-account-sex').addEventListener('change', (e) => { updatePregnancyVisibility(e.target.value); renderGlogauGroup(); });
             document.getElementById('m1-account-phone').addEventListener('input', schedulePhoneAvailabilityCheck);
+            document.getElementById('m1-account-email').addEventListener('input', scheduleEmailAvailabilityCheck);
             document.getElementById('m1-account-dob').addEventListener('change', (e) => updateAgeDisplay(e.target.value, 'm1-account-age-display'));
             updatePregnancyVisibility('');
         } else {

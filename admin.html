@@ -589,12 +589,12 @@
                         </div>
 
                         <div id="enc-rec" class="bg-[#FBF0F3] border border-[#EDE1E7] p-4 rounded-lg space-y-3">
-                            <p class="enc-label">Recomendación para el paciente (opcional)</p>
-                            <select id="enc-rec-template" onchange="onEncounterRecommendationPick()"></select>
+                            <p class="enc-label">Recomendaciones para el paciente (opcional)</p>
+                            <p class="text-[10px] opacity-60">Marca una o varias. Cada una se agrega abajo en el orden en que la marques, y puedes editar su texto solo para este paciente.</p>
+                            <div id="enc-rec-options" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+                            <button type="button" onclick="addEncounterRecommendationCard(null)" class="text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition">✍️ + Escribir una nueva</button>
+                            <div id="enc-rec-cards" class="space-y-3"></div>
                             <div id="enc-rec-editor" class="hidden space-y-2">
-                                <input type="text" id="enc-rec-title" placeholder="Título">
-                                <textarea id="enc-rec-body" rows="7" class="resize-y" placeholder="Escribe la recomendación.&#10;&#10;- Usa guion al inicio para viñetas&#10;1. Usa números para una lista numerada"></textarea>
-                                <p class="text-[10px] opacity-50">Puedes ajustar el texto antes de enviarlo; la recomendación guardada no cambia.</p>
                                 <div class="flex items-center gap-5 text-sm">
                                     <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="enc-rec-email" class="accent-[#B76E88]" checked> Correo</label>
                                     <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="enc-rec-whatsapp" class="accent-[#B76E88]" checked> WhatsApp</label>
@@ -1591,7 +1591,7 @@
                         <div class="flex items-center gap-3 flex-wrap">
                             <button onclick="openHistoryById('${p.id}')" class="text-[#B76E88] font-bold text-[10px] uppercase hover:underline">Historia</button>
                             <button onclick="openEditPatient('${p.id}')" class="text-blue-500 font-bold text-[10px] uppercase hover:underline">Editar</button>
-                            <button onclick="deletePatient('${p.id}', '${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}')" class="text-red-400 font-bold text-[10px] uppercase hover:underline">Eliminar</button>
+                            <button onclick="deletePatient('${p.id}')" class="text-red-400 font-bold text-[10px] uppercase hover:underline">Eliminar</button>
                         </div>
                     </td>
                 </tr>`;
@@ -1890,49 +1890,94 @@
             fetchRecommendationTemplates();
         }
 
-        // --- RECOMMENDATION (inside the encounter form) ---
-        // One recommendation at a time: pick a saved one (its text can be tweaked
-        // for this patient without changing the saved template) or write a new
-        // one. It's sent only through "Guardar encuentro y enviar recomendación",
-        // which saves the encounter first and then sends — one step, so the
-        // encounter and the message tied to it can't get out of sync. It always
-        // lands in the patient portal (patient_messages) and can also go out by
-        // email and/or WhatsApp.
+        // --- RECOMMENDATIONS (inside the encounter form) ---
+        // Check one or more saved recommendations (or write new ones): each adds
+        // an editable card below, in the order checked; unchecking removes it.
+        // Edits only change what this patient receives, never the saved template.
+        // They're sent only through "Guardar encuentro y enviar…", which saves
+        // the encounter first and then sends — one step, so the encounter and
+        // the messages tied to it can't get out of sync. Each card becomes one
+        // message in the patient portal; email and WhatsApp get them all together.
+        let encRecCustomSeq = 0;
+
         function populateEncounterRecommendationOptions() {
-            const select = document.getElementById('enc-rec-template');
-            select.innerHTML = '<option value="">Sin recomendación</option>'
-                + recommendationTemplates.map(rec => `<option value="${escapeHtml(rec.id)}">${escapeHtml(rec.title)}</option>`).join('')
-                + '<option value="__custom">✍️ Escribir una nueva</option>';
-            document.getElementById('enc-rec-editor').classList.add('hidden');
-            document.getElementById('enc-rec-title').value = '';
-            document.getElementById('enc-rec-body').value = '';
+            document.getElementById('enc-rec-options').innerHTML = recommendationTemplates.length
+                ? recommendationTemplates.map(rec => `
+                    <label class="flex items-start gap-2 bg-white border border-[#EDE1E7] rounded-lg px-3 py-2 cursor-pointer select-none hover:border-[#B76E88] transition">
+                        <input type="checkbox" class="enc-rec-option mt-0.5 accent-[#B76E88]" value="${escapeHtml(rec.id)}">
+                        <span class="text-sm">${escapeHtml(rec.title)}</span>
+                    </label>`).join('')
+                : '<p class="text-xs opacity-50 italic">No hay recomendaciones guardadas. Créalas en "Recomendaciones" o escribe una nueva aquí.</p>';
+            document.getElementById('enc-rec-cards').innerHTML = '';
             updateSaveAndSendButton();
         }
 
-        function onEncounterRecommendationPick() {
-            const value = document.getElementById('enc-rec-template').value;
-            document.getElementById('enc-rec-editor').classList.toggle('hidden', !value);
-            const rec = recommendationTemplates.find(r => r.id === value);
-            document.getElementById('enc-rec-title').value = rec?.title || '';
-            document.getElementById('enc-rec-body').value = rec?.body || '';
+        // templateId = null → a new, blank recommendation written just for this patient.
+        function addEncounterRecommendationCard(templateId) {
+            const rec = templateId ? recommendationTemplates.find(r => r.id === templateId) : null;
+            const key = templateId || `custom-${++encRecCustomSeq}`;
+            const card = document.createElement('div');
+            card.className = 'enc-rec-card bg-white border border-[#EDE1E7] rounded-lg p-3 space-y-2';
+            card.dataset.key = key;
+            card.innerHTML = `
+                <div class="flex items-center justify-between gap-2">
+                    <span class="enc-rec-card-num text-[10px] uppercase tracking-widest font-bold text-[#B76E88]"></span>
+                    <button type="button" class="enc-rec-card-remove text-red-400 hover:text-red-600 text-xl leading-none px-1" aria-label="Quitar">&times;</button>
+                </div>
+                <input type="text" class="enc-rec-card-title" placeholder="Título">
+                <textarea class="enc-rec-card-body resize-y" rows="6" placeholder="Escribe la recomendación.&#10;&#10;- Usa guion al inicio para viñetas&#10;1. Usa números para una lista numerada"></textarea>`;
+            card.querySelector('.enc-rec-card-title').value = rec?.title || '';
+            card.querySelector('.enc-rec-card-body').value = rec?.body || '';
+            card.querySelector('.enc-rec-card-remove').addEventListener('click', () => removeEncounterRecommendationCard(key));
+            document.getElementById('enc-rec-cards').appendChild(card);
             updateSaveAndSendButton();
-            if (value) document.getElementById(rec ? 'enc-rec-body' : 'enc-rec-title').focus();
+            if (!rec) card.querySelector('.enc-rec-card-title').focus();
         }
 
+        function removeEncounterRecommendationCard(key) {
+            document.querySelector(`#enc-rec-cards .enc-rec-card[data-key="${CSS.escape(key)}"]`)?.remove();
+            const option = document.querySelector(`#enc-rec-options .enc-rec-option[value="${CSS.escape(key)}"]`);
+            if (option) option.checked = false;
+            updateSaveAndSendButton();
+        }
+
+        document.getElementById('enc-rec-options').addEventListener('change', (e) => {
+            if (!e.target.classList.contains('enc-rec-option')) return;
+            if (e.target.checked) addEncounterRecommendationCard(e.target.value);
+            else removeEncounterRecommendationCard(e.target.value);
+        });
+        document.getElementById('enc-rec-cards').addEventListener('input', updateSaveAndSendButton);
+
+        function getEncounterRecommendations() {
+            return Array.from(document.querySelectorAll('#enc-rec-cards .enc-rec-card')).map(card => ({
+                title: card.querySelector('.enc-rec-card-title').value.trim(),
+                body: card.querySelector('.enc-rec-card-body').value.trim(),
+            }));
+        }
+
+        // Ready to send: at least one recommendation, and none left half-empty.
         function encounterRecommendationReady() {
-            return !!(document.getElementById('enc-rec-template').value
-                && document.getElementById('enc-rec-title').value.trim()
-                && document.getElementById('enc-rec-body').value.trim());
+            const recs = getEncounterRecommendations();
+            return recs.length > 0 && recs.every(r => r.title && r.body);
         }
 
-        // "Guardar y enviar" only works once there's a recommendation to send.
-        function updateSaveAndSendButton() {
-            const ready = encounterRecommendationReady();
-            document.getElementById('enc-save-send').disabled = !ready;
-            document.getElementById('enc-save-send-hint').classList.toggle('hidden', ready);
+        function saveAndSendLabel() {
+            const n = getEncounterRecommendations().length;
+            return n > 1 ? `Guardar encuentro y enviar ${n} recomendaciones` : 'Guardar encuentro y enviar recomendación';
         }
-        document.getElementById('enc-rec-title').addEventListener('input', updateSaveAndSendButton);
-        document.getElementById('enc-rec-body').addEventListener('input', updateSaveAndSendButton);
+
+        function updateSaveAndSendButton() {
+            const recs = getEncounterRecommendations();
+            const ready = encounterRecommendationReady();
+            document.querySelectorAll('#enc-rec-cards .enc-rec-card-num').forEach((el, i) => { el.innerText = `Recomendación ${i + 1}`; });
+            document.getElementById('enc-rec-editor').classList.toggle('hidden', !recs.length);
+            const sendBtn = document.getElementById('enc-save-send');
+            sendBtn.disabled = !ready;
+            sendBtn.innerText = saveAndSendLabel();
+            const hint = document.getElementById('enc-save-send-hint');
+            hint.innerText = recs.length ? 'Completa el título y el texto de cada recomendación.' : 'Para usar este botón, marca o escribe al menos una recomendación arriba.';
+            hint.classList.toggle('hidden', ready);
+        }
 
         // Both buttons are disabled while saving so a double click can't save twice.
         function setEncounterButtonsBusy(busyWith) {
@@ -1940,7 +1985,7 @@
             const saveBtn = document.getElementById('enc-save-only');
             sendBtn.disabled = !!busyWith || !encounterRecommendationReady();
             saveBtn.disabled = !!busyWith;
-            sendBtn.innerText = busyWith === 'send' ? 'Guardando y enviando…' : 'Guardar encuentro y enviar recomendación';
+            sendBtn.innerText = busyWith === 'send' ? 'Guardando y enviando…' : saveAndSendLabel();
             saveBtn.innerText = busyWith === 'save' ? 'Guardando…' : 'Guardar encuentro sin enviar recomendación';
         }
 
@@ -1953,21 +1998,23 @@
         }
 
         // Same plain-text conventions as renderRecommendationBody ("- " bullets,
-        // "1. " numbered), turned into WhatsApp formatting: *bold* title and •
-        // bullets, with a greeting and signature so it reads as a real message.
-        function buildWhatsAppRecommendation(title, body) {
+        // "1. " numbered), turned into WhatsApp formatting: each recommendation
+        // under its *bold* title with • bullets, plus a greeting and signature.
+        function buildWhatsAppRecommendations(recs) {
             const firstName = String(currentPatientName || '').trim().split(/\s+/)[0] || '';
-            const formattedBody = String(body || '').split('\n').map(line => {
-                const bullet = line.trim().match(/^[-*]\s+(.*)$/);
-                return bullet ? `• ${bullet[1]}` : line.trimEnd();
-            }).join('\n').replace(/\n{3,}/g, '\n\n').trim();
-            return `Hola${firstName ? ' ' + firstName : ''} 👋\n\n*${title.trim()}*\n\n${formattedBody}\n\n_Piel Spa_`;
+            const sections = recs.map(({ title, body }) => {
+                const formattedBody = String(body || '').split('\n').map(line => {
+                    const bullet = line.trim().match(/^[-*]\s+(.*)$/);
+                    return bullet ? `• ${bullet[1]}` : line.trimEnd();
+                }).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+                return `*${title.trim()}*\n${formattedBody}`;
+            });
+            return `Hola${firstName ? ' ' + firstName : ''} 👋\n\n${sections.join('\n\n')}\n\n_Piel Spa_`;
         }
 
         async function saveEncounterAndSendRecommendation() {
-            const title = document.getElementById('enc-rec-title').value.trim();
-            const body = document.getElementById('enc-rec-body').value.trim();
-            if (!title || !body) { alert('Escribe el título y el texto de la recomendación.'); return; }
+            const recs = getEncounterRecommendations();
+            if (!encounterRecommendationReady()) { alert('Completa el título y el texto de cada recomendación.'); return; }
             const wantEmail = document.getElementById('enc-rec-email').checked;
             const wantWhatsApp = document.getElementById('enc-rec-whatsapp').checked;
             if (wantEmail && !currentPatientEmail && !confirm('Este paciente no tiene correo registrado. ¿Continuar sin correo (portal' + (wantWhatsApp ? ' y WhatsApp' : '') + ')?')) return;
@@ -1988,21 +2035,21 @@
                     visit_time: document.getElementById('soap-time').value,
                 };
 
-                // 2) Send the recommendation tied to it.
+                // 2) Send the recommendations tied to it.
                 const results = ['✓ Encuentro guardado.'];
-                const { error: insertError } = await _supabase.from('patient_messages').insert([{
+                const { error: insertError } = await _supabase.from('patient_messages').insert(recs.map(({ title, body }) => ({
                     patient_id: currentPatientId,
                     subject: title,
                     body,
                     encounter_id: encounterId,
                     visit_date: encounter.visit_date,
                     visit_time: encounter.visit_time || null,
-                }]);
+                })));
                 if (insertError) {
                     if (waWindow) waWindow.close();
-                    results.push('✗ La recomendación NO se envió: ' + insertError.message, 'Puedes enviarla después con "Modificar" en este encuentro.');
+                    results.push('✗ Las recomendaciones NO se enviaron: ' + insertError.message, 'Puedes enviarlas después con "Modificar" en este encuentro.');
                 } else {
-                    results.push('✓ Recomendación guardada en el portal del paciente.');
+                    results.push(recs.length > 1 ? `✓ ${recs.length} recomendaciones guardadas en el portal del paciente.` : '✓ Recomendación guardada en el portal del paciente.');
                     if (wantEmail && currentPatientEmail) {
                         const { error: mailError } = await _supabase.functions.invoke('send-patient-recommendations', {
                             body: {
@@ -2011,14 +2058,14 @@
                                 patient_email: currentPatientEmail,
                                 visit_date: encounter.visit_date,
                                 visit_time: encounter.visit_time || null,
-                                recommendations: [{ title, body }],
+                                recommendations: recs,
                             },
                         });
                         if (mailError) console.error('Send recommendation email error:', mailError.message);
                         results.push(mailError ? '✗ No se pudo enviar el correo: ' + mailError.message : '✓ Correo enviado.');
                     }
                     if (wantWhatsApp) {
-                        const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(buildWhatsAppRecommendation(title, body))}`;
+                        const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(buildWhatsAppRecommendations(recs))}`;
                         if (waWindow) waWindow.location.href = waUrl;
                         else window.open(waUrl, '_blank');
                         results.push('✓ WhatsApp abierto con el mensaje listo: solo presiona enviar.');
@@ -3556,6 +3603,11 @@
             if (document.getElementById('ep-clinic-viva').checked)   clinicAff.push('viva');
             if (document.getElementById('ep-clinic-divine').checked) clinicAff.push('divine');
 
+            if (email) {
+                const { data: emailTaken } = await _supabase.rpc('email_is_registered', { p_email: email, p_exclude_id: id });
+                if (emailTaken === true) { alert('Ese correo ya está registrado en otro paciente.'); return; }
+            }
+
             const { error } = await _supabase
                 .from('profiles')
                 .update({
@@ -3579,42 +3631,53 @@
         });
 
         // --- DELETE PATIENT ---
-        async function deletePatient(patientId, patientName) {
+        // Removes everything of the patient: their photos in storage first, then
+        // (in one database transaction, see admin_delete_patient) messages,
+        // encounters, appointments, intake, profile and the portal login — so
+        // the same phone/email can be registered again.
+        function storagePathFromUrl(url) {
+            const marker = `/storage/v1/object/public/${CLINICAL_PHOTOS_BUCKET}/`;
+            const i = String(url || '').indexOf(marker);
+            return i >= 0 ? decodeURIComponent(String(url).slice(i + marker.length).split('?')[0]) : null;
+        }
+
+        async function deletePatient(patientId) {
+            const p = allPatients.find(x => x.id === patientId);
+            const name = p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : '';
             const confirmed = confirm(
-                `Are you sure you want to permanently delete the patient record for "${patientName || 'this patient'}"?\n\nThis will also delete all their clinical history and appointments. This action cannot be undone.`
+                `¿Eliminar para siempre a "${name || 'este paciente'}"?\n\n`
+                + 'Se borrará todo: su historia clínica, fotos, citas, intake, recomendaciones y su cuenta de acceso al portal. '
+                + 'Esto no se puede deshacer.'
             );
             if (!confirmed) return;
 
-            // 1. Delete clinical history records
-            const { error: histError } = await _supabase
+            const { data: encounters, error: encError } = await _supabase
                 .from('clinical_history')
-                .delete()
+                .select('photos, patient_photos, marking_photos, post_photos')
                 .eq('patient_id', patientId);
-            if (histError) {
-                alert('Could not delete clinical history: ' + histError.message);
-                return;
+            if (encError) { alert('No se pudo leer la historia del paciente: ' + encError.message); return; }
+            const paths = (encounters || [])
+                .flatMap(n => [...normalizePhotoArray(n.photos), ...legacyPhotoUrls(n)])
+                .map(storagePathFromUrl)
+                .filter(Boolean);
+            let photoWarning = '';
+            if (paths.length) {
+                const { error: storageError } = await _supabase.storage.from(CLINICAL_PHOTOS_BUCKET).remove(paths);
+                if (storageError) {
+                    console.error('Delete patient photos error:', storageError.message);
+                    photoWarning = `\n\nAviso: no se pudieron borrar ${paths.length} foto(s) del almacenamiento (${storageError.message}).`;
+                }
             }
 
-            // 2. Delete appointments
-            const { error: apptError } = await _supabase
-                .from('appointments')
-                .delete()
-                .eq('patient_id', patientId);
-            if (apptError) {
-                alert('Could not delete appointments: ' + apptError.message);
+            const { error } = await _supabase.rpc('admin_delete_patient', { p_patient_id: patientId });
+            if (error) {
+                const missingFn = /admin_delete_patient|PGRST202|schema cache/i.test(`${error.code} ${error.message}`);
+                alert(missingFn
+                    ? 'Falta correr el SQL de supabase/migrations/20260926_patient_delete_and_email_check.sql en Supabase.'
+                    : 'No se pudo eliminar el paciente: ' + error.message);
                 return;
             }
-
-            // 3. Delete profile
-            const { error: profileError } = await _supabase
-                .from('profiles')
-                .delete()
-                .eq('id', patientId);
-            if (profileError) {
-                alert('Could not delete patient profile: ' + profileError.message);
-                return;
-            }
-
+            if (photoWarning) alert('Paciente eliminado.' + photoWarning);
             fetchPatients();
         }
 
