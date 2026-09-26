@@ -31,6 +31,11 @@
         input:not([type="checkbox"]):not([type="radio"]), textarea, select { border: 1px solid #EDE1E7; background: #fff; padding: 10px; border-radius: 8px; outline-color: #B76E88; width: 100%; font-size: 14px; }
         .no-spinner::-webkit-inner-spin-button, .no-spinner::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         .no-spinner { -moz-appearance: textfield; }
+        .enc-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; color: #B76E88; }
+        input.enc-compact { width: auto !important; padding: 4px 8px !important; font-size: 13px !important; }
+        .enc-qty { width: 7rem !important; padding: 6px 8px !important; font-size: 12px !important; }
+        .enc-photo-add { width: 82px; height: 82px; border: 1px dashed #D9C4CE; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #B76E88; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; cursor: pointer; background: #fff; }
+        .enc-photo-add:hover { border-color: #B76E88; background: #FBF0F3; }
         .photo-thumb { width: 82px; height: 82px; object-fit: cover; border-radius: 10px; border: 1px solid #EDE1E7; cursor: pointer; }
         .clinic-badge-fs { background-color: #EDE1E7; color: #2A2330; font-size: 8px; padding: 2px 8px; border-radius: 99px; font-weight: bold; text-transform: uppercase; }
         .clinic-badge-viva { background-color: #E0F0EA; color: #065F46; font-size: 8px; padding: 2px 8px; border-radius: 99px; font-weight: bold; text-transform: uppercase; }
@@ -172,37 +177,22 @@
         </div>
     </div>
 
-    <!-- ===== SEND RECOMMENDATION MODAL (from a patient's History) ===== -->
-    <div id="send-recommendation-modal" class="fixed inset-0 z-[70] hidden bg-black/40 backdrop-blur-sm items-center justify-center p-4">
-        <div class="bg-white w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl shadow-2xl p-6 md:p-8">
-            <div class="flex items-center justify-between mb-2">
-                <h3 class="text-2xl italic">Enviar Recomendación</h3>
-                <button onclick="closeSendRecommendationModal()" class="text-2xl opacity-40 hover:opacity-100">&times;</button>
-            </div>
-            <p id="send-recommendation-encounter-label" class="text-xs font-semibold text-[#B76E88] mb-1"></p>
-            <p class="text-xs opacity-50 mb-4">Selecciona una o más — se guardarán en su portal y se le enviará un correo con todas juntas.</p>
-            <div id="send-recommendation-list" class="space-y-2"></div>
-            <p id="send-recommendation-empty" class="hidden text-center text-sm opacity-40 italic py-6">No hay recomendaciones creadas todavía. Ve a "Recommendations" en el menú para crear una.</p>
-            <button onclick="sendSelectedRecommendations()" class="w-full mt-5 bg-[#B76E88] text-white py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#9C5570] transition rounded-lg">Enviar al Paciente</button>
-        </div>
-    </div>
-
     <!-- ===== HISTORY MODAL ===== -->
     <div id="history-modal" class="fixed inset-0 z-50 overflow-y-auto bg-white md:bg-black/60 md:backdrop-blur-sm md:items-center md:justify-center md:p-4">
         <div class="w-full max-w-5xl bg-white md:h-[90vh] p-4 md:p-8 md:rounded-2xl md:shadow-2xl flex flex-col relative md:overflow-y-auto">
 
             <!-- Mobile: sticky top bar with back button -->
             <div class="flex items-center justify-between mb-3 md:hidden sticky top-0 bg-white z-20 pt-2 pb-3 border-b border-[#EDE1E7]">
-                <span class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold">Clinical History</span>
+                <span class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold">Historia Clínica</span>
                 <button onclick="closeHistoryModal()" class="flex items-center gap-1 bg-[#2A2330] text-white text-xs px-4 py-2 rounded-full font-bold uppercase tracking-widest">
-                    ← Back
+                    ← Volver
                 </button>
             </div>
 
             <div class="mb-4 md:mb-6 z-20 flex items-start justify-between md:sticky md:top-0 md:bg-white md:pb-4 md:border-b md:border-[#EDE1E7] md:shadow-sm">
                 <div>
-                    <h3 class="text-2xl md:text-3xl italic">Clinical History: <span id="history-patient-name" class="font-bold"></span><span id="history-patient-age" class="text-lg font-normal opacity-50 ml-3"></span></h3>
-                    <p class="text-[10px] uppercase tracking-widest opacity-40">Longitudinal Medical Record</p>
+                    <h3 class="text-2xl md:text-3xl italic">Historia Clínica: <span id="history-patient-name" class="font-bold"></span><span id="history-patient-age" class="text-lg font-normal opacity-50 ml-3"></span></h3>
+                    <p class="text-[10px] uppercase tracking-widest opacity-40">Registro clínico del paciente</p>
                     <p id="history-patient-contact" class="text-xs opacity-70 mt-1"></p>
                 </div>
                 <button onclick="closeHistoryModal()" class="hidden md:block text-2xl opacity-40 hover:opacity-100 ml-4 flex-shrink-0">&times;</button>
@@ -499,67 +489,82 @@
 
             <div class="flex flex-col relative z-10 flex-shrink-0">
                 <div class="flex justify-between items-center mb-6 gap-2 flex-wrap">
-                    <button id="add-note-btn" onclick="toggleSoapForm(true)" class="bg-[#B76E88] text-white px-6 py-2 text-[10px] uppercase tracking-widest font-bold rounded-full shadow-sm hover:bg-[#9C5570] transition">Add New Encounter</button>
+                    <button id="add-note-btn" onclick="toggleSoapForm(true)" class="bg-[#B76E88] text-white px-6 py-2 text-[10px] uppercase tracking-widest font-bold rounded-full shadow-sm hover:bg-[#9C5570] transition">+ Nuevo encuentro</button>
                 </div>
-                <p class="text-[10px] uppercase tracking-widest opacity-30 mb-2">Para enviar una recomendación, hazlo desde el encounter correspondiente abajo — así queda ligada a la fecha de esa visita.</p>
 
                 <div id="notes-container" class="pr-2 md:pr-4 space-y-6 pb-10"></div>
 
-                <div id="soap-form-container" class="hidden fixed md:absolute inset-0 bg-white flex flex-col z-[60] md:z-30 md:rounded-2xl overflow-y-auto p-4 md:p-0">
-                    <div class="flex justify-between items-center mb-6 pt-2 sticky top-0 bg-white pb-3 border-b border-[#EDE1E7] md:border-none md:static">
-                        <h4 class="text-xl italic" id="form-title">New Clinical Entry</h4>
-                        <button onclick="toggleSoapForm(false)" class="bg-[#2A2330] text-white text-[10px] px-4 py-2 rounded-full uppercase tracking-widest font-bold md:bg-transparent md:text-[#2A2330] md:underline md:opacity-40 md:hover:opacity-100 md:rounded-none md:px-0 md:py-0">← Back</button>
+                <div id="soap-form-container" class="hidden fixed md:static inset-0 bg-white flex flex-col z-[60] md:z-auto overflow-y-auto md:overflow-visible p-4 md:p-0">
+                    <div class="flex justify-between items-center gap-3 mb-4 pt-2 sticky md:static top-0 bg-white pb-3 border-b border-[#EDE1E7] z-10">
+                        <div class="flex items-center gap-x-3 gap-y-2 flex-wrap min-w-0">
+                            <h4 class="text-lg md:text-xl italic" id="form-title">Nuevo encuentro</h4>
+                            <div class="flex items-center gap-2">
+                                <input type="date" id="soap-date" required class="enc-compact" aria-label="Fecha de la visita">
+                                <input type="time" id="soap-time" required class="enc-compact" aria-label="Hora de la visita">
+                            </div>
+                        </div>
+                        <button onclick="toggleSoapForm(false)" class="flex-shrink-0 bg-[#2A2330] text-white text-[10px] px-4 py-2 rounded-full uppercase tracking-widest font-bold md:bg-transparent md:text-[#2A2330] md:underline md:opacity-40 md:hover:opacity-100 md:rounded-none md:px-0 md:py-0">← Volver</button>
                     </div>
                     <form id="soap-form" class="space-y-4 pb-10">
                         <input type="hidden" id="edit-note-id">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Visit Date</label>
-                                <input type="date" id="soap-date" required>
-                            </div>
-                            <div>
-                                <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Visit Time</label>
-                                <input type="time" id="soap-time" required>
-                            </div>
-                        </div>
+
                         <div class="bg-[#FDFBFC] border border-[#EDE1E7] p-4 rounded-lg">
-                            <div class="flex items-center justify-between mb-3">
-                                <label class="text-[9px] uppercase tracking-widest text-[#B76E88] font-bold">Procedimiento realizado</label>
-                                <span id="soap-procedures-selected" class="text-[10px] uppercase tracking-widest opacity-60 font-semibold">0 selected</span>
-                            </div>
-                            <div id="soap-procedures-list" class="w-full p-3 border border-[#EDE1E7] bg-white text-sm text-[#2A2330] rounded-lg max-h-56 overflow-y-auto overflow-x-hidden space-y-3"></div>
+                            <p class="enc-label mb-3">Procedimientos realizados</p>
+                            <div id="enc-procedures" class="space-y-2"></div>
                         </div>
 
-                        <div class="bg-[#FDFBFC] border border-[#EDE1E7] p-4 rounded-lg space-y-4">
-                            <p class="text-[9px] uppercase tracking-widest text-[#B76E88] font-bold">Clinical Photo Evidence (optional)</p>
-
-                            <div>
-                                <label class="text-[9px] uppercase tracking-widest opacity-50 block mb-2">Patient Photos (up to 5)</label>
-                                <input type="file" id="soap-patient-photos" accept="image/*" multiple>
-                                <div id="soap-patient-photos-existing" class="flex flex-wrap gap-2 mt-2"></div>
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-1">
+                                <label for="enc-summary" class="enc-label">Procedimientos</label>
+                                <button type="button" id="enc-summary-regen" onclick="regenerateEncounterSummary()" class="hidden text-[9px] uppercase tracking-widest font-bold text-[#B76E88] hover:text-[#9C5570]">↻ Regenerar resumen</button>
                             </div>
+                            <textarea id="enc-summary" rows="2" class="resize-y" placeholder="Se llena solo con los procedimientos que marques arriba"></textarea>
+                        </div>
 
-                            <div>
-                                <label class="text-[9px] uppercase tracking-widest opacity-50 block mb-2">Marking Photos (up to 5)</label>
-                                <input type="file" id="soap-marking-photos" accept="image/*" multiple>
-                                <div id="soap-marking-photos-existing" class="flex flex-wrap gap-2 mt-2"></div>
-                            </div>
-
-                            <div>
-                                <label class="text-[9px] uppercase tracking-widest opacity-50 block mb-2">Post Procedure Photos (up to 5)</label>
-                                <input type="file" id="soap-post-photos" accept="image/*" multiple>
-                                <div id="soap-post-photos-existing" class="flex flex-wrap gap-2 mt-2"></div>
+                        <div>
+                            <label for="enc-amount" class="enc-label mb-1 block">Monto a cobrar</label>
+                            <div class="relative max-w-[14rem]">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm opacity-50 pointer-events-none">$</span>
+                                <input type="text" id="enc-amount" inputmode="decimal" placeholder="0.00" style="padding-left: 1.6rem;">
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <textarea id="soap-s" placeholder="Subjective (S) - Patient concerns, updates" class="h-32 resize-none"></textarea>
-                            <textarea id="soap-o" placeholder="Objective (O) - Physical exam, findings" class="h-32 resize-none"></textarea>
-                            <textarea id="soap-a" placeholder="Assessment/Evolution (A) - Diagnosis" class="h-32 resize-none"></textarea>
-                            <textarea id="soap-p" placeholder="Plan/Treatment (P) - Procedures, dosage, orders" class="h-32 resize-none"></textarea>
+                        <div>
+                            <label for="enc-notes" class="enc-label mb-1 block">Notas y seguimiento</label>
+                            <textarea id="enc-notes" rows="7" class="resize-y"></textarea>
                         </div>
-                        <textarea id="soap-sugg" placeholder="Follow-up Suggestions & Post-procedure Instructions" class="h-20 resize-none"></textarea>
-                        <button type="submit" class="w-full bg-[#2A2330] text-white py-4 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition shadow-md rounded-lg mt-2">Save Clinical Record</button>
+
+                        <details id="enc-legacy" class="hidden border border-[#EDE1E7] rounded-lg">
+                            <summary class="px-3 py-2 text-[9px] uppercase font-bold text-[#B76E88] cursor-pointer">Notas anteriores (formato SOAP, solo lectura)</summary>
+                            <div id="enc-legacy-body" class="p-3 pt-1 space-y-2 text-xs"></div>
+                        </details>
+
+                        <div class="bg-[#FDFBFC] border border-[#EDE1E7] p-4 rounded-lg">
+                            <div class="flex items-center justify-between gap-2">
+                                <p class="enc-label">Fotos (opcional)</p>
+                                <span id="enc-photos-count" class="text-[10px] uppercase tracking-widest opacity-50 font-semibold">0 / 10</span>
+                            </div>
+                            <div id="enc-photos" class="flex flex-wrap gap-2 mt-3"></div>
+                            <input type="file" id="enc-photos-input" accept="image/*" multiple class="hidden">
+                        </div>
+
+                        <button type="submit" class="w-full bg-[#2A2330] text-white py-4 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition shadow-md rounded-lg">Guardar encuentro</button>
+
+                        <div id="enc-rec" class="bg-[#FBF0F3] border border-[#EDE1E7] p-4 rounded-lg space-y-3">
+                            <p class="enc-label">Enviar recomendación</p>
+                            <select id="enc-rec-template" onchange="onEncounterRecommendationPick()"></select>
+                            <div id="enc-rec-editor" class="hidden space-y-2">
+                                <input type="text" id="enc-rec-title" placeholder="Título">
+                                <textarea id="enc-rec-body" rows="7" class="resize-y" placeholder="Escribe la recomendación.&#10;&#10;- Usa guion al inicio para viñetas&#10;1. Usa números para una lista numerada"></textarea>
+                                <p class="text-[10px] opacity-50">Puedes ajustar el texto antes de enviarlo; la recomendación guardada no cambia.</p>
+                                <div class="flex items-center gap-5 text-sm">
+                                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="enc-rec-email" class="accent-[#B76E88]" checked> Correo</label>
+                                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="enc-rec-whatsapp" class="accent-[#B76E88]" checked> WhatsApp</label>
+                                </div>
+                                <button type="button" id="enc-rec-send" onclick="sendEncounterRecommendation()" class="w-full bg-[#B76E88] text-white py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#9C5570] transition rounded-lg">Enviar al paciente</button>
+                                <p class="text-[10px] opacity-50">Si el encuentro aún no está guardado, se guarda primero. Siempre queda en el portal del paciente.</p>
+                            </div>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -804,7 +809,7 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFram1ybnFrb2lwZGx0YXV3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTkyMjgsImV4cCI6MjA4OTA5NTIyOH0.EGqgJ9RNY9vYfuVeeEcGoMu_cIaygRq0hnyT-iE7zTw';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const CLINICAL_PHOTOS_BUCKET = 'clinical-photos';
-        const MAX_PHOTO_COUNT = 5;
+        const MAX_ENCOUNTER_PHOTOS = 10;
         const MAX_PHOTO_SIZE_MB = 8;
 
         let currentPatientId = null;
@@ -818,11 +823,6 @@
         let notesById = {};
         let admissionDirty = false;
         let soapDirty = false;
-        let soapPhotosState = {
-            patient: [],
-            marking: [],
-            post: []
-        };
 
         // Basic HTML escape to prevent any stored content from breaking the DOM.
         function escapeHtml(value) {
@@ -836,30 +836,31 @@
 
         // --- Treatments (portfolio) ---
         // Usamos IDs para poder almacenar/recuperar sin depender del texto.
+        // `es` matches dashboard.html's Spanish labels; the encounter form uses it.
         const TREATMENT_OPTIONS = [
-            { id: 'general_consultation', category: 'consultation', label: 'General Consultation' },
+            { id: 'general_consultation', category: 'consultation', label: 'General Consultation', es: 'Consulta General' },
 
-            { id: 'upper_face_rejuvenation', category: 'neuromodulators', label: 'Upper Face Rejuvenation' },
-            { id: 'masseter_reduction_bruxism', category: 'neuromodulators', label: 'Masseter Reduction (Bruxism)' },
-            { id: 'gummy_smile_correction', category: 'neuromodulators', label: 'Gummy Smile Correction' },
-            { id: 'nasal_profiling', category: 'neuromodulators', label: 'Nasal Profiling' },
-            { id: 'hyperhidrosis_treatment', category: 'neuromodulators', label: 'Hyperhidrosis Treatment' },
+            { id: 'upper_face_rejuvenation', category: 'neuromodulators', label: 'Upper Face Rejuvenation', es: 'Rejuvenecimiento de la Parte Superior' },
+            { id: 'masseter_reduction_bruxism', category: 'neuromodulators', label: 'Masseter Reduction (Bruxism)', es: 'Reducción del Masetero (Bruxismo)' },
+            { id: 'gummy_smile_correction', category: 'neuromodulators', label: 'Gummy Smile Correction', es: 'Corrección de Sonrisa Gingival' },
+            { id: 'nasal_profiling', category: 'neuromodulators', label: 'Nasal Profiling', es: 'Perfilado Nasal' },
+            { id: 'hyperhidrosis_treatment', category: 'neuromodulators', label: 'Hyperhidrosis Treatment', es: 'Tratamiento de Hiperhidrosis' },
 
-            { id: 'lip_augmentation', category: 'fillers', label: 'Lip Augmentation' },
-            { id: 'facial_harmonization', category: 'fillers', label: 'Facial Harmonization' },
-            { id: 'jawline_masculinization', category: 'fillers', label: 'Jawline Masculinization' },
-            { id: 'facial_feminization', category: 'fillers', label: 'Facial Feminization' },
+            { id: 'lip_augmentation', category: 'fillers', label: 'Lip Augmentation', es: 'Aumento de Labios' },
+            { id: 'facial_harmonization', category: 'fillers', label: 'Facial Harmonization', es: 'Armonización Facial' },
+            { id: 'jawline_masculinization', category: 'fillers', label: 'Jawline Masculinization', es: 'Masculinización de la Mandíbula' },
+            { id: 'facial_feminization', category: 'fillers', label: 'Facial Feminization', es: 'Feminización Facial' },
 
-            { id: 'sculptra', category: 'biostimulators', label: 'Sculptra (Poly-L-Lactic Acid)' },
-            { id: 'radiesse', category: 'biostimulators', label: 'Radiesse (Calcium Hydroxylapatite)' },
+            { id: 'sculptra', category: 'biostimulators', label: 'Sculptra (Poly-L-Lactic Acid)', es: 'Sculptra (Ácido Poliláctico)' },
+            { id: 'radiesse', category: 'biostimulators', label: 'Radiesse (Calcium Hydroxylapatite)', es: 'Radiesse (Hidroxiapatita de Calcio)' },
 
-            { id: 'exosomes_therapy_direct_injection', category: 'lasers', label: 'Exosomes Therapy (Direct Injection)' },
-            { id: 'microneedling_exosomes', category: 'lasers', label: 'Microneedling + Exosomes' },
-            { id: 'salmon_pdrn_direct_injection', category: 'lasers', label: 'Salmon PDRN (Direct Injection)' },
-            { id: 'microneedling_salmon_pdrn', category: 'lasers', label: 'Microneedling + Salmon PDRN' },
-            { id: 'nctf_skin_boosting', category: 'lasers', label: 'NCTF Skin Boosting' },
-            { id: 'fractional_co2_laser_resurfacing', category: 'lasers', label: 'Fractional CO2 Laser Resurfacing' },
-            { id: 'facial_cleansing', category: 'lasers', label: 'Facial Cleansing' },
+            { id: 'exosomes_therapy_direct_injection', category: 'lasers', label: 'Exosomes Therapy (Direct Injection)', es: 'Terapia con Exosomas (Inyección Directa)' },
+            { id: 'microneedling_exosomes', category: 'lasers', label: 'Microneedling + Exosomes', es: 'Microneedling + Exosomas' },
+            { id: 'salmon_pdrn_direct_injection', category: 'lasers', label: 'Salmon PDRN (Direct Injection)', es: 'Salmon PDRN (Inyección Directa)' },
+            { id: 'microneedling_salmon_pdrn', category: 'lasers', label: 'Microneedling + Salmon PDRN', es: 'Microneedling + Salmon PDRN' },
+            { id: 'nctf_skin_boosting', category: 'lasers', label: 'NCTF Skin Boosting', es: 'Impulso de la Piel con NCTF' },
+            { id: 'fractional_co2_laser_resurfacing', category: 'lasers', label: 'Fractional CO2 Laser Resurfacing', es: 'Resurfacing con Láser CO2 Fraccionado' },
+            { id: 'facial_cleansing', category: 'lasers', label: 'Facial Cleansing', es: 'Limpieza Facial' },
         ];
 
         const TREATMENT_CATEGORIES = [
@@ -922,47 +923,253 @@
             return Array.from(document.querySelectorAll(`input.${checkboxClass}:checked`)).map(cb => cb.value);
         }
 
-        function getSelectedSoapProcedureIds() {
-            return Array.from(document.querySelectorAll('input.soap-procedure-checkbox:checked')).map(cb => cb.value);
+        // ---------- ENCOUNTER: PROCEDURES BY CATEGORY ----------
+        // Each category is one checkbox; checking it opens its detail:
+        //   check        → nothing else, the check itself is the procedure
+        //   category_qty → one quantity for the whole category (units, syringes)
+        //                  + the category's checklist + "Otro"
+        //   item_qty     → each checked item asks for its own quantity, and
+        //                  "Otro" asks for a name and a quantity
+        // Saved as clinical_history.procedures_detail, keyed by category:
+        //   { neuromodulators: { qty: 40, items: [{ id }], other: { label } },
+        //     biostimulators: { items: [{ id, qty }], other: { label, qty } } }
+        const ENCOUNTER_CATEGORIES = [
+            { id: 'consultation', title: 'Consulta', mode: 'check', itemId: 'general_consultation' },
+            { id: 'neuromodulators', title: 'Neuromoduladores (Botox)', short: 'Botox', mode: 'category_qty', qtyLabel: 'Unidades', unit: ['unidad', 'unidades'] },
+            { id: 'fillers', title: 'Rellenos dérmicos (ácido hialurónico)', short: 'Relleno', mode: 'category_qty', qtyLabel: 'Jeringas', unit: ['jeringa', 'jeringas'] },
+            { id: 'biostimulators', title: 'Bioestimuladores', mode: 'item_qty' },
+            { id: 'lasers', title: 'Estética regenerativa y láser', mode: 'item_qty' },
+        ];
+        // Quantity unit per item_qty product; anything not listed is a plain count ("×2").
+        const ENCOUNTER_ITEM_UNITS = {
+            sculptra: ['ampolla', 'ampollas'],
+            radiesse: ['jeringa', 'jeringas'],
+        };
+
+        function encounterItemsFor(catId) {
+            return TREATMENT_OPTIONS.filter(o => o.category === catId);
         }
 
-        function renderSoapProceduresChecklist() {
-            const container = document.getElementById('soap-procedures-list');
+        function renderEncounterProcedures() {
+            const container = document.getElementById('enc-procedures');
             if (!container) return;
-
-            const grouped = {};
-            TREATMENT_OPTIONS.forEach(o => {
-                if (!grouped[o.category]) grouped[o.category] = [];
-                grouped[o.category].push(o);
-            });
-
-            container.innerHTML = '';
-            TREATMENT_CATEGORIES.forEach(cat => {
-                const options = grouped[cat.id] || [];
-                if (!options.length) return;
-
-                const section = document.createElement('div');
-                section.className = 'space-y-2';
-
-                const title = document.createElement('div');
-                title.className = 'text-[10px] uppercase tracking-widest opacity-60 font-semibold text-[#B76E88]';
-                title.innerText = cat.title;
-                section.appendChild(title);
-
-                options.forEach(t => {
-                    const row = document.createElement('label');
-                    row.className = 'flex items-start gap-3 cursor-pointer select-none w-full';
-                    row.innerHTML = `
-                        <input type="checkbox" class="soap-procedure-checkbox mt-1 accent-[#B76E88]" value="${t.id}">
-                        <div class="flex-1 min-w-0 w-full">
-                            <span class="text-sm text-[#2A2330] font-light leading-snug break-words">${t.label}</span>
+            container.innerHTML = ENCOUNTER_CATEGORIES.map(cat => {
+                if (cat.mode === 'check') {
+                    return `
+                    <div class="enc-cat border border-[#EDE1E7] rounded-lg bg-white" data-cat="${cat.id}">
+                        <label class="flex items-center gap-3 px-3 py-2.5 cursor-pointer select-none">
+                            <input type="checkbox" class="enc-cat-check accent-[#B76E88]">
+                            <span class="text-sm font-semibold">${cat.title}</span>
+                        </label>
+                    </div>`;
+                }
+                const qtyPlaceholder = unit => unit ? unit[1].charAt(0).toUpperCase() + unit[1].slice(1) : 'Cantidad';
+                const items = encounterItemsFor(cat.id).map(item => `
+                    <div class="enc-item flex items-center gap-3 flex-wrap" data-item="${item.id}">
+                        <label class="flex items-center gap-3 cursor-pointer select-none flex-1 min-w-[12rem]">
+                            <input type="checkbox" class="enc-item-check accent-[#B76E88]">
+                            <span class="text-sm font-light">${escapeHtml(item.es)}</span>
+                        </label>
+                        ${cat.mode === 'item_qty' ? `<input type="text" inputmode="decimal" class="enc-qty enc-item-qty hidden" placeholder="${qtyPlaceholder(ENCOUNTER_ITEM_UNITS[item.id])}">` : ''}
+                    </div>`).join('');
+                return `
+                    <div class="enc-cat border border-[#EDE1E7] rounded-lg bg-white" data-cat="${cat.id}">
+                        <label class="flex items-center gap-3 px-3 py-2.5 cursor-pointer select-none">
+                            <input type="checkbox" class="enc-cat-check accent-[#B76E88]">
+                            <span class="text-sm font-semibold">${cat.title}</span>
+                        </label>
+                        <div class="enc-cat-body hidden border-t border-[#EDE1E7] px-3 py-3 space-y-2">
+                            ${cat.mode === 'category_qty' ? `
+                            <div class="flex items-center gap-2 pb-1">
+                                <span class="text-xs opacity-70">${cat.qtyLabel}:</span>
+                                <input type="text" inputmode="decimal" class="enc-qty enc-cat-qty" placeholder="${cat.qtyLabel}">
+                            </div>` : ''}
+                            ${items}
+                            <div class="enc-other flex items-center gap-3 flex-wrap">
+                                <label class="flex items-center gap-3 cursor-pointer select-none">
+                                    <input type="checkbox" class="enc-other-check accent-[#B76E88]">
+                                    <span class="text-sm font-light">Otro</span>
+                                </label>
+                                <input type="text" class="enc-other-label hidden flex-1 min-w-[10rem]" placeholder="¿Cuál?" style="padding:6px 8px;font-size:12px;">
+                                ${cat.mode === 'item_qty' ? `<input type="text" inputmode="decimal" class="enc-qty enc-other-qty hidden" placeholder="Cantidad">` : ''}
+                            </div>
                         </div>
-                    `;
-                    section.appendChild(row);
-                });
+                    </div>`;
+            }).join('');
+        }
 
-                container.appendChild(section);
+        // Opens/closes the detail that belongs to whatever checkbox changed, then
+        // refreshes the auto summary.
+        function onEncounterProceduresChange(e) {
+            const el = e.target;
+            const catEl = el.closest('.enc-cat');
+            if (!catEl) return;
+            if (el.classList.contains('enc-cat-check')) {
+                const body = catEl.querySelector('.enc-cat-body');
+                if (body) body.classList.toggle('hidden', !el.checked);
+                // Unchecking a category clears everything under it, so hidden
+                // answers never get saved.
+                if (!el.checked && body) {
+                    body.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+                    body.querySelectorAll('input[type="text"]').forEach(input => { input.value = ''; });
+                    body.querySelectorAll('.enc-item-qty, .enc-other-label, .enc-other-qty').forEach(input => input.classList.add('hidden'));
+                }
+                if (el.checked && body) body.querySelector('.enc-cat-qty')?.focus();
+            } else if (el.classList.contains('enc-item-check')) {
+                const qty = el.closest('.enc-item').querySelector('.enc-item-qty');
+                if (qty) {
+                    qty.classList.toggle('hidden', !el.checked);
+                    if (el.checked) qty.focus(); else qty.value = '';
+                }
+            } else if (el.classList.contains('enc-other-check')) {
+                const row = el.closest('.enc-other');
+                row.querySelectorAll('.enc-other-label, .enc-other-qty').forEach(input => {
+                    input.classList.toggle('hidden', !el.checked);
+                    if (!el.checked) input.value = '';
+                });
+                if (el.checked) row.querySelector('.enc-other-label').focus();
+            }
+            refreshEncounterSummary();
+        }
+
+        function parseQty(value) {
+            const n = parseFloat(String(value || '').replace(',', '.'));
+            return Number.isFinite(n) && n > 0 ? n : null;
+        }
+
+        function getEncounterProcedures() {
+            const detail = {};
+            document.querySelectorAll('#enc-procedures .enc-cat').forEach(catEl => {
+                if (!catEl.querySelector('.enc-cat-check').checked) return;
+                const catId = catEl.dataset.cat;
+                const entry = {};
+                const catQty = catEl.querySelector('.enc-cat-qty');
+                if (catQty) entry.qty = parseQty(catQty.value);
+                entry.items = Array.from(catEl.querySelectorAll('.enc-item')).filter(row => row.querySelector('.enc-item-check').checked).map(row => {
+                    const item = { id: row.dataset.item };
+                    const qty = row.querySelector('.enc-item-qty');
+                    if (qty) item.qty = parseQty(qty.value);
+                    return item;
+                });
+                const otherCheck = catEl.querySelector('.enc-other-check');
+                const otherLabel = catEl.querySelector('.enc-other-label')?.value.trim();
+                if (otherCheck?.checked && otherLabel) {
+                    entry.other = { label: otherLabel };
+                    const otherQty = catEl.querySelector('.enc-other-qty');
+                    if (otherQty) entry.other.qty = parseQty(otherQty.value);
+                }
+                detail[catId] = entry;
             });
+            return detail;
+        }
+
+        // Older encounters only have procedures_realized_ids (no quantities); they
+        // still check the right boxes.
+        function setEncounterProcedures(detail, legacyIds) {
+            renderEncounterProcedures();
+            let safe = detail && typeof detail === 'object' && !Array.isArray(detail) ? detail : {};
+            if (!Object.keys(safe).length && legacyIds.length) {
+                safe = {};
+                legacyIds.forEach(id => {
+                    const option = TREATMENT_OPTIONS.find(o => o.id === id);
+                    if (!option) return;
+                    if (!safe[option.category]) safe[option.category] = { items: [] };
+                    safe[option.category].items.push({ id });
+                });
+            }
+            Object.entries(safe).forEach(([catId, entry]) => {
+                const catEl = document.querySelector(`#enc-procedures .enc-cat[data-cat="${catId}"]`);
+                if (!catEl) return;
+                catEl.querySelector('.enc-cat-check').checked = true;
+                const body = catEl.querySelector('.enc-cat-body');
+                if (!body) return;
+                body.classList.remove('hidden');
+                const catQty = catEl.querySelector('.enc-cat-qty');
+                if (catQty && entry.qty) catQty.value = entry.qty;
+                (entry.items || []).forEach(item => {
+                    const row = catEl.querySelector(`.enc-item[data-item="${item.id}"]`);
+                    if (!row) return;
+                    row.querySelector('.enc-item-check').checked = true;
+                    const qty = row.querySelector('.enc-item-qty');
+                    if (qty) { qty.classList.remove('hidden'); if (item.qty) qty.value = item.qty; }
+                });
+                if (entry.other?.label) {
+                    const row = catEl.querySelector('.enc-other');
+                    row.querySelector('.enc-other-check').checked = true;
+                    const label = row.querySelector('.enc-other-label');
+                    label.classList.remove('hidden');
+                    label.value = entry.other.label;
+                    const qty = row.querySelector('.enc-other-qty');
+                    if (qty) { qty.classList.remove('hidden'); if (entry.other.qty) qty.value = entry.other.qty; }
+                }
+            });
+        }
+
+        // procedures_realized_ids stays filled: the patient dashboard's "last
+        // visit" card and older admin views read it.
+        function encounterProcedureIds(detail) {
+            const ids = [];
+            ENCOUNTER_CATEGORIES.forEach(cat => {
+                const entry = detail[cat.id];
+                if (!entry) return;
+                if (cat.mode === 'check') ids.push(cat.itemId);
+                (entry.items || []).forEach(item => ids.push(item.id));
+            });
+            return ids;
+        }
+
+        function formatQty(qty, unit) {
+            if (!qty) return '';
+            const n = Number.isInteger(qty) ? String(qty) : String(qty).replace('.', ',');
+            return unit ? `${n} ${qty === 1 ? unit[0] : unit[1]}` : `×${n}`;
+        }
+
+        // Short label for summaries: "Sculptra (Ácido Poliláctico)" → "Sculptra".
+        function shortTreatmentLabel(id) {
+            const option = TREATMENT_OPTIONS.find(o => o.id === id);
+            return option ? option.es.replace(/\s*\([^)]*\)\s*$/, '') : id;
+        }
+
+        // e.g. "Consulta · Botox 40 unidades (Perfilado Nasal, Cuello) · Sculptra 2 ampollas"
+        function buildProceduresSummary(detail) {
+            const parts = [];
+            ENCOUNTER_CATEGORIES.forEach(cat => {
+                const entry = detail[cat.id];
+                if (!entry) return;
+                if (cat.mode === 'check') { parts.push(cat.title); return; }
+                if (cat.mode === 'category_qty') {
+                    const names = (entry.items || []).map(item => shortTreatmentLabel(item.id));
+                    if (entry.other?.label) names.push(entry.other.label);
+                    const head = [cat.short, formatQty(entry.qty, cat.unit)].filter(Boolean).join(' ');
+                    parts.push(names.length ? `${head} (${names.join(', ')})` : head);
+                    return;
+                }
+                (entry.items || []).forEach(item => {
+                    parts.push([shortTreatmentLabel(item.id), formatQty(item.qty, ENCOUNTER_ITEM_UNITS[item.id])].filter(Boolean).join(' '));
+                });
+                if (entry.other?.label) parts.push([entry.other.label, formatQty(entry.other.qty)].filter(Boolean).join(' '));
+                if (!(entry.items || []).length && !entry.other?.label) parts.push(cat.title);
+            });
+            return parts.join(' · ');
+        }
+
+        // The "Procedimientos" field follows the checkboxes until it's edited by
+        // hand; from then on it keeps the typed text and offers "Regenerar".
+        let encSummaryAuto = '';
+        function refreshEncounterSummary() {
+            const field = document.getElementById('enc-summary');
+            const generated = buildProceduresSummary(getEncounterProcedures());
+            const followsAuto = !field.value.trim() || field.value === encSummaryAuto;
+            if (followsAuto) field.value = generated;
+            encSummaryAuto = generated;
+            document.getElementById('enc-summary-regen').classList.toggle('hidden', field.value === generated);
+        }
+        function regenerateEncounterSummary() {
+            const field = document.getElementById('enc-summary');
+            field.value = buildProceduresSummary(getEncounterProcedures());
+            encSummaryAuto = field.value;
+            document.getElementById('enc-summary-regen').classList.add('hidden');
+            soapDirty = true;
         }
 
         // Admin booking dropdown controls
@@ -976,13 +1183,6 @@
             const selectedCountEl = document.getElementById('admin-book-treatments-selected');
             if (!selectedCountEl) return;
             const count = getCheckedValuesByClass('admin-book-treatment-checkbox').length;
-            selectedCountEl.innerText = `${count} selected`;
-        }
-
-        function syncSoapProceduresSelectedSummary() {
-            const selectedCountEl = document.getElementById('soap-procedures-selected');
-            if (!selectedCountEl) return;
-            const count = getSelectedSoapProcedureIds().length;
             selectedCountEl.innerText = `${count} selected`;
         }
 
@@ -1023,71 +1223,74 @@
             return wrapper;
         }
 
-        function renderSoapPhotosExisting() {
-            const map = [
-                { key: 'patient', containerId: 'soap-patient-photos-existing' },
-                { key: 'marking', containerId: 'soap-marking-photos-existing' },
-                { key: 'post', containerId: 'soap-post-photos-existing' }
-            ];
+        // ---------- ENCOUNTER: PHOTOS ----------
+        // Up to MAX_ENCOUNTER_PHOTOS per encounter, no categories, always picked
+        // from files (never the camera). `saved` are URLs already in storage;
+        // `pending` are picked files shown via object URLs and uploaded on save.
+        let encPhotos = { saved: [], pending: [] };
 
-            map.forEach(({ key, containerId }) => {
-                const container = document.getElementById(containerId);
-                if (!container) return;
-                container.innerHTML = '';
-                (soapPhotosState[key] || []).forEach((url, idx) => {
-                    const thumb = buildPhotoThumb(url, () => {
-                        soapPhotosState[key].splice(idx, 1);
-                        renderSoapPhotosExisting();
-                    });
-                    container.appendChild(thumb);
-                });
+        function resetEncounterPhotos(savedUrls) {
+            encPhotos.pending.forEach(p => URL.revokeObjectURL(p.previewUrl));
+            encPhotos = { saved: [...savedUrls], pending: [] };
+            renderEncounterPhotos();
+        }
+
+        function renderEncounterPhotos() {
+            const container = document.getElementById('enc-photos');
+            if (!container) return;
+            container.innerHTML = '';
+            encPhotos.saved.forEach((url, idx) => {
+                container.appendChild(buildPhotoThumb(url, () => {
+                    encPhotos.saved.splice(idx, 1);
+                    soapDirty = true;
+                    renderEncounterPhotos();
+                }));
             });
-        }
-
-        function clearSoapPhotoInputs() {
-            const ids = ['soap-patient-photos', 'soap-marking-photos', 'soap-post-photos'];
-            ids.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = '';
+            encPhotos.pending.forEach((photo, idx) => {
+                container.appendChild(buildPhotoThumb(photo.previewUrl, () => {
+                    URL.revokeObjectURL(photo.previewUrl);
+                    encPhotos.pending.splice(idx, 1);
+                    renderEncounterPhotos();
+                }));
             });
+            const total = encPhotos.saved.length + encPhotos.pending.length;
+            if (total < MAX_ENCOUNTER_PHOTOS) {
+                const add = document.createElement('button');
+                add.type = 'button';
+                add.className = 'enc-photo-add';
+                add.innerHTML = '<span class="text-xl leading-none">+</span><span>Agregar</span>';
+                add.addEventListener('click', () => document.getElementById('enc-photos-input').click());
+                container.appendChild(add);
+            }
+            document.getElementById('enc-photos-count').innerText = `${total} / ${MAX_ENCOUNTER_PHOTOS}`;
         }
 
-        function validatePhotoInputLimit(inputId, existingCount) {
-            const input = document.getElementById(inputId);
-            if (!input) return true;
-            const selectedFiles = Array.from(input.files || []);
-
-            if ((existingCount + selectedFiles.length) > MAX_PHOTO_COUNT) {
-                alert(`You can keep up to ${MAX_PHOTO_COUNT} photos in this category.`);
-                return false;
-            }
-
-            const oversized = selectedFiles.find(f => f.size > (MAX_PHOTO_SIZE_MB * 1024 * 1024));
-            if (oversized) {
-                alert(`Each photo must be <= ${MAX_PHOTO_SIZE_MB}MB.`);
-                return false;
-            }
-            return true;
-        }
-
-        async function uploadSoapPhotos(noteId, categoryKey, inputId) {
-            const input = document.getElementById(inputId);
-            if (!input) return [];
+        document.getElementById('enc-photos-input').addEventListener('change', (e) => {
+            const input = e.target;
             const files = Array.from(input.files || []);
-            if (!files.length) return [];
+            input.value = '';
+            if (!files.length) return;
+            const room = MAX_ENCOUNTER_PHOTOS - encPhotos.saved.length - encPhotos.pending.length;
+            const oversized = files.filter(f => f.size > MAX_PHOTO_SIZE_MB * 1024 * 1024);
+            const accepted = files.filter(f => f.size <= MAX_PHOTO_SIZE_MB * 1024 * 1024).slice(0, room);
+            accepted.forEach(file => encPhotos.pending.push({ file, previewUrl: URL.createObjectURL(file) }));
+            const skippedForRoom = files.length - oversized.length - accepted.length;
+            const notes = [];
+            if (oversized.length) notes.push(`${oversized.length} foto(s) pesan más de ${MAX_PHOTO_SIZE_MB} MB y no se agregaron.`);
+            if (skippedForRoom > 0) notes.push(`Máximo ${MAX_ENCOUNTER_PHOTOS} fotos por encuentro: ${skippedForRoom} no se agregaron.`);
+            if (notes.length) alert(notes.join('\n'));
+            renderEncounterPhotos();
+        });
 
+        async function uploadEncounterPhotos(noteStorageId) {
             const uploaded = [];
-            for (const file of files) {
+            for (const { file } of encPhotos.pending) {
                 const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-                const fileName = `${noteId}/${categoryKey}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+                const fileName = `${noteStorageId}/photo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
                 const { error: uploadError } = await _supabase.storage
                     .from(CLINICAL_PHOTOS_BUCKET)
                     .upload(fileName, file, { upsert: false });
-
-                if (uploadError) {
-                    throw new Error(uploadError.message || 'Upload failed');
-                }
-
+                if (uploadError) throw new Error(uploadError.message || 'Upload failed');
                 const { data: publicData } = _supabase.storage
                     .from(CLINICAL_PHOTOS_BUCKET)
                     .getPublicUrl(fileName);
@@ -1120,16 +1323,20 @@
 
         // Render dropdown options immediately (this script is at the end of the body).
         renderTreatmentsDropdownOptions('admin-book-treatments-options', 'admin-book-treatment-checkbox');
-        renderSoapProceduresChecklist();
+        renderEncounterProcedures();
         syncAdminTreatmentsSelectedSummary();
-        syncSoapProceduresSelectedSummary();
 
         // Keep the selected counters up to date.
         document.querySelectorAll('input.admin-book-treatment-checkbox').forEach(cb => {
             cb.addEventListener('change', syncAdminTreatmentsSelectedSummary);
         });
-        document.querySelectorAll('input.soap-procedure-checkbox').forEach(cb => {
-            cb.addEventListener('change', syncSoapProceduresSelectedSummary);
+        // The procedure checklist is re-rendered per encounter, so listen on its container.
+        document.getElementById('enc-procedures').addEventListener('change', onEncounterProceduresChange);
+        document.getElementById('enc-procedures').addEventListener('input', (e) => {
+            if (e.target.matches('.enc-qty, .enc-other-label')) refreshEncounterSummary();
+        });
+        document.getElementById('enc-summary').addEventListener('input', () => {
+            document.getElementById('enc-summary-regen').classList.toggle('hidden', document.getElementById('enc-summary').value === encSummaryAuto);
         });
 
         // Close dropdowns when clicking outside.
@@ -1349,7 +1556,6 @@
         // --- RECOMMENDATION TEMPLATES (admin-managed library) ---
         let recommendationTemplates = [];
         let editingRecommendationId = null;
-        let sendingForEncounterId = null;
 
         // Lightweight "Markdown-lite" convention, shared (independently, since
         // these are static files with no module system) with dashboard.html and
@@ -1466,84 +1672,124 @@
             fetchRecommendationTemplates();
         }
 
-        // --- SEND RECOMMENDATION TO PATIENT (from their Clinical History) ---
-        async function openSendRecommendationModal(encounterId) {
-            if (!currentPatientId || !encounterId) return;
-            sendingForEncounterId = encounterId;
-            const encounter = notesById[encounterId];
-            const encounterLabelEl = document.getElementById('send-recommendation-encounter-label');
-            if (encounterLabelEl) {
-                encounterLabelEl.innerText = encounter
-                    ? `Para el encounter del ${encounter.visit_date}${encounter.visit_time ? ' @ ' + String(encounter.visit_time).substring(0, 5) : ''}.`
-                    : '';
-            }
-            if (!recommendationTemplates.length) {
-                await fetchRecommendationTemplates();
-            }
-            const listEl = document.getElementById('send-recommendation-list');
-            const emptyEl = document.getElementById('send-recommendation-empty');
-            if (!recommendationTemplates.length) {
-                listEl.innerHTML = '';
-                emptyEl.classList.remove('hidden');
-            } else {
-                emptyEl.classList.add('hidden');
-                listEl.innerHTML = recommendationTemplates.map(rec => `
-                    <label class="flex items-start gap-3 p-3 border border-[#EDE1E7] rounded-lg cursor-pointer hover:border-[#B76E88] transition">
-                        <input type="checkbox" class="send-rec-checkbox mt-1 accent-[#B76E88]" value="${rec.id}">
-                        <span>
-                            <span class="block font-semibold text-sm text-[#2A2330]">${escapeHtml(rec.title)}</span>
-                            <span class="block text-xs opacity-60 mt-1">${renderRecommendationBody(rec.body)}</span>
-                        </span>
-                    </label>
-                `).join('');
-            }
-            document.getElementById('send-recommendation-modal').classList.add('flex');
-            document.getElementById('send-recommendation-modal').classList.remove('hidden');
+        // --- SEND RECOMMENDATION (inside the encounter form) ---
+        // One recommendation at a time: pick a saved one (its text can be tweaked
+        // for this patient without changing the saved template) or write a new
+        // one. It always lands in the patient portal (patient_messages, tied to
+        // this encounter) and can also go out by email and/or WhatsApp.
+        function populateEncounterRecommendationOptions() {
+            const select = document.getElementById('enc-rec-template');
+            select.innerHTML = '<option value="">Elegir una recomendación guardada…</option>'
+                + recommendationTemplates.map(rec => `<option value="${escapeHtml(rec.id)}">${escapeHtml(rec.title)}</option>`).join('')
+                + '<option value="__custom">✍️ Escribir una nueva</option>';
+            document.getElementById('enc-rec-editor').classList.add('hidden');
+            document.getElementById('enc-rec-title').value = '';
+            document.getElementById('enc-rec-body').value = '';
         }
 
-        function closeSendRecommendationModal() {
-            sendingForEncounterId = null;
-            document.getElementById('send-recommendation-modal').classList.add('hidden');
-            document.getElementById('send-recommendation-modal').classList.remove('flex');
+        function onEncounterRecommendationPick() {
+            const value = document.getElementById('enc-rec-template').value;
+            const editor = document.getElementById('enc-rec-editor');
+            editor.classList.toggle('hidden', !value);
+            if (!value) return;
+            const rec = recommendationTemplates.find(r => r.id === value);
+            document.getElementById('enc-rec-title').value = rec?.title || '';
+            document.getElementById('enc-rec-body').value = rec?.body || '';
+            document.getElementById(rec ? 'enc-rec-body' : 'enc-rec-title').focus();
         }
 
-        async function sendSelectedRecommendations() {
-            const checked = Array.from(document.querySelectorAll('.send-rec-checkbox:checked')).map(cb => cb.value);
-            if (!checked.length) { alert('Selecciona al menos una recomendación.'); return; }
-            if (!sendingForEncounterId) { alert('No se identificó el encounter de origen. Cierra este panel y ábrelo de nuevo desde el encounter correspondiente.'); return; }
-            const encounter = notesById[sendingForEncounterId];
-            if (!encounter) { alert('No se encontró ese encounter — recarga la historia clínica e intenta de nuevo.'); return; }
-            const selected = recommendationTemplates.filter(r => checked.includes(r.id));
+        // profiles.phone holds the full number with country code ("+15551234567");
+        // older admin-created patients may have 10 bare US digits.
+        function whatsappNumber(phone) {
+            let digits = String(phone || '').replace(/\D/g, '');
+            if (digits.length === 10) digits = '1' + digits;
+            return digits.length >= 11 ? digits : null;
+        }
 
-            const rows = selected.map(rec => ({
-                patient_id: currentPatientId,
-                subject: rec.title,
-                body: rec.body,
-                encounter_id: encounter.id,
-                visit_date: encounter.visit_date,
-                visit_time: encounter.visit_time || null,
-            }));
-            const { error: insertError } = await _supabase.from('patient_messages').insert(rows);
-            if (insertError) { alert('Error guardando el mensaje: ' + insertError.message); return; }
+        // Same plain-text conventions as renderRecommendationBody ("- " bullets,
+        // "1. " numbered), turned into WhatsApp formatting: *bold* title and •
+        // bullets, with a greeting and signature so it reads as a real message.
+        function buildWhatsAppRecommendation(title, body) {
+            const firstName = String(currentPatientName || '').trim().split(/\s+/)[0] || '';
+            const formattedBody = String(body || '').split('\n').map(line => {
+                const bullet = line.trim().match(/^[-*]\s+(.*)$/);
+                return bullet ? `• ${bullet[1]}` : line.trimEnd();
+            }).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+            return `Hola${firstName ? ' ' + firstName : ''} 👋\n\n*${title.trim()}*\n\n${formattedBody}\n\n_Piel Spa_`;
+        }
 
-            const { error: mailError } = await _supabase.functions.invoke('send-patient-recommendations', {
-                body: {
+        async function sendEncounterRecommendation() {
+            const title = document.getElementById('enc-rec-title').value.trim();
+            const body = document.getElementById('enc-rec-body').value.trim();
+            if (!title || !body) { alert('Escribe el título y el texto de la recomendación.'); return; }
+            const wantEmail = document.getElementById('enc-rec-email').checked;
+            const wantWhatsApp = document.getElementById('enc-rec-whatsapp').checked;
+            if (wantEmail && !currentPatientEmail && !confirm('Este paciente no tiene correo registrado. ¿Enviar de todas formas (solo portal' + (wantWhatsApp ? ' y WhatsApp' : '') + ')?')) return;
+            const waNumber = wantWhatsApp ? whatsappNumber(currentPatientPhone) : null;
+            if (wantWhatsApp && !waNumber) { alert('Este paciente no tiene un teléfono válido para WhatsApp. Desmarca WhatsApp o corrige su teléfono.'); return; }
+
+            // Open the WhatsApp tab right away, while this click still counts as a
+            // user action — browsers block pop-ups opened after an await.
+            const waWindow = wantWhatsApp ? window.open('', '_blank') : null;
+
+            const sendBtn = document.getElementById('enc-rec-send');
+            sendBtn.disabled = true;
+            sendBtn.innerText = 'Enviando…';
+            try {
+                // The message is tied to this encounter, so an unsaved (or edited)
+                // encounter is saved first and the form stays open.
+                let encounterId = document.getElementById('edit-note-id').value;
+                if (!encounterId || soapDirty) {
+                    encounterId = await submitSoapForm({ keepOpen: true });
+                    if (!encounterId) { if (waWindow) waWindow.close(); return; }
+                }
+                const encounter = notesById[encounterId] || {
+                    visit_date: document.getElementById('soap-date').value,
+                    visit_time: document.getElementById('soap-time').value,
+                };
+
+                const { error: insertError } = await _supabase.from('patient_messages').insert([{
                     patient_id: currentPatientId,
-                    patient_name: currentPatientName,
-                    patient_email: currentPatientEmail,
+                    subject: title,
+                    body,
+                    encounter_id: encounterId,
                     visit_date: encounter.visit_date,
                     visit_time: encounter.visit_time || null,
-                    recommendations: selected.map(r => ({ title: r.title, body: r.body })),
-                },
-            });
-            if (mailError) {
-                console.error('Send recommendation email error:', mailError.message);
-                alert('Se guardó en el portal del paciente, pero no se pudo enviar el correo: ' + mailError.message);
-            } else {
-                alert('Recomendación(es) enviada(s) al paciente.');
+                }]);
+                if (insertError) {
+                    if (waWindow) waWindow.close();
+                    alert('Error guardando la recomendación: ' + insertError.message);
+                    return;
+                }
+
+                const results = ['Guardada en el portal del paciente.'];
+                if (wantEmail && currentPatientEmail) {
+                    const { error: mailError } = await _supabase.functions.invoke('send-patient-recommendations', {
+                        body: {
+                            patient_id: currentPatientId,
+                            patient_name: currentPatientName,
+                            patient_email: currentPatientEmail,
+                            visit_date: encounter.visit_date,
+                            visit_time: encounter.visit_time || null,
+                            recommendations: [{ title, body }],
+                        },
+                    });
+                    if (mailError) console.error('Send recommendation email error:', mailError.message);
+                    results.push(mailError ? 'No se pudo enviar el correo: ' + mailError.message : 'Correo enviado.');
+                }
+                if (wantWhatsApp) {
+                    const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(buildWhatsAppRecommendation(title, body))}`;
+                    if (waWindow) waWindow.location.href = waUrl;
+                    else window.open(waUrl, '_blank');
+                    results.push('WhatsApp abierto con el mensaje listo: solo presiona enviar.');
+                }
+                alert(results.join('\n'));
+                populateEncounterRecommendationOptions();
+                loadNotes();
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerText = 'Enviar al paciente';
             }
-            closeSendRecommendationModal();
-            loadNotes();
         }
 
         // --- APPOINTMENTS FETCHING ---
@@ -1750,6 +1996,66 @@
             }
         }
 
+        // ---------- ENCOUNTER: NOTES ("Notas y seguimiento") ----------
+        // Every time the form opens, a new line starting with the current date
+        // and time is added at the end, so follow-ups stay in order and dated.
+        // If nothing is written after it, that empty stamp is dropped on save.
+        let encNotesStamp = '';
+
+        function formatStamp(d = new Date()) {
+            const date = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            return `${date} ${time} — `;
+        }
+
+        function cleanEncounterNotes(value) {
+            let text = String(value || '').replace(/\s+$/, '');
+            const stamp = encNotesStamp.trim();
+            if (stamp && text.endsWith(stamp)) text = text.slice(0, -stamp.length).replace(/\s+$/, '');
+            return text;
+        }
+
+        // "$1,250.50" / "1250,5" → 1250.5; '' → null; anything else → undefined (invalid).
+        function parseAmount(raw) {
+            const cleaned = String(raw || '').replace(/[$\s]/g, '');
+            if (!cleaned) return null;
+            const normalized = /,\d{1,2}$/.test(cleaned) ? cleaned.replace(/\./g, '').replace(',', '.') : cleaned.replace(/,/g, '');
+            const n = Number(normalized);
+            return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : undefined;
+        }
+
+        function formatAmount(value) {
+            if (value === null || value === undefined || value === '') return '';
+            return Number(value).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        }
+
+        function formatVisitTime(timeStr) {
+            if (!timeStr) return '';
+            const [h, m] = String(timeStr).split(':').map(Number);
+            if (Number.isNaN(h)) return String(timeStr);
+            return new Date(2000, 0, 1, h, m || 0).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        }
+
+        // Old SOAP fields are no longer edited, but encounters that have them
+        // keep showing them (read-only) so nothing recorded before is lost.
+        function legacySoapHtml(n) {
+            const fields = [
+                ['Subjetivo', n.subjective], ['Objetivo', n.objective], ['Evaluación', n.assessment],
+                ['Plan', n.plan], ['Sugerencias de seguimiento', n.suggestions],
+            ].filter(([, v]) => v && String(v).trim());
+            return fields.map(([label, v]) => `<div><p class="font-bold opacity-40 uppercase text-[8px] tracking-widest mb-0.5">${label}</p><p class="text-gray-700 whitespace-pre-wrap">${escapeHtml(v)}</p></div>`).join('');
+        }
+
+        function legacyPhotoUrls(n) {
+            return [...normalizePhotoArray(n.patient_photos), ...normalizePhotoArray(n.marking_photos), ...normalizePhotoArray(n.post_photos)];
+        }
+
+        function parseProcedureIds(raw) {
+            if (Array.isArray(raw)) return raw;
+            if (typeof raw === 'string') return raw.replace(/[{}"]/g, '').split(',').map(s => s.trim()).filter(Boolean);
+            return [];
+        }
+
         async function toggleSoapForm(show, note = null) {
             if (!show && soapDirty) {
                 const choice = await askUnsavedChanges();
@@ -1763,63 +2069,73 @@
 
             const container = document.getElementById('soap-form-container');
             container.classList.toggle('hidden', !show);
-            if (show) soapDirty = false;
+            // The form's wrapper is its own z-10 layer, which left the history
+            // header (z-20) drawn over the full-screen form on phones; lift the
+            // wrapper while the form is open.
+            container.parentElement.style.zIndex = show ? '70' : '';
+            // On desktop the form sits in the page flow, in place of the list.
+            document.getElementById('notes-container').classList.toggle('hidden', show);
+            document.getElementById('add-note-btn').parentElement.classList.toggle('hidden', show);
+            if (!show) { resetEncounterPhotos([]); return; }
 
-            if (show) {
-                if (note) {
-                    document.getElementById('form-title').innerText = "Modify Clinical Encounter";
-                    document.getElementById('edit-note-id').value = note.id;
-                    document.getElementById('soap-date').value = note.visit_date;
-                    document.getElementById('soap-time').value = note.visit_time || '';
-                    document.getElementById('soap-s').value = note.subjective || '';
-                    document.getElementById('soap-o').value = note.objective || '';
-                    document.getElementById('soap-a').value = note.assessment || '';
-                    document.getElementById('soap-p').value = note.plan || '';
-                    document.getElementById('soap-sugg').value = note.suggestions || '';
+            document.getElementById('soap-form').reset();
+            encNotesStamp = formatStamp();
+            const notesEl = document.getElementById('enc-notes');
+            const legacyEl = document.getElementById('enc-legacy');
 
-                    // Prefill multi-select procedures realized
-                    const rawProcIds = note.procedures_realized_ids;
-                    const procIds = Array.isArray(rawProcIds)
-                        ? rawProcIds
-                        : (typeof rawProcIds === 'string'
-                            ? rawProcIds.replace(/[{}"]/g, '').split(',').map(s => s.trim()).filter(Boolean)
-                            : []);
+            if (note) {
+                document.getElementById('form-title').innerText = 'Modificar encuentro';
+                document.getElementById('edit-note-id').value = note.id;
+                document.getElementById('soap-date').value = note.visit_date;
+                document.getElementById('soap-time').value = note.visit_time ? String(note.visit_time).substring(0, 5) : '';
 
-                    document.querySelectorAll('input.soap-procedure-checkbox').forEach(cb => {
-                        cb.checked = procIds.includes(cb.value);
-                    });
-                    syncSoapProceduresSelectedSummary();
+                setEncounterProcedures(note.procedures_detail, parseProcedureIds(note.procedures_realized_ids));
+                encSummaryAuto = buildProceduresSummary(getEncounterProcedures());
+                document.getElementById('enc-summary').value = note.procedures_summary ?? encSummaryAuto;
+                document.getElementById('enc-summary-regen').classList.toggle('hidden', document.getElementById('enc-summary').value === encSummaryAuto);
 
-                    soapPhotosState.patient = normalizePhotoArray(note.patient_photos);
-                    soapPhotosState.marking = normalizePhotoArray(note.marking_photos);
-                    soapPhotosState.post = normalizePhotoArray(note.post_photos);
-                    renderSoapPhotosExisting();
-                    clearSoapPhotoInputs();
-                } else {
-                    document.getElementById('form-title').innerText = "New Clinical Entry";
-                    document.getElementById('soap-form').reset();
-                    document.getElementById('edit-note-id').value = "";
-                    const now = new Date();
-                    // Setup correct local time offset
-                    const offset = now.getTimezoneOffset() * 60000;
-                    const localISOTime = (new Date(now - offset)).toISOString().slice(0, -1);
-                    document.getElementById('soap-date').value = localISOTime.split('T')[0];
-                    document.getElementById('soap-time').value = localISOTime.split('T')[1].substring(0, 5);
+                document.getElementById('enc-amount').value = note.amount !== null && note.amount !== undefined ? Number(note.amount).toFixed(2) : '';
+                const existingNotes = String(note.notes || '').replace(/\s+$/, '');
+                notesEl.value = existingNotes ? `${existingNotes}\n\n${encNotesStamp}` : encNotesStamp;
 
-                    // Clear multi-select procedures realized
-                    document.querySelectorAll('input.soap-procedure-checkbox').forEach(cb => cb.checked = false);
-                    syncSoapProceduresSelectedSummary();
+                const legacy = legacySoapHtml(note);
+                document.getElementById('enc-legacy-body').innerHTML = legacy;
+                legacyEl.classList.toggle('hidden', !legacy);
+                legacyEl.open = false;
 
-                    soapPhotosState = { patient: [], marking: [], post: [] };
-                    renderSoapPhotosExisting();
-                    clearSoapPhotoInputs();
-                }
+                // Old encounters' categorized photos join the single list; they're
+                // saved back as `photos` from now on.
+                resetEncounterPhotos([...normalizePhotoArray(note.photos), ...legacyPhotoUrls(note)]);
+            } else {
+                document.getElementById('form-title').innerText = 'Nuevo encuentro';
+                document.getElementById('edit-note-id').value = '';
+                const now = new Date();
+                const offset = now.getTimezoneOffset() * 60000;
+                const localISOTime = (new Date(now - offset)).toISOString().slice(0, -1);
+                document.getElementById('soap-date').value = localISOTime.split('T')[0];
+                document.getElementById('soap-time').value = localISOTime.split('T')[1].substring(0, 5);
+
+                setEncounterProcedures({}, []);
+                encSummaryAuto = '';
+                document.getElementById('enc-summary').value = '';
+                document.getElementById('enc-summary-regen').classList.add('hidden');
+                document.getElementById('enc-amount').value = '';
+                notesEl.value = encNotesStamp;
+                document.getElementById('enc-legacy-body').innerHTML = '';
+                legacyEl.classList.add('hidden');
+                resetEncounterPhotos([]);
             }
+
+            if (!recommendationTemplates.length) await fetchRecommendationTemplates();
+            populateEncounterRecommendationOptions();
+            soapDirty = false;
+            container.scrollTop = 0;
+            container.scrollIntoView({ block: 'start' });
         }
 
         async function loadNotes() {
             const container = document.getElementById('notes-container');
-            container.innerHTML = '<p class="text-center opacity-30 text-sm mt-10">Accessing secure records...</p>';
+            container.innerHTML = '<p class="text-center opacity-30 text-sm mt-10">Cargando historia clínica…</p>';
 
             const { data, error } = await _supabase
                 .from('clinical_history')
@@ -1828,11 +2144,12 @@
                 .order('visit_date', { ascending: false })
                 .order('visit_time', { ascending: false });
 
+            if (error) console.error('Load encounters error:', error.message);
             if (!data || data.length === 0) {
                 container.innerHTML = `
                     <div class="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                        <p class="opacity-40 italic text-sm mb-4">No clinical history found for this patient.</p>
-                        <p class="text-[10px] uppercase tracking-widest opacity-30">Start by adding a new encounter above.</p>
+                        <p class="opacity-40 italic text-sm mb-4">Este paciente todavía no tiene encuentros.</p>
+                        <p class="text-[10px] uppercase tracking-widest opacity-30">Crea el primero con "+ Nuevo encuentro".</p>
                     </div>`;
                 return;
             }
@@ -1858,53 +2175,44 @@
                 messagesByEncounter[m.encounter_id].push(m);
             });
 
-            container.innerHTML = data.map(n => `
-                <div class="p-6 bg-white border border-[#EDE1E7] rounded-xl shadow-sm relative group hover:border-[#B76E88] transition-colors">
-                    <div class="flex justify-between items-start mb-4 border-b border-gray-50 pb-3">
-                        <div>
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-[#B76E88]">Encounter: ${escapeHtml(n.visit_date)} @ ${n.visit_time ? escapeHtml(String(n.visit_time).substring(0,5)) : 'N/A'}</span>
-                        </div>
-                        <div class="flex flex-col items-end gap-2">
-                            <button onclick='openSendRecommendationModal("${n.id}")' class="text-[9px] uppercase font-bold text-[#B76E88] hover:text-[#9C5570] underline transition">✉️ Enviar Recomendación</button>
-                            <button onclick='editNoteById("${n.id}")' class="text-[9px] uppercase font-bold text-blue-500 hover:text-blue-700 underline transition">Modify</button>
-                            <button onclick='deleteNote("${n.id}")' class="text-[9px] uppercase font-bold text-red-400 hover:text-red-600 underline transition">Delete</button>
+            const sectionLabel = 'font-bold text-[#B76E88] uppercase tracking-widest text-[8px] mb-1';
+            container.innerHTML = data.map(n => {
+                const summary = n.procedures_summary
+                    || buildProceduresSummary(n.procedures_detail && Object.keys(n.procedures_detail).length ? n.procedures_detail : {})
+                    || parseProcedureIds(n.procedures_realized_ids).map(pid => TREATMENT_OPTIONS.find(o => o.id === pid)?.es || pid).join(', ');
+                const photos = [...normalizePhotoArray(n.photos), ...legacyPhotoUrls(n)];
+                const legacy = legacySoapHtml(n);
+                const sent = messagesByEncounter[n.id] || [];
+                return `
+                <div class="p-5 md:p-6 bg-white border border-[#EDE1E7] rounded-xl shadow-sm hover:border-[#B76E88] transition-colors">
+                    <div class="flex justify-between items-start gap-3 mb-3 border-b border-gray-50 pb-3">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-[#B76E88]">Encuentro · ${escapeHtml(formatVisitDate(n.visit_date))}${n.visit_time ? ' · ' + escapeHtml(formatVisitTime(n.visit_time)) : ''}</span>
+                        <div class="flex items-center gap-4 flex-shrink-0">
+                            <button onclick='editNoteById("${n.id}")' class="text-[9px] uppercase font-bold text-blue-500 hover:text-blue-700 underline transition">Modificar</button>
+                            <button onclick='deleteNote("${n.id}")' class="text-[9px] uppercase font-bold text-red-400 hover:text-red-600 underline transition">Eliminar</button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-x-8 gap-y-6 text-xs leading-relaxed mt-2">
-                        <div><p class="font-bold opacity-30 uppercase text-[7px] mb-1 tracking-widest">Subjective</p><p class="text-gray-700 whitespace-pre-wrap">${escapeHtml(n.subjective || '-')}</p></div>
-                        <div><p class="font-bold opacity-30 uppercase text-[7px] mb-1 tracking-widest">Objective</p><p class="text-gray-700 whitespace-pre-wrap">${escapeHtml(n.objective || '-')}</p></div>
-                        <div><p class="font-bold opacity-30 uppercase text-[7px] mb-1 tracking-widest">Assessment</p><p class="text-gray-700 font-medium whitespace-pre-wrap">${escapeHtml(n.assessment || '-')}</p></div>
-                        <div><p class="font-bold opacity-30 uppercase text-[7px] mb-1 tracking-widest">Plan</p><p class="text-gray-700 whitespace-pre-wrap">${escapeHtml(n.plan || '-')}</p></div>
+                    <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-x-8 gap-y-3 text-xs leading-relaxed">
+                        <div><p class="${sectionLabel}">Procedimientos</p><p class="text-gray-700">${escapeHtml(summary || '—')}</p></div>
+                        <div><p class="${sectionLabel}">Monto a cobrar</p><p class="text-gray-800 font-semibold text-sm">${escapeHtml(formatAmount(n.amount) || '—')}</p></div>
                     </div>
-                    ${(() => {
-                        const patientPhotos = normalizePhotoArray(n.patient_photos);
-                        const markingPhotos = normalizePhotoArray(n.marking_photos);
-                        const postPhotos = normalizePhotoArray(n.post_photos);
-
-                        function row(label, arr) {
-                            if (!arr.length) return '';
-                            return `<div class="mt-3"><p class="font-bold text-[#B76E88] uppercase tracking-widest text-[8px] mb-2">${label}</p><div class="flex flex-wrap gap-2">${arr.map(url => `<img src="${escapeHtml(url)}" class="photo-thumb" onclick="openImageLightbox('${escapeHtml(url)}')" alt="${label}">`).join('')}</div></div>`;
-                        }
-
-                        const block = row('Patient Photos', patientPhotos) + row('Marking Photos', markingPhotos) + row('Post Procedure Photos', postPhotos);
-                        return block ? `<div class="mt-4 pt-4 border-t border-gray-50">${block}</div>` : '';
-                    })()}
-                    ${Array.isArray(n.procedures_realized_ids) && n.procedures_realized_ids.length ? `<div class="mt-5 pt-4 border-t border-gray-50 text-[10px]"><span class="font-bold text-[#B76E88] uppercase tracking-widest text-[8px] mr-2">Procedures:</span> <span class="italic text-gray-500">${escapeHtml(formatTreatmentIds(n.procedures_realized_ids))}</span></div>` : ''}
-                    ${n.suggestions ? `<div class="mt-5 pt-4 border-t border-gray-50 text-[10px]"><span class="font-bold text-[#B76E88] uppercase tracking-widest text-[8px] mr-2">Suggestions:</span> <span class="italic text-gray-500">${escapeHtml(n.suggestions)}</span></div>` : ''}
-                    ${(messagesByEncounter[n.id] || []).length ? `
-                        <div class="mt-5 pt-4 border-t border-gray-50 text-[10px]">
-                            <span class="font-bold text-[#B76E88] uppercase tracking-widest text-[8px] block mb-2">✉️ Recomendaciones Enviadas</span>
+                    ${n.notes ? `<div class="mt-4 text-xs leading-relaxed"><p class="${sectionLabel}">Notas y seguimiento</p><p class="text-gray-700 whitespace-pre-wrap">${escapeHtml(n.notes)}</p></div>` : ''}
+                    ${legacy ? `<details class="mt-4 text-xs"><summary class="cursor-pointer ${sectionLabel}">Notas anteriores (SOAP)</summary><div class="mt-2 space-y-2">${legacy}</div></details>` : ''}
+                    ${photos.length ? `<div class="mt-4"><p class="${sectionLabel}">Fotos (${photos.length})</p><div class="flex flex-wrap gap-2 mt-1">${photos.map(url => `<img src="${escapeHtml(url)}" class="photo-thumb" onclick="openImageLightbox('${escapeHtml(url)}')" alt="Foto del encuentro">`).join('')}</div></div>` : ''}
+                    ${sent.length ? `
+                        <div class="mt-4 pt-3 border-t border-gray-50 text-[10px]">
+                            <p class="${sectionLabel}">✉️ Recomendaciones enviadas</p>
                             <div class="space-y-1">
-                                ${messagesByEncounter[n.id].map(m => `
+                                ${sent.map(m => `
                                     <div class="flex items-center justify-between gap-3 text-gray-500">
                                         <span class="italic">${escapeHtml(m.subject || 'Recomendación')}</span>
-                                        <span class="opacity-60 whitespace-nowrap">${new Date(m.created_at).toLocaleString()}</span>
+                                        <span class="opacity-60 whitespace-nowrap">${new Date(m.created_at).toLocaleString('es-ES')}</span>
                                     </div>
                                 `).join('')}
                             </div>
                         </div>` : ''}
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         window.editNoteById = (noteId) => {
@@ -1914,68 +2222,78 @@
         };
 
         async function deleteNote(id) {
-            if (confirm("Are you sure you want to permanently delete this clinical record?")) {
+            if (confirm('¿Eliminar este encuentro de forma permanente?')) {
                 await _supabase.from('clinical_history').delete().eq('id', id);
                 loadNotes();
             }
         }
 
-        async function submitSoapForm() {
+        // Saves the open encounter. Returns its id on success, false on failure.
+        // keepOpen leaves the form open (used when a recommendation is sent from
+        // an encounter that wasn't saved yet).
+        async function submitSoapForm({ keepOpen = false } = {}) {
             const id = document.getElementById('edit-note-id').value;
-            const proceduresRealizedIds = getSelectedSoapProcedureIds();
-            if (!validatePhotoInputLimit('soap-patient-photos', soapPhotosState.patient.length)) return false;
-            if (!validatePhotoInputLimit('soap-marking-photos', soapPhotosState.marking.length)) return false;
-            if (!validatePhotoInputLimit('soap-post-photos', soapPhotosState.post.length)) return false;
-
-            let photoStateToSave = {
-                patient: [...soapPhotosState.patient],
-                marking: [...soapPhotosState.marking],
-                post: [...soapPhotosState.post]
-            };
-
-            try {
-                // Use existing note id for updates, and a temporary id for inserts.
-                const noteStorageId = id || `new-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-                const uploadedPatient = await uploadSoapPhotos(noteStorageId, 'patient', 'soap-patient-photos');
-                const uploadedMarking = await uploadSoapPhotos(noteStorageId, 'marking', 'soap-marking-photos');
-                const uploadedPost = await uploadSoapPhotos(noteStorageId, 'post', 'soap-post-photos');
-
-                photoStateToSave.patient = [...photoStateToSave.patient, ...uploadedPatient];
-                photoStateToSave.marking = [...photoStateToSave.marking, ...uploadedMarking];
-                photoStateToSave.post = [...photoStateToSave.post, ...uploadedPost];
-            } catch (uploadErr) {
-                alert("Photo upload error: " + uploadErr.message);
+            const amount = parseAmount(document.getElementById('enc-amount').value);
+            if (amount === undefined) {
+                alert('El monto a cobrar no es válido. Escribe solo el número, por ejemplo 250 o 250.50.');
+                document.getElementById('enc-amount').focus();
                 return false;
             }
 
+            let uploaded;
+            try {
+                // Use existing note id for updates, and a temporary id for inserts.
+                const noteStorageId = id || `new-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                uploaded = await uploadEncounterPhotos(noteStorageId);
+            } catch (uploadErr) {
+                alert('Error subiendo las fotos: ' + uploadErr.message);
+                return false;
+            }
+
+            const detail = getEncounterProcedures();
+            const notes = cleanEncounterNotes(document.getElementById('enc-notes').value);
             const noteData = {
                 patient_id: currentPatientId,
                 visit_date: document.getElementById('soap-date').value,
                 visit_time: document.getElementById('soap-time').value,
-                subjective: document.getElementById('soap-s').value,
-                objective: document.getElementById('soap-o').value,
-                assessment: document.getElementById('soap-a').value,
-                plan: document.getElementById('soap-p').value,
-                procedures_realized_ids: proceduresRealizedIds,
-                patient_photos: photoStateToSave.patient,
-                marking_photos: photoStateToSave.marking,
-                post_photos: photoStateToSave.post,
-                suggestions: document.getElementById('soap-sugg').value
+                procedures_detail: detail,
+                procedures_realized_ids: encounterProcedureIds(detail),
+                procedures_summary: document.getElementById('enc-summary').value.trim() || null,
+                amount,
+                notes: notes || null,
+                photos: [...encPhotos.saved, ...uploaded],
             };
+            // Old categorized photos were merged into `photos` when the form opened.
+            if (id) Object.assign(noteData, { patient_photos: [], marking_photos: [], post_photos: [] });
 
-            let result;
-            if (id) result = await _supabase.from('clinical_history').update(noteData).eq('id', id);
-            else result = await _supabase.from('clinical_history').insert([noteData]);
+            const query = id
+                ? _supabase.from('clinical_history').update(noteData).eq('id', id)
+                : _supabase.from('clinical_history').insert([noteData]);
+            const result = await query.select('id').single();
 
-            if (!result.error) {
-                soapDirty = false;
-                toggleSoapForm(false);
-                loadNotes();
-                return true;
-            } else {
-                alert("Database Error: " + result.error.message);
+            if (result.error) {
+                const missingColumn = /column|schema cache/i.test(result.error.message || '');
+                alert('Error guardando el encuentro: ' + result.error.message
+                    + (missingColumn ? '\n\nFalta correr el SQL de la migración (supabase/migrations/20260926_encounter_redesign.sql) en Supabase.' : ''));
                 return false;
             }
+
+            const savedId = result.data.id;
+            soapDirty = false;
+            if (keepOpen) {
+                // Stay in the form as "Modificar" on the saved row; uploaded photos
+                // are now saved URLs and the notes keep what was just written.
+                document.getElementById('edit-note-id').value = savedId;
+                document.getElementById('form-title').innerText = 'Modificar encuentro';
+                encNotesStamp = formatStamp();
+                document.getElementById('enc-notes').value = notes ? `${notes}\n\n${encNotesStamp}` : encNotesStamp;
+                resetEncounterPhotos(noteData.photos);
+                await loadNotes();
+                return savedId;
+            }
+            await toggleSoapForm(false);
+            await loadNotes();
+            return savedId;
         }
 
         document.getElementById('soap-form').onsubmit = async (e) => {
@@ -2005,8 +2323,11 @@
 
         document.getElementById('admission-section').addEventListener('input', () => { admissionDirty = true; });
         document.getElementById('admission-section').addEventListener('change', () => { admissionDirty = true; });
-        document.getElementById('soap-form').addEventListener('input', () => { soapDirty = true; });
-        document.getElementById('soap-form').addEventListener('change', () => { soapDirty = true; });
+        // The recommendation box at the bottom isn't part of the encounter record,
+        // so typing there doesn't count as an unsaved encounter change.
+        const markSoapDirty = (e) => { if (!e.target.closest('#enc-rec')) soapDirty = true; };
+        document.getElementById('soap-form').addEventListener('input', markSoapDirty);
+        document.getElementById('soap-form').addEventListener('change', markSoapDirty);
 
         async function closeHistoryModal() {
             if (admissionDirty || soapDirty) {
