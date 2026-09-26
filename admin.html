@@ -120,6 +120,7 @@
                         </tr>
                     </thead>
                     <tbody id="today-table-body"></tbody>
+                    <tfoot id="today-table-foot" class="sticky bottom-0 z-10 bg-[#FBF0F3] shadow-[0_-1px_0_#EDE1E7]"></tfoot>
                 </table>
             </div>
         </div>
@@ -1665,6 +1666,7 @@
                     ? 'Falta correr el SQL de supabase/migrations/20260926_staff_roles_and_rls_fix.sql en Supabase.'
                     : 'No se pudo cargar el día: ' + error.message)}</td></tr>`;
                 summaryEl.innerText = '';
+                document.getElementById('today-table-foot').innerHTML = '';
                 return;
             }
 
@@ -1683,6 +1685,14 @@
             summaryEl.innerHTML = visits.length
                 ? `<span class="font-semibold">${visits.length} paciente${visits.length === 1 ? '' : 's'}</span> · Total a cobrar <span class="font-semibold">${escapeHtml(formatAmount(total))}</span>${withoutAmount ? ` <span class="text-amber-700">· ${withoutAmount} sin monto</span>` : ''}`
                 : '';
+
+            // Fixed total row at the bottom of the sheet, under the Monto column.
+            document.getElementById('today-table-foot').innerHTML = visits.length ? `
+                <tr class="text-sm">
+                    <td colspan="8" class="px-4 py-3 text-right text-[10px] uppercase tracking-widest font-bold text-[#B76E88]">Total del día${withoutAmount ? ` <span class="normal-case tracking-normal font-semibold text-amber-700">(${withoutAmount} sin monto)</span>` : ''}</td>
+                    <td class="px-4 py-3 text-right font-bold text-base whitespace-nowrap">${escapeHtml(formatAmount(total))}</td>
+                    <td colspan="2"></td>
+                </tr>` : '';
 
             if (!visits.length) {
                 body.innerHTML = `<tr><td colspan="11" class="px-4 py-12 text-center text-sm opacity-40 italic">${isToday ? 'Todavía no hay pacientes atendidos hoy.' : 'No hubo pacientes atendidos este día.'}</td></tr>`;
