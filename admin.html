@@ -60,12 +60,13 @@
             <p class="text-[9px] uppercase tracking-[0.3em] opacity-40 mt-1">Admin</p>
         </div>
         <nav class="flex-1 space-y-2">
-            <a onclick="switchAdminView('patients-view', this)" class="nav-link active-link block px-4 py-3 text-[10px] uppercase tracking-widest">Patients</a>
+            <a onclick="switchAdminView('today-view', this)" class="nav-link active-link block px-4 py-3 text-[10px] uppercase tracking-widest">Hoy</a>
+            <a onclick="switchAdminView('patients-view', this)" class="nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">Pacientes</a>
             <a onclick="switchAdminView('appointments-view', this)" class="nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest flex items-center justify-between">
-                <span>Appointments</span>
+                <span>Citas</span>
                 <span id="pending-badge" class="hidden bg-amber-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full leading-none">0</span>
             </a>
-            <a onclick="switchAdminView('recommendations-view', this)" class="nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">Recommendations</a>
+            <a onclick="switchAdminView('recommendations-view', this)" class="nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">Recomendaciones</a>
         </nav>
         <button onclick="logout()" class="text-[10px] uppercase tracking-widest opacity-40 hover:opacity-100 transition mt-auto">Logout</button>
     </aside>
@@ -80,33 +81,69 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
-                <h2 id="view-title" class="text-2xl italic">Patient Database</h2>
+                <h2 id="view-title" class="text-2xl italic">Hoy</h2>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
                 <button onclick="openNewPatientModal()" class="bg-[#2A2330] text-white px-5 py-2 text-[10px] uppercase tracking-widest font-bold shadow-md hover:bg-[#1D1822] transition rounded-full">+ Nuevo paciente</button>
-                <button onclick="openAdminBooking()" class="bg-[#B76E88] text-white px-6 py-2 text-[10px] uppercase tracking-widest font-bold shadow-md hover:bg-[#9C5570] transition rounded-full">+ New Appointment</button>
+                <button onclick="openAdminBooking()" class="bg-[#B76E88] text-white px-6 py-2 text-[10px] uppercase tracking-widest font-bold shadow-md hover:bg-[#9C5570] transition rounded-full">+ Nueva cita</button>
             </div>
         </header>
 
-        <!-- Patients View -->
-        <div id="patients-view" class="flex-1 overflow-y-auto p-4 md:p-8">
-            <div class="bg-white rounded-xl shadow-sm border border-[#EDE1E7] overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left min-w-[600px]">
-                        <thead class="bg-gray-50 text-[10px] uppercase tracking-widest opacity-60">
-                            <tr>
-                                <th class="p-6 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('name')">Patient Name <span class="sort-icon" data-key="name"></span></th>
-                                <th class="p-6 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('age')">Age <span class="sort-icon" data-key="age"></span></th>
-                                <th class="p-6">Email</th>
-                                <th class="p-6">Phone</th>
-                                <th class="p-6 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('registered')">Fecha de Creación de Usuario <span class="sort-icon" data-key="registered"></span></th>
-                                <th class="p-6">Clinic</th>
-                                <th class="p-6">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="patient-table-body" class="text-sm"></tbody>
-                    </table>
+        <!-- Today View: the daily sheet, one row per visit (clinical_history) -->
+        <div id="today-view" class="flex-1 flex flex-col overflow-hidden p-4 md:p-8 gap-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <button onclick="shiftTodayDate(-1)" class="w-9 h-9 rounded-full border border-[#EDE1E7] bg-white hover:border-[#B76E88] transition" aria-label="Día anterior">‹</button>
+                    <input type="date" id="today-date" class="enc-compact" onchange="loadToday()" aria-label="Fecha">
+                    <button onclick="shiftTodayDate(1)" class="w-9 h-9 rounded-full border border-[#EDE1E7] bg-white hover:border-[#B76E88] transition" aria-label="Día siguiente">›</button>
+                    <button id="today-reset-btn" onclick="setTodayDate(null)" class="hidden text-[10px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline ml-1">Ir a hoy</button>
                 </div>
+                <div id="today-summary" class="text-sm text-[#2A2330]"></div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-[#EDE1E7] overflow-auto flex-1 min-h-0">
+                <table class="w-full text-left min-w-[1150px] text-sm">
+                    <thead class="sticky top-0 z-10 bg-gray-50 text-[10px] uppercase tracking-widest text-[#2A2330]/60 shadow-[0_1px_0_#EDE1E7]">
+                        <tr>
+                            <th class="px-4 py-3 w-10">#</th>
+                            <th class="px-4 py-3">Paciente</th>
+                            <th class="px-4 py-3">F. nacimiento</th>
+                            <th class="px-4 py-3">Edad</th>
+                            <th class="px-4 py-3">Teléfono</th>
+                            <th class="px-4 py-3">Ubicación</th>
+                            <th class="px-4 py-3">Hora</th>
+                            <th class="px-4 py-3">Procedimientos</th>
+                            <th class="px-4 py-3 text-right">Monto</th>
+                            <th class="px-4 py-3">Observaciones</th>
+                            <th class="px-4 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="today-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Patients View -->
+        <div id="patients-view" class="flex-1 flex flex-col overflow-hidden p-4 md:p-8 gap-4 hidden">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div id="patient-filters" class="flex items-center gap-2 flex-wrap"></div>
+                <input type="search" id="patient-search" oninput="renderSortedPatients()" placeholder="Buscar por nombre o teléfono" class="max-w-xs" style="padding:8px 12px;">
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-[#EDE1E7] overflow-auto flex-1 min-h-0">
+                <table class="w-full text-left min-w-[900px]">
+                    <thead class="sticky top-0 z-10 bg-gray-50 text-[10px] uppercase tracking-widest text-[#2A2330]/60 shadow-[0_1px_0_#EDE1E7]">
+                        <tr>
+                            <th class="px-5 py-4 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('name')">Paciente <span class="sort-icon" data-key="name"></span></th>
+                            <th class="px-5 py-4 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('age')">Edad <span class="sort-icon" data-key="age"></span></th>
+                            <th class="px-5 py-4">Teléfono</th>
+                            <th class="px-5 py-4">Correo</th>
+                            <th class="px-5 py-4 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('visit')">Última atención <span class="sort-icon" data-key="visit"></span></th>
+                            <th class="px-5 py-4 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('registered')">Registro <span class="sort-icon" data-key="registered"></span></th>
+                            <th class="px-5 py-4">Clínica</th>
+                            <th class="px-5 py-4">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="patient-table-body" class="text-sm"></tbody>
+                </table>
             </div>
         </div>
 
@@ -1093,6 +1130,16 @@
             return parts.join(' · ');
         }
 
+        // What an encounter shows as its procedures: the saved (possibly edited)
+        // summary, else one built from the detail, else — for encounters from
+        // before the redesign — the plain list of procedure names.
+        function encounterSummaryText(n) {
+            const detail = n.procedures_detail && typeof n.procedures_detail === 'object' ? n.procedures_detail : {};
+            return n.procedures_summary
+                || buildProceduresSummary(detail)
+                || parseProcedureIds(n.procedures_realized_ids).map(pid => TREATMENT_OPTIONS.find(o => o.id === pid)?.es || pid).join(', ');
+        }
+
         // The "Procedimientos" field follows the checkboxes until it's edited by
         // hand; from then on it keeps the typed text and offers "Regenerar".
         let encSummaryAuto = '';
@@ -1310,28 +1357,42 @@
             const { data: { user } } = await _supabase.auth.getUser();
             const admins = ['samuel.galviz@gmail.com', 'freddyjosevp@gmail.com', 'pielspanyc@gmail.com']; // Updated email
             if (!user || !admins.includes(user.email)) { window.location.href = 'index.html'; return; }
+            setTodayDate(null);
             fetchPatients();
             refreshPendingBadge(); // Show pending count on sidebar from the start
             renderAdmissionOptionLists();
         }
 
+        const ADMIN_VIEWS = {
+            'today-view': 'Hoy',
+            'patients-view': 'Pacientes',
+            'appointments-view': 'Citas',
+            'recommendations-view': 'Recomendaciones',
+        };
+
+        function currentAdminView() {
+            return Object.keys(ADMIN_VIEWS).find(id => !document.getElementById(id).classList.contains('hidden'));
+        }
+
         function switchAdminView(viewId, element) {
-            document.getElementById('patients-view').classList.add('hidden');
-            document.getElementById('appointments-view').classList.add('hidden');
-            document.getElementById('recommendations-view').classList.add('hidden');
-            document.getElementById(viewId).classList.remove('hidden');
-
-            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active-link'));
+            Object.keys(ADMIN_VIEWS).forEach(id => document.getElementById(id).classList.toggle('hidden', id !== viewId));
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active-link');
+                link.classList.add('opacity-60');
+            });
             element.classList.add('active-link');
-            document.getElementById('view-title').innerText = viewId === 'patients-view' ? 'Patient Database'
-                : viewId === 'appointments-view' ? 'Appointment Queue'
-                : 'Recommendation Templates';
+            element.classList.remove('opacity-60');
+            document.getElementById('view-title').innerText = ADMIN_VIEWS[viewId];
+            refreshCurrentAdminView();
+            closeMobileSidebar();
+        }
 
-            if (viewId === 'appointments-view') fetchAppointments();
+        function refreshCurrentAdminView() {
+            const viewId = currentAdminView();
+            if (viewId === 'today-view') loadToday();
+            else if (viewId === 'appointments-view') fetchAppointments();
             else if (viewId === 'recommendations-view') fetchRecommendationTemplates();
             else fetchPatients();
-
-            closeMobileSidebar();
         }
 
         // --- PATIENT FETCHING ---
@@ -1340,8 +1401,35 @@
         // date," so it's computed here from a lightweight clinical_history
         // fetch instead of a per-patient round trip).
         let allPatients = [];
-        let patientSortKey = 'registered';
-        let patientSortDir = 'desc'; // most recently created accounts first by default
+        // Most recently attended first; patients never attended sink to the end.
+        let patientSortKey = 'visit';
+        let patientSortDir = 'desc';
+        // 'all' | 'attended' (has at least one encounter) | 'unattended' (self-registered, never seen)
+        let patientFilter = 'all';
+
+        function setPatientFilter(filter) {
+            patientFilter = filter;
+            renderSortedPatients();
+        }
+
+        function renderPatientFilters() {
+            const attended = allPatients.filter(p => p.last_visit_date).length;
+            const options = [
+                ['all', 'Todos', allPatients.length],
+                ['attended', 'Atendidos', attended],
+                ['unattended', 'Sin atender', allPatients.length - attended],
+            ];
+            document.getElementById('patient-filters').innerHTML = options.map(([key, label, count]) => `
+                <button onclick="setPatientFilter('${key}')" class="px-4 py-1.5 rounded-full text-[10px] uppercase tracking-widest font-bold border transition ${patientFilter === key ? 'bg-[#2A2330] text-white border-[#2A2330]' : 'bg-white text-[#2A2330] border-[#EDE1E7] hover:border-[#B76E88]'}">${label} <span class="opacity-60">${count}</span></button>
+            `).join('');
+        }
+
+        function patientMatchesSearch(p, query) {
+            if (!query) return true;
+            const name = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
+            const digits = query.replace(/\D/g, '');
+            return name.includes(query) || (digits.length >= 3 && String(p.phone || '').replace(/\D/g, '').includes(digits));
+        }
 
         async function fetchPatients() {
             const { data, error } = await _supabase.from('profiles').select('id, first_name, last_name, dob, sex, phone, email, clinic_affiliation, created_at');
@@ -1424,7 +1512,12 @@
         function renderSortedPatients() {
             const dir = patientSortDir === 'asc' ? 1 : -1;
             const missingLast = dir === 1 ? Infinity : -Infinity; // patients missing the sorted field always sink to the end, regardless of direction
-            const sorted = [...allPatients].sort((a, b) => {
+            const query = (document.getElementById('patient-search')?.value || '').trim().toLowerCase();
+            const visible = allPatients.filter(p =>
+                (patientFilter === 'all' || (patientFilter === 'attended') === !!p.last_visit_date)
+                && patientMatchesSearch(p, query));
+            renderPatientFilters();
+            const sorted = visible.sort((a, b) => {
                 let va, vb;
                 if (patientSortKey === 'name') {
                     va = `${a.last_name || ''} ${a.first_name || ''}`.trim().toLowerCase();
@@ -1450,6 +1543,10 @@
         }
 
         function renderPatientTable(patients) {
+            if (!patients.length) {
+                document.getElementById('patient-table-body').innerHTML = `<tr><td colspan="8" class="px-5 py-12 text-center text-sm opacity-40 italic">No hay pacientes que coincidan.</td></tr>`;
+                return;
+            }
             document.getElementById('patient-table-body').innerHTML = patients.map(p => {
                 const clinicAff = Array.isArray(p.clinic_affiliation) ? p.clinic_affiliation : [];
                 let clinicBadges = '';
@@ -1460,22 +1557,175 @@
 
                 return `
                 <tr class="border-t border-gray-50 hover:bg-gray-50 transition">
-                    <td class="p-6 font-medium">${[p.last_name, p.first_name].filter(v => String(v || '').trim()).join(', ') || escapeHtml(p.email || 'Patient')}</td>
-                    <td class="p-6 text-xs">${calcAge(p.dob)}</td>
-                    <td class="p-6 text-xs">${escapeHtml(p.email || '-')}</td>
-                    <td class="p-6 text-xs">${escapeHtml(p.phone || '-')}</td>
-                    <td class="p-6 text-xs">${formatCreatedAt(p.created_at)}</td>
-                    <td class="p-6 text-xs">${clinicBadges}</td>
-                    <td class="p-6">
+                    <td class="px-5 py-4 font-medium">${escapeHtml([p.last_name, p.first_name].filter(v => String(v || '').trim()).join(', ') || p.email || 'Paciente')}</td>
+                    <td class="px-5 py-4 text-xs">${calcAge(p.dob)}</td>
+                    <td class="px-5 py-4 text-xs whitespace-nowrap">${escapeHtml(formatPhone(p.phone) || '-')}</td>
+                    <td class="px-5 py-4 text-xs">${escapeHtml(p.email || '-')}</td>
+                    <td class="px-5 py-4 text-xs whitespace-nowrap">${p.last_visit_date ? formatVisitDate(p.last_visit_date) : '<span class="text-[9px] uppercase tracking-widest font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">Sin atender</span>'}</td>
+                    <td class="px-5 py-4 text-xs whitespace-nowrap opacity-60">${formatCreatedAt(p.created_at)}</td>
+                    <td class="px-5 py-4 text-xs">${clinicBadges}</td>
+                    <td class="px-5 py-4">
                         <div class="flex items-center gap-3 flex-wrap">
-                            <button onclick="openHistory('${p.id}', '${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}', '${p.dob || ''}')" class="text-[#B76E88] font-bold text-[10px] uppercase hover:underline">History</button>
-                            <button onclick="openEditPatient('${p.id}')" class="text-blue-500 font-bold text-[10px] uppercase hover:underline">Edit</button>
-                            <button onclick="deletePatient('${p.id}', '${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}')" class="text-red-400 font-bold text-[10px] uppercase hover:underline">Delete</button>
+                            <button onclick="openHistoryById('${p.id}')" class="text-[#B76E88] font-bold text-[10px] uppercase hover:underline">Historia</button>
+                            <button onclick="openEditPatient('${p.id}')" class="text-blue-500 font-bold text-[10px] uppercase hover:underline">Editar</button>
+                            <button onclick="deletePatient('${p.id}', '${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}')" class="text-red-400 font-bold text-[10px] uppercase hover:underline">Eliminar</button>
                         </div>
                     </td>
                 </tr>`;
             }).join('');
         }
+
+        // Opens a patient's history from just their id (profile looked up in the
+        // loaded list, or fetched), so table rows don't have to inline names
+        // into onclick strings.
+        async function openHistoryById(patientId) {
+            let p = allPatients.find(x => x.id === patientId) || todayProfiles[patientId];
+            if (!p) {
+                const { data } = await _supabase.from('profiles').select('id, first_name, last_name, dob').eq('id', patientId).maybeSingle();
+                p = data;
+            }
+            if (!p) { alert('No se encontró el paciente.'); return; }
+            openHistory(p.id, `${p.first_name || ''} ${p.last_name || ''}`.trim(), p.dob || '');
+        }
+
+        // --- TODAY ("Hoy"): the daily sheet ---
+        // One row per visit (clinical_history) on the chosen date, numbered in
+        // order of visit time. Patient data comes from profiles; the location
+        // is the city/state the patient gave in the intake (admission_history).
+        let todayProfiles = {};
+        let todayRefreshTimer = null;
+
+        function localIsoDate(d = new Date()) {
+            return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        }
+
+        function setTodayDate(isoDate) {
+            document.getElementById('today-date').value = isoDate || localIsoDate();
+            loadToday();
+        }
+
+        function shiftTodayDate(days) {
+            const current = document.getElementById('today-date').value || localIsoDate();
+            const d = new Date(current + 'T12:00:00');
+            d.setDate(d.getDate() + days);
+            setTodayDate(localIsoDate(d));
+        }
+
+        // "+15551234567" / "5551234567" → "(555) 123-4567"; other countries keep "+" and digits.
+        function formatPhone(phone) {
+            const digits = String(phone || '').replace(/\D/g, '');
+            if (!digits) return '';
+            const us = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits.length === 10 ? digits : null;
+            if (us) return `(${us.slice(0, 3)}) ${us.slice(3, 6)}-${us.slice(6)}`;
+            return String(phone).trim().startsWith('+') ? `+${digits}` : String(phone).trim();
+        }
+
+        function formatDob(dob) {
+            if (!dob) return '—';
+            const [y, m, d] = String(dob).split('-');
+            return y && m && d ? `${m}/${d}/${y}` : dob;
+        }
+
+        async function loadToday() {
+            const date = document.getElementById('today-date').value || localIsoDate();
+            const isToday = date === localIsoDate();
+            document.getElementById('today-reset-btn').classList.toggle('hidden', isToday);
+            const body = document.getElementById('today-table-body');
+            const summaryEl = document.getElementById('today-summary');
+
+            const { data: visits, error } = await _supabase
+                .from('clinical_history')
+                .select('id, patient_id, visit_date, visit_time, procedures_summary, procedures_detail, procedures_realized_ids, amount, frontdesk_notes')
+                .eq('visit_date', date)
+                .order('visit_time', { ascending: true });
+            if (error) {
+                const missingColumn = /frontdesk_notes/.test(error.message || '');
+                body.innerHTML = `<tr><td colspan="11" class="px-4 py-12 text-center text-sm text-red-500">${escapeHtml(missingColumn
+                    ? 'Falta correr el SQL de supabase/migrations/20260926_frontdesk_notes.sql en Supabase.'
+                    : 'No se pudo cargar el día: ' + error.message)}</td></tr>`;
+                summaryEl.innerText = '';
+                return;
+            }
+
+            const ids = [...new Set((visits || []).map(v => v.patient_id))];
+            todayProfiles = {};
+            const locations = {};
+            if (ids.length) {
+                const [{ data: profiles }, { data: admissions }] = await Promise.all([
+                    _supabase.from('profiles').select('id, first_name, last_name, dob, phone').in('id', ids),
+                    _supabase.from('admission_history').select('patient_id, city, state').in('patient_id', ids),
+                ]);
+                (profiles || []).forEach(p => { todayProfiles[p.id] = p; });
+                (admissions || []).forEach(a => { locations[a.patient_id] = [a.city, a.state].filter(Boolean).join(', '); });
+            }
+
+            const total = (visits || []).reduce((sum, v) => sum + (Number(v.amount) || 0), 0);
+            const withoutAmount = (visits || []).filter(v => v.amount === null || v.amount === undefined).length;
+            summaryEl.innerHTML = visits.length
+                ? `<span class="font-semibold">${visits.length} paciente${visits.length === 1 ? '' : 's'}</span> · Total a cobrar <span class="font-semibold">${escapeHtml(formatAmount(total))}</span>${withoutAmount ? ` <span class="text-amber-700">· ${withoutAmount} sin monto</span>` : ''}`
+                : '';
+
+            if (!visits.length) {
+                body.innerHTML = `<tr><td colspan="11" class="px-4 py-12 text-center text-sm opacity-40 italic">${isToday ? 'Todavía no hay pacientes atendidos hoy.' : 'No hubo pacientes atendidos este día.'}</td></tr>`;
+                return;
+            }
+
+            body.innerHTML = visits.map((v, idx) => {
+                const p = todayProfiles[v.patient_id] || {};
+                const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Paciente';
+                return `
+                <tr class="border-t border-gray-100 align-top hover:bg-[#FDFBFC]">
+                    <td class="px-4 py-3 font-bold text-[#B76E88]">${idx + 1}</td>
+                    <td class="px-4 py-3 font-medium whitespace-nowrap">${escapeHtml(name)}</td>
+                    <td class="px-4 py-3 text-xs whitespace-nowrap">${escapeHtml(formatDob(p.dob))}</td>
+                    <td class="px-4 py-3 text-xs whitespace-nowrap">${escapeHtml(p.dob ? calcAge(p.dob) : '—')}</td>
+                    <td class="px-4 py-3 text-xs whitespace-nowrap">${escapeHtml(formatPhone(p.phone) || '—')}</td>
+                    <td class="px-4 py-3 text-xs">${escapeHtml(locations[v.patient_id] || '—')}</td>
+                    <td class="px-4 py-3 text-xs whitespace-nowrap">${escapeHtml(formatVisitTime(v.visit_time) || '—')}</td>
+                    <td class="px-4 py-3 text-xs min-w-[14rem]">${escapeHtml(encounterSummaryText(v) || '—')}</td>
+                    <td class="px-4 py-3 text-right font-semibold whitespace-nowrap">${v.amount !== null && v.amount !== undefined ? escapeHtml(formatAmount(v.amount)) : '<span class="text-[9px] uppercase tracking-widest font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">Pendiente</span>'}</td>
+                    <td class="px-4 py-3 min-w-[15rem]">
+                        <textarea class="today-notes resize-y" rows="2" data-id="${v.id}" style="padding:6px 8px;font-size:12px;" placeholder="Observaciones">${escapeHtml(v.frontdesk_notes || '')}</textarea>
+                        <p class="today-notes-status text-[9px] uppercase tracking-widest font-bold mt-0.5 h-3"></p>
+                    </td>
+                    <td class="px-4 py-3"><button onclick="openHistoryById('${v.patient_id}')" class="text-[#B76E88] font-bold text-[10px] uppercase hover:underline whitespace-nowrap">Historia</button></td>
+                </tr>`;
+            }).join('');
+
+            body.querySelectorAll('.today-notes').forEach(textarea => {
+                textarea.dataset.saved = textarea.value;
+                textarea.addEventListener('blur', () => saveTodayNotes(textarea));
+            });
+        }
+
+        // Observations save on their own when the field loses focus.
+        async function saveTodayNotes(textarea) {
+            if (textarea.value === textarea.dataset.saved) return;
+            const status = textarea.nextElementSibling;
+            status.className = 'today-notes-status text-[9px] uppercase tracking-widest font-bold mt-0.5 h-3 opacity-50';
+            status.innerText = 'Guardando…';
+            const value = textarea.value.trim() || null;
+            const { error } = await _supabase.from('clinical_history').update({ frontdesk_notes: value }).eq('id', textarea.dataset.id);
+            if (error) {
+                status.className = 'today-notes-status text-[9px] uppercase tracking-widest font-bold mt-0.5 h-3 text-red-500';
+                status.innerText = 'No se guardó';
+                console.error('Save frontdesk notes error:', error.message);
+                return;
+            }
+            textarea.dataset.saved = textarea.value;
+            status.className = 'today-notes-status text-[9px] uppercase tracking-widest font-bold mt-0.5 h-3 text-[#3A8C5F]';
+            status.innerText = '✓ Guardado';
+            setTimeout(() => { if (status.innerText === '✓ Guardado') status.innerText = ''; }, 2000);
+        }
+
+        // Keep the sheet current while it's on screen (new check-ins, amounts
+        // filled in later), without clobbering an observation being typed.
+        todayRefreshTimer = setInterval(() => {
+            if (currentAdminView() !== 'today-view') return;
+            if (document.getElementById('history-modal').classList.contains('modal-open')) return;
+            if (document.activeElement && document.activeElement.classList.contains('today-notes')) return;
+            loadToday();
+        }, 60000);
 
         // --- PENDING BADGE ---
         async function refreshPendingBadge() {
@@ -2117,9 +2367,7 @@
 
             const sectionLabel = 'font-bold text-[#B76E88] uppercase tracking-widest text-[8px] mb-1';
             container.innerHTML = data.map(n => {
-                const summary = n.procedures_summary
-                    || buildProceduresSummary(n.procedures_detail && Object.keys(n.procedures_detail).length ? n.procedures_detail : {})
-                    || parseProcedureIds(n.procedures_realized_ids).map(pid => TREATMENT_OPTIONS.find(o => o.id === pid)?.es || pid).join(', ');
+                const summary = encounterSummaryText(n);
                 const photos = [...normalizePhotoArray(n.photos), ...legacyPhotoUrls(n)];
                 const legacy = legacySoapHtml(n);
                 const sent = messagesByEncounter[n.id] || [];
@@ -2281,6 +2529,8 @@
             admissionDirty = false;
             soapDirty = false;
             document.getElementById('history-modal').classList.remove('modal-open');
+            // Encounters added or edited in the history show up in "Hoy" / "Pacientes" right away.
+            refreshCurrentAdminView();
         }
 
         // --- ADMIN BOOKING LOGIC ---
