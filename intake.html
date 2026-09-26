@@ -47,6 +47,7 @@
         }
         .field-error { border-color: #D14343 !important; border-width: 2px !important; }
         .field-error-group { border: 2px solid #D14343 !important; border-radius: 0.75rem; padding: 0.6rem; }
+        .dob-split.field-error .field-input { border-color: #D14343 !important; border-width: 2px !important; }
         .field-error-msg { color: #D14343; font-size: 0.78rem; font-weight: 600; margin-top: 0.4rem; }
         .step-circle { display:flex; align-items:center; justify-content:center; width:1.5rem; height:1.5rem; border-radius:9999px; border-width:2px; font-size:10px; font-weight:700; flex-shrink:0; transition: 0.2s; }
     </style>
@@ -62,6 +63,14 @@
             <button id="exit-btn" onclick="handleExitClick()" class="text-2xl leading-none text-gray-400 hover:text-[#B76E88] transition" aria-label="Close">&times;</button>
         </div>
     </header>
+
+    <div id="patient-banner" class="hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-[#EDE1E7]">
+        <div class="max-w-2xl mx-auto px-4 md:px-6 py-2 flex items-baseline gap-2 min-w-0">
+            <span class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold flex-shrink-0" data-en="Patient" data-es="Paciente">Patient</span>
+            <span id="patient-banner-name" class="text-sm font-semibold text-[#2A2330] truncate"></span>
+            <span id="patient-banner-age" class="text-sm opacity-60 flex-shrink-0"></span>
+        </div>
+    </div>
 
     <div class="max-w-2xl mx-auto px-4 md:px-6 pt-6">
         <div id="stepper" class="flex items-center mb-3"></div>
@@ -95,7 +104,8 @@
                 <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold" data-en="A few more details are needed to complete your profile" data-es="Necesitamos algunos datos más para completar tu perfil">A few more details are needed to complete your profile</label>
                 <div id="m1-dob-field" class="hidden">
                     <label class="block text-[10px] uppercase tracking-widest opacity-60 mb-1" data-en="Date of Birth" data-es="Fecha de Nacimiento">Date of Birth</label>
-                    <input type="date" id="m1-dob-input" class="field-input">
+                    <div class="dob-split" data-dob-for="m1-dob-input"></div>
+                    <input type="hidden" id="m1-dob-input">
                     <span id="m1-age-input-display" class="text-xs opacity-50 mt-1 block"></span>
                 </div>
                 <div id="m1-sex-field" class="hidden">
@@ -134,7 +144,9 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-[10px] uppercase tracking-widest opacity-60 mb-1" data-en="Date of Birth" data-es="Fecha de Nacimiento">Date of Birth</label>
-                        <input type="date" id="m1-account-dob" class="field-input">
+                        <div class="dob-split" data-dob-for="m1-account-dob"></div>
+                        <input type="hidden" id="m1-account-dob">
+                        <span id="m1-account-age-display" class="text-xs opacity-50 mt-1 block"></span>
                     </div>
                     <div>
                         <label class="block text-[10px] uppercase tracking-widest opacity-60 mb-1" data-en="Sex" data-es="Sexo">Sex</label>
@@ -149,30 +161,12 @@
                     <label class="block text-[10px] uppercase tracking-widest opacity-60 mb-1" data-en="Email (for account recovery & updates)" data-es="Correo (para recuperación de cuenta y avisos)">Email</label>
                     <input type="email" id="m1-account-email" class="field-input" data-en-ph="Email" data-es-ph="Correo">
                 </div>
-                <div>
-                    <label class="block text-[9px] uppercase tracking-widest text-[#B76E88] font-bold mb-3" data-en="Preferred Contact Method" data-es="Método de Contacto Preferido">Preferred Contact Method</label>
-                    <div id="m1-contact-method-group" class="grid grid-cols-2 gap-3 text-xs text-[#2A2330] font-light">
-                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B76E88] transition">
-                            <input type="checkbox" value="WhatsApp" class="m1-contact-method accent-[#B76E88]"> WhatsApp
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B76E88] transition">
-                            <input type="checkbox" value="SMS" class="m1-contact-method accent-[#B76E88]"> SMS
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B76E88] transition">
-                            <input type="checkbox" value="Llamada" class="m1-contact-method accent-[#B76E88]"> <span data-en="Phone Call" data-es="Llamada">Phone Call</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer hover:text-[#B76E88] transition">
-                            <input type="checkbox" value="Email" class="m1-contact-method accent-[#B76E88]"> Email
-                        </label>
-                    </div>
-                </div>
             </div>
 
             <div>
                 <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="Physical Address" data-es="Dirección Física">Physical Address</label>
                 <div class="space-y-3">
                     <input type="text" id="m1-addr1" class="field-input" data-en-ph="Address Line 1" data-es-ph="Dirección 1">
-                    <input type="text" id="m1-addr2" class="field-input" data-en-ph="Address Line 2 (apt, suite — write N/A if none)" data-es-ph="Dirección 2 (apto, suite — escribe N/A si no aplica)">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <input type="text" id="m1-city" class="field-input" data-en-ph="City" data-es-ph="Ciudad">
                         <select id="m1-state" class="field-input"></select>
@@ -182,7 +176,7 @@
             </div>
 
             <div class="bg-[#FBF0F3] border border-[#EDE1E7] rounded-xl p-5">
-                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-3" data-en="Emergency Contact" data-es="Contacto de Emergencia">Emergency Contact</label>
+                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-3" data-en="Emergency Contact (optional)" data-es="Contacto de Emergencia (opcional)">Emergency Contact (optional)</label>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <input type="text" id="m1-ec-name" class="field-input" data-en-ph="Name" data-es-ph="Nombre">
                     <input type="text" id="m1-ec-relationship" class="field-input" data-en-ph="Relationship" data-es-ph="Relación">
@@ -227,7 +221,7 @@
                             <label for="m2-other-toggle" class="text-sm" data-en="Other" data-es="Otro">Other</label>
                         </div>
                         <div id="m2-other-container" class="hidden space-y-2 ml-6"></div>
-                        <button type="button" onclick="addOtherRow('m2-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otro">+ Add Another</button>
+                        <button type="button" onclick="addOtherRow('m2-other-container', '', true)" class="other-add-btn hidden ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otro">+ Add Another</button>
                     </div>
                 </div>
             </details>
@@ -249,7 +243,7 @@
                             <label for="m3-other-toggle" class="text-sm" data-en="Other Medical Condition" data-es="Otra Condición Médica">Other Medical Condition</label>
                         </div>
                         <div id="m3-other-container" class="hidden space-y-2 ml-6"></div>
-                        <button type="button" onclick="addOtherRow('m3-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Condition" data-es="+ Agregar Condición">+ Add Condition</button>
+                        <button type="button" onclick="addOtherRow('m3-other-container', '', true)" class="other-add-btn hidden ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Condition" data-es="+ Agregar Condición">+ Add Condition</button>
                     </div>
                 </div>
             </details>
@@ -257,29 +251,35 @@
             <details class="acc-section border border-[#EDE1E7] rounded-xl bg-white overflow-hidden">
                 <summary class="flex items-center justify-between gap-3 px-4 py-4">
                     <span class="flex items-center gap-2">
-                        <span class="text-base font-semibold text-[#2A2330]" data-en="Blood Thinners & Allergies" data-es="Anticoagulantes y Alergias">Blood Thinners & Allergies</span>
-                        <span id="m2-badge-meds" class="hidden bg-[#B76E88] text-white text-[10px] font-bold rounded-full px-2 py-0.5"></span>
+                        <span class="text-base font-semibold text-[#2A2330]" data-en="Blood Thinners" data-es="Anticoagulantes">Blood Thinners</span>
+                        <span id="m2-badge-thinners" class="hidden bg-[#B76E88] text-white text-[10px] font-bold rounded-full px-2 py-0.5"></span>
                     </span>
                     <svg class="acc-chevron w-4 h-4 text-[#B76E88] transition-transform flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-4 pb-5 space-y-4 border-t border-[#EDE1E7] pt-4">
+                    <p class="instruction-hint" data-en="🩸 Have you taken any of these in the last 7–10 days? Select one or more, or “None of the above.”" data-es="🩸 ¿Ha tomado alguno de estos en los últimos 7–10 días? Selecciona uno o varios, o “Ninguna de las anteriores.”">Have you taken any of these in the last 7–10 days?</p>
+                    <div id="m4-blood-thinners" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                </div>
+            </details>
+
+            <details class="acc-section border border-[#EDE1E7] rounded-xl bg-white overflow-hidden">
+                <summary class="flex items-center justify-between gap-3 px-4 py-4">
+                    <span class="flex items-center gap-2">
+                        <span class="text-base font-semibold text-[#2A2330]" data-en="Allergies" data-es="Alergias">Allergies</span>
+                        <span id="m2-badge-allergies" class="hidden bg-[#B76E88] text-white text-[10px] font-bold rounded-full px-2 py-0.5"></span>
+                    </span>
+                    <svg class="acc-chevron w-4 h-4 text-[#B76E88] transition-transform flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-4 pb-5 space-y-4 border-t border-[#EDE1E7] pt-4">
+                    <p class="instruction-hint" data-en="⚠️ Do you have any of the following allergies? Select one or more, or “No known allergies.”" data-es="⚠️ ¿Presenta alguna de las siguientes alergias? Selecciona una o varias, o “Ninguna alergia conocida.”">Do you have any of the following allergies?</p>
+                    <div id="m4-allergies" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
                     <div>
-                        <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="🩸 Blood Thinners" data-es="🩸 Anticoagulantes">🩸 Blood Thinners</h4>
-                        <p class="section-hint" data-en="Have you taken any of these in the last 7–10 days? Select one or more, or “None of the above.”" data-es="¿Ha tomado alguno de estos en los últimos 7–10 días? Selecciona uno o varios, o “Ninguna de las anteriores.”">Have you taken any of these in the last 7–10 days?</p>
-                        <div id="m4-blood-thinners" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-                    </div>
-                    <div>
-                        <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="⚠️ Allergies" data-es="⚠️ Alergias">⚠️ Allergies</h4>
-                        <p class="section-hint" data-en="Do you have any of the following allergies? Select one or more, or “No known allergies.”" data-es="¿Presenta alguna de las siguientes alergias? Selecciona una o varias, o “Ninguna alergia conocida.”">Do you have any of the following allergies?</p>
-                        <div id="m4-allergies" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-                        <div class="mt-3">
-                            <div class="flex items-center gap-2 mb-2">
-                                <input type="checkbox" id="m4-other-toggle" class="accent-[#B76E88]" onchange="toggleOtherContainer(this, 'm4-other-container')">
-                                <label for="m4-other-toggle" class="text-sm" data-en="Other Allergies" data-es="Otras Alergias">Other Allergies</label>
-                            </div>
-                            <div id="m4-other-container" class="hidden space-y-2 ml-6"></div>
-                            <button type="button" onclick="addOtherRow('m4-other-container')" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otra">+ Add Another</button>
+                        <div class="flex items-center gap-2 mb-2">
+                            <input type="checkbox" id="m4-other-toggle" class="accent-[#B76E88]" onchange="toggleOtherContainer(this, 'm4-other-container')">
+                            <label for="m4-other-toggle" class="text-sm" data-en="Other Allergies" data-es="Otras Alergias">Other Allergies</label>
                         </div>
+                        <div id="m4-other-container" class="hidden space-y-2 ml-6"></div>
+                        <button type="button" onclick="addOtherRow('m4-other-container', '', true)" class="other-add-btn hidden ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otra">+ Add Another</button>
                     </div>
                 </div>
             </details>
@@ -287,30 +287,35 @@
             <details class="acc-section border border-[#EDE1E7] rounded-xl bg-white overflow-hidden">
                 <summary class="flex items-center justify-between gap-3 px-4 py-4">
                     <span class="flex items-center gap-2">
-                        <span class="text-base font-semibold text-[#2A2330]" data-en="Surgical History" data-es="Antecedentes Quirúrgicos">Surgical History</span>
-                        <span id="m2-badge-surgical" class="hidden bg-[#B76E88] text-white text-[10px] font-bold rounded-full px-2 py-0.5"></span>
+                        <span class="text-base font-semibold text-[#2A2330]" data-en="Facial / Head & Neck Surgeries" data-es="Cirugías Faciales / Cabeza y Cuello">Facial / Head & Neck Surgeries</span>
+                        <span id="m2-badge-surgical-facial" class="hidden bg-[#B76E88] text-white text-[10px] font-bold rounded-full px-2 py-0.5"></span>
                     </span>
                     <svg class="acc-chevron w-4 h-4 text-[#B76E88] transition-transform flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-4 pb-5 space-y-4 border-t border-[#EDE1E7] pt-4">
-                    <p class="instruction-hint" data-en="🏥 Answer both questions below. Select every surgery that applies, or “None” if it doesn't apply to you." data-es="🏥 Responde ambas preguntas a continuación. Selecciona cada cirugía que aplique, o “Ninguna” si no aplica en tu caso.">Answer both questions below. Select every surgery that applies, or "None" if it doesn't apply to you.</p>
-                    <div>
-                        <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="Facial / Head & Neck Surgeries" data-es="Cirugías Faciales / Cabeza y Cuello">Facial / Head & Neck Surgeries</h4>
-                        <p class="section-hint" data-en="Have you had any of these? Select one or more, or “None.”" data-es="¿Te has realizado alguna de estas? Selecciona una o varias, o “Ninguna.”">Have you had any of these?</p>
-                        <div id="m5-facial" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-                    </div>
-                    <div>
-                        <h4 class="text-sm font-semibold text-[#2A2330] mb-1" data-en="General & Body Surgeries" data-es="Cirugías Generales y Corporales">General & Body Surgeries</h4>
-                        <p class="section-hint" data-en="Have you had any of these? Select one or more, or “None.”" data-es="¿Te has realizado alguna de estas? Selecciona una o varias, o “Ninguna.”">Have you had any of these?</p>
-                        <div id="m5-general" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-                    </div>
+                    <p class="instruction-hint" data-en="🏥 Have you had any of these? Select one or more, or “None.”" data-es="🏥 ¿Te has realizado alguna de estas? Selecciona una o varias, o “Ninguna.”">Have you had any of these?</p>
+                    <div id="m5-facial" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                </div>
+            </details>
+
+            <details class="acc-section border border-[#EDE1E7] rounded-xl bg-white overflow-hidden">
+                <summary class="flex items-center justify-between gap-3 px-4 py-4">
+                    <span class="flex items-center gap-2">
+                        <span class="text-base font-semibold text-[#2A2330]" data-en="General & Body Surgeries" data-es="Cirugías Generales y Corporales">General & Body Surgeries</span>
+                        <span id="m2-badge-surgical-general" class="hidden bg-[#B76E88] text-white text-[10px] font-bold rounded-full px-2 py-0.5"></span>
+                    </span>
+                    <svg class="acc-chevron w-4 h-4 text-[#B76E88] transition-transform flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-4 pb-5 space-y-4 border-t border-[#EDE1E7] pt-4">
+                    <p class="instruction-hint" data-en="🏥 Have you had any of these? Select one or more, or “None.”" data-es="🏥 ¿Te has realizado alguna de estas? Selecciona una o varias, o “Ninguna.”">Have you had any of these?</p>
+                    <div id="m5-general" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
                     <div>
                         <div class="flex items-center gap-2 mb-2">
                             <input type="checkbox" id="m5-other-toggle" class="accent-[#B76E88]" onchange="toggleOtherContainer(this, 'm5-other-container')">
                             <label for="m5-other-toggle" class="text-sm" data-en="Other Surgical Procedure" data-es="Otro Procedimiento Quirúrgico">Other Surgical Procedure</label>
                         </div>
                         <div id="m5-other-container" class="hidden space-y-2 ml-6"></div>
-                        <button type="button" onclick="addOtherSurgicalRow()" class="ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otra">+ Add Another</button>
+                        <button type="button" onclick="addOtherSurgicalRow(null, true)" class="other-add-btn hidden ml-6 mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="+ Add Another" data-es="+ Agregar Otra">+ Add Another</button>
                     </div>
                 </div>
             </details>
@@ -383,12 +388,13 @@
             </label>
 
             <div>
-                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="Type Full Name as Electronic Signature" data-es="Escribe tu Nombre Completo como Firma Electrónica">Type Full Name as Electronic Signature</label>
+                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="Full Name as Electronic Signature" data-es="Nombre Completo como Firma Electrónica">Full Name as Electronic Signature</label>
                 <input type="text" id="m8-signature-name" class="field-input" required>
+                <p class="text-[10px] opacity-50 mt-1" data-en="Filled in with the name from Step 1 — correct it if needed." data-es="Se llenó con el nombre del Paso 1 — corrígelo si es necesario.">Filled in with the name from Step 1 — correct it if needed.</p>
             </div>
 
             <div>
-                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="Or Sign Below (optional)" data-es="O Firma Aquí Abajo (opcional)">Or Sign Below (optional)</label>
+                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="Draw Your Signature Below" data-es="Dibuja tu Firma Aquí Abajo">Draw Your Signature Below</label>
                 <canvas id="signature-pad" width="500" height="150" class="border border-[#EDE1E7] rounded-lg bg-white w-full" style="height:150px;"></canvas>
                 <button type="button" onclick="clearSignature()" class="mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition" data-en="Clear" data-es="Borrar">Clear</button>
             </div>
@@ -651,8 +657,6 @@
           hasTimesPerformed: true, areaOptions: AREA_FACE_NECK_OTHER, areaFreeText: false, timeSinceOptions: TIME_SINCE_STANDARD, hasComplicationQuestion: false, hasLaserTypeQuestion: false },
         { id: 'laser', header: { en: 'Laser', es: 'Láser' },
           hasTimesPerformed: true, areaOptions: AREA_FACE_NECK_HANDS_BODY, areaFreeText: false, timeSinceOptions: TIME_SINCE_STANDARD, hasComplicationQuestion: false, hasLaserTypeQuestion: true },
-        { id: 'skin_tightening_rf', header: { en: 'Skin Tightening / Ultrasound / RF', es: 'Reafirmación / Ultrasonido / RF' },
-          hasTimesPerformed: true, areaOptions: AREA_FACE_NECK_BODY_OTHER, areaFreeText: false, timeSinceOptions: TIME_SINCE_STANDARD, hasComplicationQuestion: false, hasLaserTypeQuestion: false },
         { id: 'chemical_peel', header: { en: 'Chemical Peel', es: 'Peeling Químico' },
           hasTimesPerformed: true, areaOptions: AREA_FACE_NECK_HANDS_OTHER, areaFreeText: false, timeSinceOptions: TIME_SINCE_STANDARD, hasComplicationQuestion: false, hasLaserTypeQuestion: false },
         { id: 'microneedling', header: { en: 'Microneedling (/PRP/PRF)', es: 'Microneedling (/PRP/PRF)' },
@@ -825,6 +829,102 @@
         const m = today.getMonth() - dob.getMonth();
         if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
         return age;
+    }
+
+    // ---------- DATE OF BIRTH (month / day / year) ----------
+    // A native <input type="date"> is hard for older patients (tiny calendar,
+    // year-by-year paging), so DOB is typed as three plain fields instead. Each
+    // .dob-split writes a valid YYYY-MM-DD (or '') into the hidden input named by
+    // its data-dob-for, so the rest of the form keeps reading that input's value.
+    const MONTH_NAMES = [
+        { en: 'January', es: 'Enero' }, { en: 'February', es: 'Febrero' }, { en: 'March', es: 'Marzo' },
+        { en: 'April', es: 'Abril' }, { en: 'May', es: 'Mayo' }, { en: 'June', es: 'Junio' },
+        { en: 'July', es: 'Julio' }, { en: 'August', es: 'Agosto' }, { en: 'September', es: 'Septiembre' },
+        { en: 'October', es: 'Octubre' }, { en: 'November', es: 'Noviembre' }, { en: 'December', es: 'Diciembre' },
+    ];
+
+    function initDobSplits() {
+        document.querySelectorAll('.dob-split').forEach(wrap => {
+            wrap.classList.add('flex', 'gap-2');
+            wrap.innerHTML = `
+                <select class="dob-month field-input" style="flex: 1 1 0; min-width: 0;">
+                    <option value="" data-en="Month" data-es="Mes">Month</option>
+                    ${MONTH_NAMES.map((m, i) => `<option value="${String(i + 1).padStart(2, '0')}" data-en="${m.en}" data-es="${m.es}">${m.en}</option>`).join('')}
+                </select>
+                <input type="text" class="dob-day field-input text-center" inputmode="numeric" maxlength="2" data-en-ph="Day" data-es-ph="Día" style="flex: 0 0 4.5rem;">
+                <input type="text" class="dob-year field-input text-center" inputmode="numeric" maxlength="4" data-en-ph="Year" data-es-ph="Año" style="flex: 0 0 5.5rem;">`;
+            wrap.addEventListener('input', () => syncDobSplit(wrap));
+            wrap.addEventListener('change', () => syncDobSplit(wrap));
+        });
+    }
+
+    // { iso, empty } — iso is '' unless the three parts form a real past date.
+    function parseDobSplit(wrap) {
+        const month = wrap.querySelector('.dob-month').value;
+        const day = wrap.querySelector('.dob-day').value;
+        const year = wrap.querySelector('.dob-year').value;
+        const empty = !month && !day && !year;
+        if (!month || !day || year.length !== 4) return { iso: '', empty };
+        const date = new Date(Number(year), Number(month) - 1, Number(day));
+        const real = date.getFullYear() === Number(year) && date.getMonth() === Number(month) - 1 && date.getDate() === Number(day);
+        if (!real || Number(year) < 1900 || date > new Date()) return { iso: '', empty };
+        return { iso: `${year}-${month}-${String(day).padStart(2, '0')}`, empty };
+    }
+
+    function getDobSplitError(wrap) {
+        const { iso, empty } = parseDobSplit(wrap);
+        if (iso) return null;
+        return empty
+            ? { en: 'Please enter your date of birth.', es: 'Por favor ingresa tu fecha de nacimiento.' }
+            : { en: 'Please check the date: month, day and a 4-digit year.', es: 'Revisa la fecha: mes, día y año de 4 dígitos.' };
+    }
+
+    function syncDobSplit(wrap) {
+        wrap.querySelectorAll('.dob-day, .dob-year').forEach(input => {
+            const digits = input.value.replace(/\D/g, '');
+            if (digits !== input.value) input.value = digits;
+        });
+        if (wrap.classList.contains('field-error')) {
+            wrap.classList.remove('field-error');
+            const msg = wrap.nextElementSibling;
+            if (msg && msg.classList.contains('field-error-msg')) msg.classList.add('hidden');
+        }
+        const hidden = document.getElementById(wrap.dataset.dobFor);
+        const { iso } = parseDobSplit(wrap);
+        if (hidden && hidden.value !== iso) {
+            hidden.value = iso;
+            hidden.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+
+    // ---------- PATIENT BANNER ----------
+    // From Module 2 on, a sticky strip shows who the intake is for, so staff
+    // filling it in alongside the patient can address them by name.
+    let currentProfile = null;
+
+    function getPatientIdentity() {
+        if (isNewAccountMode) {
+            const name = `${document.getElementById('m1-firstname').value.trim()} ${document.getElementById('m1-lastname').value.trim()}`.trim();
+            return { name, dob: document.getElementById('m1-account-dob').value };
+        }
+        const name = `${currentProfile?.first_name || ''} ${currentProfile?.last_name || ''}`.trim();
+        return { name, dob: currentProfile?.dob || document.getElementById('m1-dob-input').value };
+    }
+
+    function updatePatientBanner() {
+        const banner = document.getElementById('patient-banner');
+        if (!banner) return;
+        const { name, dob } = getPatientIdentity();
+        const show = currentModule > 1 && !!name;
+        banner.classList.toggle('hidden', !show);
+        if (!show) return;
+        document.getElementById('patient-banner-name').innerText = name;
+        const age = calculateAge(dob);
+        document.getElementById('patient-banner-age').innerText = age === null ? '' : `· ${age} ${currentLang === 'en' ? 'years old' : 'años'}`;
+        // Sit just below the page's own sticky header when it's visible (direct
+        // visit); embedded in the portal modal that header is hidden.
+        const header = document.getElementById('intake-header');
+        banner.style.top = header && header.style.display !== 'none' ? header.offsetHeight + 'px' : '0px';
     }
 
     function populateSelect(selectEl, options, { valueKey = 'code', placeholder, labelFn } = {}) {
@@ -1011,29 +1111,59 @@
     // container — otherwise a previously-typed value stays in the DOM (invisible
     // to the patient) and still counts as an answer in validation/collectFormData,
     // making it look like nothing was selected while a stale value quietly persists.
+    // Checking "Other" opens it with one empty field already focused, so the
+    // patient can type right away instead of hunting for an "+ Add" button.
     function toggleOtherContainer(toggleEl, containerId) {
         const container = document.getElementById(containerId);
         if (!container) return;
-        container.classList.toggle('hidden', !toggleEl.checked);
-        if (!toggleEl.checked) container.innerHTML = '';
+        setOtherContainerOpen(containerId, toggleEl.checked);
+        if (!toggleEl.checked) { container.innerHTML = ''; return; }
+        if (!container.children.length) {
+            if (containerId === 'm5-other-container') addOtherSurgicalRow(null, true);
+            else addOtherRow(containerId, '', true);
+        }
     }
 
-    function addOtherRow(containerId, value) {
+    // Shows/hides an "Other" container together with its "+ Add Another" button.
+    function setOtherContainerOpen(containerId, open) {
+        const container = document.getElementById(containerId);
+        container.classList.toggle('hidden', !open);
+        const addBtn = container.nextElementSibling;
+        if (addBtn && addBtn.classList.contains('other-add-btn')) addBtn.classList.toggle('hidden', !open);
+    }
+
+    // Removing the last "Other" row also unchecks its toggle, so the section
+    // never shows "Other" checked with nothing under it.
+    function removeOtherRow(btn, rowSelector) {
+        const container = btn.closest('[id$="-other-container"]');
+        btn.closest(rowSelector).remove();
+        if (container && !container.children.length) {
+            const toggle = document.getElementById(container.id.replace('-container', '-toggle'));
+            if (toggle) toggle.checked = false;
+            setOtherContainerOpen(container.id, false);
+        }
+        updateModule2Badges();
+        updateNextButtonState();
+    }
+
+    function addOtherRow(containerId, value, focus) {
         const container = document.getElementById(containerId);
         const row = document.createElement('div');
         row.className = 'flex gap-2 other-row';
         row.innerHTML = `
-            <input type="text" class="other-input field-input" value="${escapeAttr(value || '')}">
-            <button type="button" onclick="this.closest('.other-row').remove()" class="text-red-400 hover:text-red-600 text-2xl leading-none px-2">&times;</button>
+            <input type="text" class="other-input field-input" value="${escapeAttr(value || '')}" data-en-ph="Which one?" data-es-ph="¿Cuál?">
+            <button type="button" onclick="removeOtherRow(this, '.other-row')" class="text-red-400 hover:text-red-600 text-2xl leading-none px-2">&times;</button>
         `;
         container.appendChild(row);
+        applyPlaceholders();
+        if (focus) row.querySelector('input').focus();
     }
 
     function getOtherValues(containerId) {
         return Array.from(document.querySelectorAll('#' + containerId + ' .other-input')).map(i => i.value.trim()).filter(Boolean);
     }
 
-    function addOtherSurgicalRow(data) {
+    function addOtherSurgicalRow(data, focus) {
         const container = document.getElementById('m5-other-container');
         const row = document.createElement('div');
         row.className = 'grid grid-cols-1 md:grid-cols-2 gap-2 other-surgical-row';
@@ -1041,11 +1171,12 @@
             <input type="text" class="os-name field-input" data-en-ph="Surgery name" data-es-ph="Nombre de la cirugía" value="${escapeAttr(data?.name || '')}">
             <div class="flex gap-2">
                 <input type="text" class="os-date field-input" data-en-ph="Approximate date" data-es-ph="Fecha aproximada" value="${escapeAttr(data?.approximate_date || '')}">
-                <button type="button" onclick="this.closest('.other-surgical-row').remove()" class="text-red-400 hover:text-red-600 text-2xl leading-none px-2">&times;</button>
+                <button type="button" onclick="removeOtherRow(this, '.other-surgical-row')" class="text-red-400 hover:text-red-600 text-2xl leading-none px-2">&times;</button>
             </div>
         `;
         container.appendChild(row);
         applyPlaceholders();
+        if (focus) row.querySelector('.os-name').focus();
     }
 
     function getOtherSurgicalValues() {
@@ -1066,8 +1197,10 @@
         };
         setBadge('m2-badge-concerns', getCheckedValues('concern-checkbox').length + getOtherValues('m2-other-container').length);
         setBadge('m2-badge-medical', getCheckedValues('medical-checkbox').length + getOtherValues('m3-other-container').length);
-        setBadge('m2-badge-meds', getCheckedValues('blood-thinner-checkbox').length + getCheckedValues('allergy-checkbox').length + getOtherValues('m4-other-container').length);
-        setBadge('m2-badge-surgical', getCheckedValues('surgical-facial-checkbox').length + getCheckedValues('surgical-general-checkbox').length + getOtherSurgicalValues().length);
+        setBadge('m2-badge-thinners', getCheckedValues('blood-thinner-checkbox').length);
+        setBadge('m2-badge-allergies', getCheckedValues('allergy-checkbox').length + getOtherValues('m4-other-container').length);
+        setBadge('m2-badge-surgical-facial', getCheckedValues('surgical-facial-checkbox').length);
+        setBadge('m2-badge-surgical-general', getCheckedValues('surgical-general-checkbox').length + getOtherSurgicalValues().length);
     }
     document.addEventListener('change', (e) => { if (e.target.closest && e.target.closest('#module-2')) updateModule2Badges(); });
     document.addEventListener('input', (e) => { if (e.target.closest && e.target.closest('#module-2')) updateModule2Badges(); });
@@ -1104,11 +1237,13 @@
                 <div>
                     <label class="block text-[9px] uppercase tracking-widest opacity-50 mb-1" data-en="Treated area" data-es="Área tratada">Treated area</label>
                     <select class="m6-area field-input" data-for="${cat.id}"></select>
+                    <input type="text" class="m6-area-other hidden field-input mt-2" data-for="${cat.id}" data-en-ph="Which area?" data-es-ph="¿Cuál área?">
                 </div>`;
             const laserBlock = cat.hasLaserTypeQuestion ? `
                 <div>
                     <label class="block text-[9px] uppercase tracking-widest opacity-50 mb-1" data-en="Type of laser" data-es="Tipo de láser">Type of laser</label>
                     <select class="m6-laser-type field-input" data-for="${cat.id}"></select>
+                    <input type="text" class="m6-laser-type-other hidden field-input mt-2" data-for="${cat.id}" data-en-ph="Which laser?" data-es-ph="¿Cuál láser?">
                 </div>` : '';
             const complicationBlock = cat.hasComplicationQuestion ? `
                 <div>
@@ -1161,6 +1296,37 @@
         applyLanguage();
     }
 
+    // Area / laser-type selects offer "Other": picking it reveals a text field
+    // right below (class = the select's class + "-other"). What's typed there
+    // is saved in place of the bare 'other' code, so the admin sees the actual
+    // answer; a saved value that isn't one of the codes restores as "Other".
+    function getSelectOtherInput(selectEl) {
+        return selectEl.parentElement.querySelector('.' + selectEl.classList[0] + '-other');
+    }
+    function readSelectWithOther(selectEl) {
+        if (selectEl.value !== 'other') return selectEl.value || null;
+        return getSelectOtherInput(selectEl)?.value.trim() || 'other';
+    }
+    function writeSelectWithOther(selectEl, value) {
+        const isCode = Array.from(selectEl.options).some(o => o.value === value);
+        selectEl.value = isCode ? value : 'other';
+        const otherInput = getSelectOtherInput(selectEl);
+        if (otherInput) {
+            otherInput.classList.toggle('hidden', selectEl.value !== 'other');
+            if (!isCode) otherInput.value = value;
+        }
+    }
+    document.addEventListener('change', (e) => {
+        const el = e.target;
+        if (!el.matches || !el.matches('select.m6-area, select.m6-laser-type')) return;
+        const otherInput = getSelectOtherInput(el);
+        if (!otherInput) return;
+        const isOther = el.value === 'other';
+        otherInput.classList.toggle('hidden', !isOther);
+        if (isOther) otherInput.focus();
+        else otherInput.value = '';
+    });
+
     function getAestheticHistoryDataV2() {
         const rows = [];
         AESTHETIC_CATEGORIES_V2.forEach(cat => {
@@ -1172,9 +1338,9 @@
                 item_id: cat.id,
                 item_label: t(cat.header),
                 times_performed: cat.hasTimesPerformed ? (subform.querySelector('.m6-times').value || null) : null,
-                treated_area: cat.areaFreeText ? (subform.querySelector('.m6-area-text').value.trim() || null) : (subform.querySelector('.m6-area').value || null),
+                treated_area: cat.areaFreeText ? (subform.querySelector('.m6-area-text').value.trim() || null) : readSelectWithOther(subform.querySelector('.m6-area')),
                 last_treatment_period: subform.querySelector('.m6-time-since').value || null,
-                laser_type: cat.hasLaserTypeQuestion ? (subform.querySelector('.m6-laser-type').value || null) : null,
+                laser_type: cat.hasLaserTypeQuestion ? readSelectWithOther(subform.querySelector('.m6-laser-type')) : null,
                 had_complication: cat.hasComplicationQuestion ? complicationYes : null,
                 complication_description: complicationYes ? (subform.querySelector('.m6-complication-desc').value.trim() || null) : null,
                 had_reaction: reactionYes,
@@ -1206,10 +1372,10 @@
             if (cat.hasTimesPerformed && row.times_performed) subform.querySelector('.m6-times').value = row.times_performed;
             if (row.treated_area) {
                 if (cat.areaFreeText) subform.querySelector('.m6-area-text').value = row.treated_area;
-                else subform.querySelector('.m6-area').value = row.treated_area;
+                else writeSelectWithOther(subform.querySelector('.m6-area'), row.treated_area);
             }
             if (row.last_treatment_period) subform.querySelector('.m6-time-since').value = row.last_treatment_period;
-            if (cat.hasLaserTypeQuestion && row.laser_type) subform.querySelector('.m6-laser-type').value = row.laser_type;
+            if (cat.hasLaserTypeQuestion && row.laser_type) writeSelectWithOther(subform.querySelector('.m6-laser-type'), row.laser_type);
             if (cat.hasComplicationQuestion && (row.had_complication === true || row.had_complication === false)) {
                 const val = row.had_complication ? 'yes' : 'no';
                 const card = document.querySelector(`.radio-card[data-group="m6-complication-${cat.id}"][data-value="${val}"]`);
@@ -1261,11 +1427,23 @@
             sigHasContent = true;
             e.preventDefault();
         });
-        window.addEventListener('pointerup', () => { sigDrawing = false; });
+        window.addEventListener('pointerup', () => {
+            if (!sigDrawing) return;
+            sigDrawing = false;
+            // The drawn signature is required: clear its error and re-check
+            // whether Submit can be enabled now that there's a stroke.
+            if (sigHasContent) {
+                sigCanvas.classList.remove('field-error');
+                const msg = sigCanvas.nextElementSibling;
+                if (msg && msg.classList.contains('field-error-msg')) msg.classList.add('hidden');
+            }
+            updateNextButtonState();
+        });
     }
     function clearSignature() {
         sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
         sigHasContent = false;
+        updateNextButtonState();
     }
     function getSignatureDataUrl() {
         return sigHasContent ? sigCanvas.toDataURL('image/png') : null;
@@ -1325,6 +1503,7 @@
         document.getElementById('btn-prev').style.visibility = currentModule === 1 ? 'hidden' : 'visible';
         document.getElementById('btn-next').classList.toggle('hidden', currentModule === TOTAL_MODULES);
         document.getElementById('btn-submit').classList.toggle('hidden', currentModule !== TOTAL_MODULES);
+        updatePatientBanner();
     }
 
     // Briefly flashes a "Saved" confirmation after each successful autosave so
@@ -1340,11 +1519,26 @@
         savedIndicatorTimeout = setTimeout(() => { el.style.opacity = '0'; }, 2000);
     }
 
+    // The typed-name signature starts as the Module 1 name but stays editable.
+    // It's only refreshed while it still holds the last value we filled in, so
+    // a name the patient typed or corrected themselves is never overwritten.
+    let lastAutoSignatureName = '';
+    function prefillSignatureName() {
+        const el = document.getElementById('m8-signature-name');
+        const { name } = getPatientIdentity();
+        if (!name) return;
+        if (!el.value.trim() || el.value === lastAutoSignatureName) {
+            el.value = name;
+            lastAutoSignatureName = name;
+        }
+    }
+
     function showModule(n) {
         for (let i = 1; i <= TOTAL_MODULES; i++) {
             document.getElementById('module-' + i).classList.toggle('hidden', i !== n);
         }
         currentModule = n;
+        if (n === TOTAL_MODULES) prefillSignatureName();
         updateProgressUI();
         updateNextButtonState();
         window.scrollTo(0, 0);
@@ -1445,8 +1639,9 @@
                     : phoneTakenWarning
                         ? { en: 'This phone number is already registered. Please log in instead.', es: 'Este número de teléfono ya está registrado. Por favor inicia sesión.' }
                         : { en: 'This phone number doesn’t look valid.', es: 'Este número de teléfono no parece válido.' }));
-                flag(setInputError(document.getElementById('m1-account-dob'), !document.getElementById('m1-account-dob').value,
-                    { en: 'Please enter your date of birth.', es: 'Por favor ingresa tu fecha de nacimiento.' }));
+                const acctDobWrap = document.querySelector('.dob-split[data-dob-for="m1-account-dob"]');
+                const acctDobErr = getDobSplitError(acctDobWrap);
+                flag(setInputError(acctDobWrap, !!acctDobErr, acctDobErr));
                 flag(setInputError(document.getElementById('m1-account-sex'), !document.getElementById('m1-account-sex').value,
                     { en: 'Please select your sex.', es: 'Por favor selecciona tu sexo.' }));
                 const acctEmailEl = document.getElementById('m1-account-email');
@@ -1456,8 +1651,9 @@
             } else {
                 const dobActive = !document.getElementById('m1-dob-field').classList.contains('hidden');
                 if (dobActive) {
-                    const el = document.getElementById('m1-dob-input');
-                    flag(setInputError(el, !el.value, { en: 'Please enter your date of birth.', es: 'Por favor ingresa tu fecha de nacimiento.' }));
+                    const dobWrap = document.querySelector('.dob-split[data-dob-for="m1-dob-input"]');
+                    const dobErr = getDobSplitError(dobWrap);
+                    flag(setInputError(dobWrap, !!dobErr, dobErr));
                 }
                 const sexActive = !document.getElementById('m1-sex-field').classList.contains('hidden');
                 if (sexActive) {
@@ -1476,8 +1672,6 @@
 
             flag(setInputError(document.getElementById('m1-addr1'), !document.getElementById('m1-addr1').value.trim(),
                 { en: 'Please enter your street address.', es: 'Por favor ingresa tu dirección.' }));
-            flag(setInputError(document.getElementById('m1-addr2'), !document.getElementById('m1-addr2').value.trim(),
-                { en: 'Please enter apt/suite, or write N/A.', es: 'Por favor ingresa apto/suite, o escribe N/A.' }));
             flag(setInputError(document.getElementById('m1-city'), !document.getElementById('m1-city').value.trim(),
                 { en: 'Please enter your city.', es: 'Por favor ingresa tu ciudad.' }));
             flag(setInputError(document.getElementById('m1-state'), !document.getElementById('m1-state').value,
@@ -1485,18 +1679,14 @@
             flag(setInputError(document.getElementById('m1-zip'), !document.getElementById('m1-zip').value.trim(),
                 { en: 'Please enter your ZIP code.', es: 'Por favor ingresa tu código postal.' }));
 
-            flag(setInputError(document.getElementById('m1-ec-name'), !document.getElementById('m1-ec-name').value.trim(),
-                { en: 'Please enter a name.', es: 'Por favor ingresa un nombre.' }));
-            flag(setInputError(document.getElementById('m1-ec-relationship'), !document.getElementById('m1-ec-relationship').value.trim(),
-                { en: 'Please enter their relationship to you.', es: 'Por favor ingresa su relación contigo.' }));
-
+            // Emergency contact is optional — only a phone number that was actually
+            // typed gets checked, so a typo doesn't slip through.
             const ecCountryDial = document.getElementById('m1-ec-phone-country').value;
             const ecPhoneEl = document.getElementById('m1-ec-phone-number');
             const ecNumber = ecPhoneEl.value.trim();
             const ecIso = (COUNTRY_CODES.find(c => c.dial === ecCountryDial) || {}).iso || DEFAULT_COUNTRY_ISO;
-            flag(setInputError(ecPhoneEl, !ecNumber || !validatePhoneNumber(ecIso, ecNumber), !ecNumber
-                ? { en: 'Please enter an emergency contact phone number.', es: 'Por favor ingresa un teléfono de contacto de emergencia.' }
-                : { en: 'This phone number doesn’t look valid.', es: 'Este número de teléfono no parece válido.' }));
+            flag(setInputError(ecPhoneEl, !!ecNumber && !validatePhoneNumber(ecIso, ecNumber),
+                { en: 'This phone number doesn’t look valid.', es: 'Este número de teléfono no parece válido.' }));
 
             if (!document.getElementById('m1-pregnancy-block').classList.contains('hidden')) {
                 flag(setGroupError(document.getElementById('m1-pregnancy-options'), !getRadioValue('m1-pregnancy'),
@@ -1546,6 +1736,8 @@
                 { en: 'Please accept this to continue.', es: 'Por favor acepta esto para continuar.' }));
             flag(setInputError(document.getElementById('m8-signature-name'), !document.getElementById('m8-signature-name').value.trim(),
                 { en: 'Please type your full name as signature.', es: 'Por favor escribe tu nombre completo como firma.' }));
+            flag(setInputError(sigCanvas, !sigHasContent,
+                { en: 'Please draw your signature in the box.', es: 'Por favor dibuja tu firma en el recuadro.' }));
         }
 
         if (firstInvalid) {
@@ -1607,7 +1799,6 @@
         return {
             ...(currentUser ? { patient_id: currentUser.id } : {}),
             address_line1: document.getElementById('m1-addr1').value.trim() || null,
-            address_line2: document.getElementById('m1-addr2').value.trim() || null,
             city: document.getElementById('m1-city').value.trim() || null,
             state: document.getElementById('m1-state').value || null,
             zip: document.getElementById('m1-zip').value.trim() || null,
@@ -1652,7 +1843,6 @@
     function fillFormFromData(data) {
         if (!data) return;
         document.getElementById('m1-addr1').value = data.address_line1 || '';
-        document.getElementById('m1-addr2').value = data.address_line2 || '';
         document.getElementById('m1-city').value = data.city || '';
         document.getElementById('m1-state').value = data.state || '';
         document.getElementById('m1-zip').value = data.zip || '';
@@ -1665,14 +1855,14 @@
         setCheckedValues('concern-checkbox', data.consultation_reasons);
         if (Array.isArray(data.consultation_reasons_other) && data.consultation_reasons_other.length) {
             document.getElementById('m2-other-toggle').checked = true;
-            document.getElementById('m2-other-container').classList.remove('hidden');
+            setOtherContainerOpen('m2-other-container', true);
             data.consultation_reasons_other.forEach(v => addOtherRow('m2-other-container', v));
         }
 
         setCheckedValues('medical-checkbox', data.medical_conditions);
         if (Array.isArray(data.medical_conditions_other) && data.medical_conditions_other.length) {
             document.getElementById('m3-other-toggle').checked = true;
-            document.getElementById('m3-other-container').classList.remove('hidden');
+            setOtherContainerOpen('m3-other-container', true);
             data.medical_conditions_other.forEach(v => addOtherRow('m3-other-container', v));
         }
 
@@ -1680,7 +1870,7 @@
         setCheckedValues('allergy-checkbox', data.allergies);
         if (Array.isArray(data.allergies_other) && data.allergies_other.length) {
             document.getElementById('m4-other-toggle').checked = true;
-            document.getElementById('m4-other-container').classList.remove('hidden');
+            setOtherContainerOpen('m4-other-container', true);
             data.allergies_other.forEach(v => addOtherRow('m4-other-container', v));
         }
 
@@ -1690,7 +1880,7 @@
         if (typeof surgicalOther === 'string') { try { surgicalOther = JSON.parse(surgicalOther); } catch(_) { surgicalOther = []; } }
         if (Array.isArray(surgicalOther) && surgicalOther.length) {
             document.getElementById('m5-other-toggle').checked = true;
-            document.getElementById('m5-other-container').classList.remove('hidden');
+            setOtherContainerOpen('m5-other-container', true);
             surgicalOther.forEach(row => addOtherSurgicalRow(row));
         }
 
@@ -1739,7 +1929,6 @@
             dob: document.getElementById('m1-account-dob').value,
             sex: document.getElementById('m1-account-sex').value,
             email: document.getElementById('m1-account-email').value.trim(),
-            preferred_contact_methods: Array.from(document.querySelectorAll('.m1-contact-method:checked')).map(cb => cb.value),
         };
     }
 
@@ -1858,7 +2047,9 @@
         renderRadioGroup('m7-skintype', SKIN_TYPES, 'm7-skintype', false);
         initSignaturePad();
 
-        populateSelect(document.getElementById('m1-state'), US_STATES, { valueKey: 'code', placeholder: { en: 'Select State...', es: 'Selecciona Estado...' } });
+        // State names always in English (they're US states), whatever the page language.
+        populateSelect(document.getElementById('m1-state'), US_STATES, { valueKey: 'code', labelFn: o => o.en, placeholder: { en: 'Select State...', es: 'Selecciona Estado...' } });
+        initDobSplits();
         populateSelect(document.getElementById('m1-ec-phone-country'), COUNTRY_CODES, { valueKey: 'dial', labelFn: o => `${isoToFlagEmoji(o.iso)} ${o.dial}` });
         document.getElementById('m1-ec-phone-country').value = '+1';
         populateSelect(document.getElementById('m1-account-phone-country'), COUNTRY_CODES, { valueKey: 'dial', labelFn: o => `${isoToFlagEmoji(o.iso)} ${o.dial}` });
@@ -1868,6 +2059,7 @@
             document.getElementById('m1-account-fields').classList.remove('hidden');
             document.getElementById('m1-account-sex').addEventListener('change', (e) => { updatePregnancyVisibility(e.target.value); renderGlogauGroup(); });
             document.getElementById('m1-account-phone').addEventListener('input', schedulePhoneAvailabilityCheck);
+            document.getElementById('m1-account-dob').addEventListener('change', (e) => updateAgeDisplay(e.target.value, 'm1-account-age-display'));
             updatePregnancyVisibility('');
         } else {
             document.getElementById('m1-profile-summary').classList.remove('hidden');
@@ -1875,6 +2067,7 @@
             timeEstimateEl.setAttribute('data-en', '⏱ Takes about 5 minutes · Your progress is saved automatically as you go');
             timeEstimateEl.setAttribute('data-es', '⏱ Toma aproximadamente 5 minutos · Tu progreso se guarda automáticamente');
             const { data: profile } = await _supabase.from('profiles').select('first_name, last_name, dob, sex, phone').eq('id', currentUser.id).maybeSingle();
+            currentProfile = profile;
             document.getElementById('m1-full-name').innerText = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || '—';
             document.getElementById('m1-email').innerText = currentUser.email || '—';
 
