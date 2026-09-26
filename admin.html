@@ -83,7 +83,7 @@
                 <h2 id="view-title" class="text-2xl italic">Patient Database</h2>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-                <button onclick="openNewPatientModal()" class="bg-[#2A2330] text-white px-5 py-2 text-[10px] uppercase tracking-widest font-bold shadow-md hover:bg-[#1D1822] transition rounded-full">+ New Patient</button>
+                <button onclick="openNewPatientModal()" class="bg-[#2A2330] text-white px-5 py-2 text-[10px] uppercase tracking-widest font-bold shadow-md hover:bg-[#1D1822] transition rounded-full">+ Nuevo paciente</button>
                 <button onclick="openAdminBooking()" class="bg-[#B76E88] text-white px-6 py-2 text-[10px] uppercase tracking-widest font-bold shadow-md hover:bg-[#9C5570] transition rounded-full">+ New Appointment</button>
             </div>
         </header>
@@ -571,77 +571,17 @@
         </div>
     </div>
 
-    <!-- ===== NEW PATIENT MODAL ===== -->
-    <div id="new-patient-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-lg p-8 rounded-2xl shadow-2xl relative overflow-y-auto max-h-[95vh]">
-            <button onclick="closeNewPatientModal()" class="absolute top-4 right-6 text-2xl opacity-30 hover:opacity-100 transition">&times;</button>
-            <h3 class="text-2xl italic mb-1">New Patient</h3>
-            <p class="text-[10px] uppercase tracking-widest opacity-40 mb-6">Manual patient record (no portal account)</p>
-
-            <form id="new-patient-form" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">First Name *</label>
-                        <input type="text" id="np-first-name" placeholder="First name" required>
-                    </div>
-                    <div>
-                        <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Last Name *</label>
-                        <input type="text" id="np-last-name" placeholder="Last name" required>
-                    </div>
+    <!-- ===== NEW PATIENT MODAL: the full patient intake (intake.html) in admin mode ===== -->
+    <div id="new-patient-modal" class="fixed inset-0 bg-black/60 hidden items-stretch md:items-center justify-center z-50 md:p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-3xl md:rounded-2xl shadow-2xl flex flex-col h-full md:h-[92vh] overflow-hidden">
+            <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#EDE1E7]">
+                <div class="min-w-0">
+                    <h3 class="text-xl italic">Nuevo paciente</h3>
+                    <p class="text-[10px] uppercase tracking-widest opacity-40">Al terminar se abre su historia clínica con el encuentro de hoy</p>
                 </div>
-                <div>
-                    <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Date of Birth (MM/DD/YYYY)</label>
-                    <div class="flex gap-2">
-                        <select id="np-dob-month" onchange="updateNpDOB()" style="padding:10px;font-size:14px;width:40%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
-                            <option value="" disabled selected>MM</option>
-                            <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
-                            <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
-                            <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
-                            <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
-                        </select>
-                        <input type="number" id="np-dob-day" placeholder="DD" min="1" max="31" onchange="updateNpDOB()" class="no-spinner" style="padding:10px;font-size:14px;width:28%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
-                        <input type="number" id="np-dob-year" placeholder="YYYY" min="1920" max="2015" onchange="updateNpDOB()" class="no-spinner" style="padding:10px;font-size:14px;width:32%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;">
-                    </div>
-                    <input type="hidden" id="np-dob">
-                </div>
-                <div>
-                    <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Sex</label>
-                    <select id="np-sex">
-                        <option value="">Select...</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Phone</label>
-                    <input type="tel" id="np-phone" placeholder="Phone number">
-                </div>
-                <div>
-                    <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Email</label>
-                    <input type="email" id="np-email" placeholder="Email address">
-                </div>
-
-                <!-- Clinic Affiliation -->
-                <div class="bg-[#FDFBFC] border border-[#EDE1E7] rounded-lg p-4">
-                    <p class="text-[9px] uppercase tracking-widest text-[#B76E88] font-bold mb-3">Clinic Affiliation *</p>
-                    <div class="flex items-center gap-6 flex-wrap">
-                        <label class="flex items-center gap-2 cursor-pointer text-sm">
-                            <input type="checkbox" id="np-clinic-fs" class="accent-[#B76E88]">
-                            Piel SPA
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer text-sm">
-                            <input type="checkbox" id="np-clinic-viva" class="accent-[#065F46]">
-                            Viva Skin
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer text-sm">
-                            <input type="checkbox" id="np-clinic-divine" class="accent-[#7C3AED]">
-                            Divine Bliss
-                        </label>
-                    </div>
-                </div>
-
-                <button type="submit" class="w-full bg-[#2A2330] text-white py-4 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition shadow-md rounded-lg mt-2">Create Patient Record</button>
-            </form>
+                <button onclick="closeNewPatientModal()" class="text-2xl opacity-40 hover:opacity-100 transition flex-shrink-0" aria-label="Cerrar">&times;</button>
+            </div>
+            <iframe id="new-patient-frame" class="flex-1 w-full border-0" title="Intake de nuevo paciente"></iframe>
         </div>
     </div>
 
@@ -1440,7 +1380,7 @@
             let age = today.getFullYear() - birth.getFullYear();
             const m = today.getMonth() - birth.getMonth();
             if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-            return age >= 0 ? age + ' yrs' : '-';
+            return age >= 0 ? age + ' años' : '-';
         }
 
         function calcAgeYears(dob) {
@@ -2407,71 +2347,73 @@
             }
         };
 
-        // --- NEW PATIENT MODAL ---
-        function updateNpDOB() {
-            const month = document.getElementById('np-dob-month').value;
-            const day   = document.getElementById('np-dob-day').value;
-            const year  = document.getElementById('np-dob-year').value;
-            if (month && day && year && String(year).length === 4) {
-                document.getElementById('np-dob').value = `${year}-${month}-${String(day).padStart(2,'0')}`;
-            } else {
-                document.getElementById('np-dob').value = '';
-            }
+        // --- NEW PATIENT (full intake in admin mode) ---
+        // "+ Nuevo paciente" runs the same intake patients fill in (intake.html),
+        // so the whole clinical history is captured in one pass. In admin mode the
+        // intake never signs anyone in (the admin session stays), and when the
+        // account is created it messages this page, which creates today's
+        // encounter and opens the patient's history on it.
+        let newPatientInProgress = false;
+
+        // A fresh iframe each time, so a new patient never starts from the last one's answers.
+        function resetNewPatientFrame(src) {
+            const oldFrame = document.getElementById('new-patient-frame');
+            const freshFrame = document.createElement('iframe');
+            freshFrame.id = oldFrame.id;
+            freshFrame.className = oldFrame.className;
+            freshFrame.title = oldFrame.title;
+            if (src) freshFrame.src = src;
+            oldFrame.replaceWith(freshFrame);
         }
 
         function openNewPatientModal() {
-            document.getElementById('new-patient-form').reset();
-            // Reset DOB parts manually (form.reset() doesn't clear number inputs reliably)
-            document.getElementById('np-dob-month').value = '';
-            document.getElementById('np-dob-day').value   = '';
-            document.getElementById('np-dob-year').value  = '';
-            document.getElementById('np-dob').value       = '';
-            document.getElementById('new-patient-modal').classList.remove('hidden');
+            resetNewPatientFrame('intake.html#mode=new&by=admin');
+            newPatientInProgress = true;
+            const modal = document.getElementById('new-patient-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
         }
 
-        function closeNewPatientModal() {
-            document.getElementById('new-patient-modal').classList.add('hidden');
+        function closeNewPatientModal(skipConfirm) {
+            if (!skipConfirm && newPatientInProgress && !confirm('¿Cerrar el registro? Lo que se haya llenado se perderá.')) return;
+            newPatientInProgress = false;
+            const modal = document.getElementById('new-patient-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            resetNewPatientFrame(null);
         }
 
-        document.getElementById('new-patient-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const firstName = document.getElementById('np-first-name').value.trim();
-            const lastName = document.getElementById('np-last-name').value.trim();
-            if (!firstName || !lastName) {
-                alert("First name and last name are required.");
-                return;
-            }
+        function localDateAndTimeNow() {
+            const now = new Date();
+            const local = new Date(now - now.getTimezoneOffset() * 60000).toISOString();
+            return { date: local.slice(0, 10), time: local.slice(11, 16) };
+        }
 
-            const dob   = document.getElementById('np-dob').value || null;
-            const sex   = document.getElementById('np-sex').value || null;
-            const phone = document.getElementById('np-phone').value.trim() || null;
-            const email = document.getElementById('np-email').value.trim() || null;
-            const clinicAff = [];
-            if (document.getElementById('np-clinic-fs').checked)     clinicAff.push('fs');
-            if (document.getElementById('np-clinic-viva').checked)   clinicAff.push('viva');
-            if (document.getElementById('np-clinic-divine').checked) clinicAff.push('divine');
-
-            const newId = crypto.randomUUID();
-
-            const { error } = await _supabase.from('profiles').insert([{
-                id: newId,
-                first_name: firstName,
-                last_name: lastName,
-                dob: dob,
-                sex: sex,
-                phone: phone,
-                email: email,
-                clinic_affiliation: clinicAff,
-                is_manual_patient: true
-            }]);
-
+        async function onAdminCreatedPatient({ patientId, name, dob }) {
+            closeNewPatientModal(true);
+            const { date, time } = localDateAndTimeNow();
+            const { data: encounter, error } = await _supabase
+                .from('clinical_history')
+                .insert([{ patient_id: patientId, visit_date: date, visit_time: time, procedures_detail: {}, photos: [] }])
+                .select('*')
+                .single();
+            await fetchPatients();
+            await openHistory(patientId, name, dob);
             if (error) {
-                alert("Could not create patient: " + error.message);
+                alert('El paciente se creó, pero no se pudo crear el encuentro de hoy: ' + error.message + '\n\nCréalo con "+ Nuevo encuentro".');
                 return;
             }
+            notesById[encounter.id] = encounter;
+            await toggleSoapForm(true, encounter);
+            document.getElementById('form-title').innerText = 'Encuentro de hoy';
+        }
 
-            closeNewPatientModal();
-            fetchPatients();
+        window.addEventListener('message', (event) => {
+            if (event.origin !== window.location.origin) return;
+            const frame = document.getElementById('new-patient-frame');
+            if (!frame || event.source !== frame.contentWindow) return;
+            if (event.data?.type === 'close-intake-modal') closeNewPatientModal(true);
+            if (event.data?.type === 'intake-created' && event.data.patientId) onAdminCreatedPatient(event.data);
         });
 
         // --- ADMISSION HISTORY ---
@@ -2815,7 +2757,7 @@
             if (ageBox) {
                 if (estAge !== null) {
                     const rawChronoAge = currentPatientDob ? calcAge(currentPatientDob) : null;
-                    const chronoAge = rawChronoAge && rawChronoAge !== '-' ? rawChronoAge.replace(' yrs', ' años') : null;
+                    const chronoAge = rawChronoAge && rawChronoAge !== '-' ? rawChronoAge : null;
                     ageBox.classList.remove('hidden');
                     ageBox.innerHTML = `<span class="uppercase tracking-widest font-bold text-[#B76E88]">Edad estética estimada:</span> ~${estAge} años`
                         + (chronoAge ? ` <span class="opacity-50">(edad cronológica: ${chronoAge})</span>` : '')

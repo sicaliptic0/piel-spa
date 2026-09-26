@@ -434,6 +434,9 @@
     // URL" redirect that strips /intake.html?query — fragments are never sent to
     // the server, so browsers always re-attach them across a redirect.
     const NEW_MODE_REQUESTED = window.location.hash.includes('mode=new');
+    // Opened from the admin's "+ Nuevo paciente": staff fill it in with the
+    // patient, and on success the admin page takes over (see submitIntake).
+    const ADMIN_MODE = NEW_MODE_REQUESTED && window.location.hash.includes('by=admin');
     // New-patient mode runs on a shared clinic device, so it must never read or
     // write the browser's stored session: reading it sent the next patient into
     // the previous patient's dashboard, and writing it would log the admin out.
@@ -1969,6 +1972,11 @@
             // No automatic sign-in: the patient logs in later from their own device,
             // so nothing of theirs is left behind on the clinic's browser.
             allowUnload = true;
+            if (ADMIN_MODE && window.parent !== window && data?.user_id) {
+                const { name, dob } = getPatientIdentity();
+                window.parent.postMessage({ type: 'intake-created', patientId: data.user_id, name, dob }, window.location.origin);
+                return;
+            }
             document.getElementById('account-created-overlay').classList.remove('hidden');
             applyLanguage();
             return;
