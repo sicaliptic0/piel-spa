@@ -31,6 +31,8 @@
         input:not([type="checkbox"]):not([type="radio"]), textarea, select { border: 1px solid #EDE1E7; background: #fff; padding: 10px; border-radius: 8px; outline-color: #B76E88; width: 100%; font-size: 14px; }
         .no-spinner::-webkit-inner-spin-button, .no-spinner::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         .no-spinner { -moz-appearance: textfield; }
+        /* Front desk sees only the "Hoy" sheet: everything else is admin-only. */
+        body.frontdesk-mode .admin-only { display: none !important; }
         .enc-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; color: #B76E88; }
         input.enc-compact { width: auto !important; padding: 4px 8px !important; font-size: 13px !important; }
         .enc-qty { width: 7rem !important; padding: 6px 8px !important; font-size: 12px !important; }
@@ -57,16 +59,16 @@
         <button onclick="closeMobileSidebar()" class="md:hidden absolute top-4 right-4 text-2xl opacity-40 hover:opacity-100 transition">&times;</button>
         <div class="text-center mb-10">
             <h1 class="text-xl tracking-widest font-bold"><span class="brand-piel">Piel</span> <span class="brand-spa">spa</span></h1>
-            <p class="text-[9px] uppercase tracking-[0.3em] opacity-40 mt-1">Admin</p>
+            <p id="staff-role-label" class="text-[9px] uppercase tracking-[0.3em] opacity-40 mt-1">Admin</p>
         </div>
         <nav class="flex-1 space-y-2">
             <a onclick="switchAdminView('today-view', this)" class="nav-link active-link block px-4 py-3 text-[10px] uppercase tracking-widest">Hoy</a>
-            <a onclick="switchAdminView('patients-view', this)" class="nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">Pacientes</a>
-            <a onclick="switchAdminView('appointments-view', this)" class="nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest flex items-center justify-between">
+            <a onclick="switchAdminView('patients-view', this)" class="admin-only nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">Pacientes</a>
+            <a onclick="switchAdminView('appointments-view', this)" class="admin-only nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest flex items-center justify-between">
                 <span>Citas</span>
                 <span id="pending-badge" class="hidden bg-amber-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full leading-none">0</span>
             </a>
-            <a onclick="switchAdminView('recommendations-view', this)" class="nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">Recomendaciones</a>
+            <a onclick="switchAdminView('recommendations-view', this)" class="admin-only nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">Recomendaciones</a>
         </nav>
         <button onclick="logout()" class="text-[10px] uppercase tracking-widest opacity-40 hover:opacity-100 transition mt-auto">Logout</button>
     </aside>
@@ -83,7 +85,7 @@
                 </button>
                 <h2 id="view-title" class="text-2xl italic">Hoy</h2>
             </div>
-            <div class="flex items-center gap-2 flex-wrap">
+            <div class="admin-only flex items-center gap-2 flex-wrap">
                 <button onclick="openNewPatientModal()" class="bg-[#2A2330] text-white px-5 py-2 text-[10px] uppercase tracking-widest font-bold shadow-md hover:bg-[#1D1822] transition rounded-full">+ Nuevo paciente</button>
                 <button onclick="openAdminBooking()" class="bg-[#B76E88] text-white px-6 py-2 text-[10px] uppercase tracking-widest font-bold shadow-md hover:bg-[#9C5570] transition rounded-full">+ Nueva cita</button>
             </div>
@@ -1353,10 +1355,27 @@
         }
 
         // --- CORE NAVIGATION & AUTH ---
+        // 'admin' | 'frontdesk'. Comes from public.staff_roles; the email list is
+        // only a fallback for admins in case that table isn't reachable. What the
+        // front desk can actually read/change is enforced in the database (it
+        // only has the day_sheet / set_frontdesk_notes functions) — hiding the
+        // other sections here is just so the page matches.
+        let staffRole = null;
+
         async function checkAdmin() {
             const { data: { user } } = await _supabase.auth.getUser();
-            const admins = ['samuel.galviz@gmail.com', 'freddyjosevp@gmail.com', 'pielspanyc@gmail.com']; // Updated email
-            if (!user || !admins.includes(user.email)) { window.location.href = 'index.html'; return; }
+            if (!user) { window.location.href = 'index.html'; return; }
+            const admins = ['samuel.galviz@gmail.com', 'freddyjosevp@gmail.com', 'pielspanyc@gmail.com'];
+            const { data: roleRow } = await _supabase.from('staff_roles').select('role').eq('user_id', user.id).maybeSingle();
+            staffRole = roleRow?.role || (admins.includes(user.email) ? 'admin' : null);
+            if (!staffRole) { window.location.href = 'index.html'; return; }
+
+            if (staffRole === 'frontdesk') {
+                document.body.classList.add('frontdesk-mode');
+                document.getElementById('staff-role-label').innerText = 'Recepción';
+                setTodayDate(null);
+                return;
+            }
             setTodayDate(null);
             fetchPatients();
             refreshPendingBadge(); // Show pending count on sidebar from the start
@@ -1633,31 +1652,28 @@
             const body = document.getElementById('today-table-body');
             const summaryEl = document.getElementById('today-summary');
 
-            const { data: visits, error } = await _supabase
-                .from('clinical_history')
-                .select('id, patient_id, visit_date, visit_time, procedures_summary, procedures_detail, procedures_realized_ids, amount, frontdesk_notes')
-                .eq('visit_date', date)
-                .order('visit_time', { ascending: true });
+            // One database function returns the whole sheet (visit + patient +
+            // location) for admin and front desk alike; the front desk has no
+            // direct access to the tables behind it.
+            const { data: rows, error } = await _supabase.rpc('day_sheet', { p_date: date });
             if (error) {
-                const missingColumn = /frontdesk_notes/.test(error.message || '');
-                body.innerHTML = `<tr><td colspan="11" class="px-4 py-12 text-center text-sm text-red-500">${escapeHtml(missingColumn
-                    ? 'Falta correr el SQL de supabase/migrations/20260926_frontdesk_notes.sql en Supabase.'
+                const missingFn = /day_sheet|PGRST202|schema cache/i.test(`${error.code} ${error.message}`);
+                body.innerHTML = `<tr><td colspan="11" class="px-4 py-12 text-center text-sm text-red-500">${escapeHtml(missingFn
+                    ? 'Falta correr el SQL de supabase/migrations/20260926_staff_roles_and_rls_fix.sql en Supabase.'
                     : 'No se pudo cargar el día: ' + error.message)}</td></tr>`;
                 summaryEl.innerText = '';
                 return;
             }
 
-            const ids = [...new Set((visits || []).map(v => v.patient_id))];
             todayProfiles = {};
             const locations = {};
-            if (ids.length) {
-                const [{ data: profiles }, { data: admissions }] = await Promise.all([
-                    _supabase.from('profiles').select('id, first_name, last_name, dob, phone').in('id', ids),
-                    _supabase.from('admission_history').select('patient_id, city, state').in('patient_id', ids),
-                ]);
-                (profiles || []).forEach(p => { todayProfiles[p.id] = p; });
-                (admissions || []).forEach(a => { locations[a.patient_id] = [a.city, a.state].filter(Boolean).join(', '); });
-            }
+            const visits = (rows || []).map(r => {
+                todayProfiles[r.patient_id] = { id: r.patient_id, first_name: r.first_name, last_name: r.last_name, dob: r.dob, phone: r.phone };
+                locations[r.patient_id] = [r.city, r.state].filter(Boolean).join(', ');
+                let procedureIds = [];
+                try { procedureIds = JSON.parse(r.procedures_realized_ids || '[]') || []; } catch (_) { procedureIds = []; }
+                return { ...r, procedures_realized_ids: procedureIds };
+            });
 
             const total = (visits || []).reduce((sum, v) => sum + (Number(v.amount) || 0), 0);
             const withoutAmount = (visits || []).filter(v => v.amount === null || v.amount === undefined).length;
@@ -1688,7 +1704,7 @@
                         <textarea class="today-notes resize-y" rows="2" data-id="${v.id}" style="padding:6px 8px;font-size:12px;" placeholder="Observaciones">${escapeHtml(v.frontdesk_notes || '')}</textarea>
                         <p class="today-notes-status text-[9px] uppercase tracking-widest font-bold mt-0.5 h-3"></p>
                     </td>
-                    <td class="px-4 py-3"><button onclick="openHistoryById('${v.patient_id}')" class="text-[#B76E88] font-bold text-[10px] uppercase hover:underline whitespace-nowrap">Historia</button></td>
+                    <td class="px-4 py-3"><button onclick="openHistoryById('${v.patient_id}')" class="admin-only text-[#B76E88] font-bold text-[10px] uppercase hover:underline whitespace-nowrap">Historia</button></td>
                 </tr>`;
             }).join('');
 
@@ -1704,8 +1720,7 @@
             const status = textarea.nextElementSibling;
             status.className = 'today-notes-status text-[9px] uppercase tracking-widest font-bold mt-0.5 h-3 opacity-50';
             status.innerText = 'Guardando…';
-            const value = textarea.value.trim() || null;
-            const { error } = await _supabase.from('clinical_history').update({ frontdesk_notes: value }).eq('id', textarea.dataset.id);
+            const { error } = await _supabase.rpc('set_frontdesk_notes', { p_encounter_id: textarea.dataset.id, p_notes: textarea.value });
             if (error) {
                 status.className = 'today-notes-status text-[9px] uppercase tracking-widest font-bold mt-0.5 h-3 text-red-500';
                 status.innerText = 'No se guardó';
@@ -1725,7 +1740,7 @@
             if (document.getElementById('history-modal').classList.contains('modal-open')) return;
             if (document.activeElement && document.activeElement.classList.contains('today-notes')) return;
             loadToday();
-        }, 60000);
+        }, 30000);
 
         // --- PENDING BADGE ---
         async function refreshPendingBadge() {
