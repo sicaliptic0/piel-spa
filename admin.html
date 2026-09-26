@@ -587,10 +587,8 @@
                             <input type="file" id="enc-photos-input" accept="image/*" multiple class="hidden">
                         </div>
 
-                        <button type="submit" class="w-full bg-[#2A2330] text-white py-4 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition shadow-md rounded-lg">Guardar encuentro</button>
-
                         <div id="enc-rec" class="bg-[#FBF0F3] border border-[#EDE1E7] p-4 rounded-lg space-y-3">
-                            <p class="enc-label">Enviar recomendación</p>
+                            <p class="enc-label">Recomendación para el paciente (opcional)</p>
                             <select id="enc-rec-template" onchange="onEncounterRecommendationPick()"></select>
                             <div id="enc-rec-editor" class="hidden space-y-2">
                                 <input type="text" id="enc-rec-title" placeholder="Título">
@@ -600,9 +598,14 @@
                                     <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="enc-rec-email" class="accent-[#B76E88]" checked> Correo</label>
                                     <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="enc-rec-whatsapp" class="accent-[#B76E88]" checked> WhatsApp</label>
                                 </div>
-                                <button type="button" id="enc-rec-send" onclick="sendEncounterRecommendation()" class="w-full bg-[#B76E88] text-white py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#9C5570] transition rounded-lg">Enviar al paciente</button>
-                                <p class="text-[10px] opacity-50">Si el encuentro aún no está guardado, se guarda primero. Siempre queda en el portal del paciente.</p>
+                                <p class="text-[10px] opacity-50">Siempre queda también en el portal del paciente.</p>
                             </div>
+                        </div>
+
+                        <div class="space-y-2 pt-1">
+                            <button type="button" id="enc-save-send" onclick="saveEncounterAndSendRecommendation()" disabled class="w-full bg-[#B76E88] text-white py-4 uppercase text-[10px] tracking-widest font-bold hover:bg-[#9C5570] transition shadow-md rounded-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#B76E88]">Guardar encuentro y enviar recomendación</button>
+                            <p id="enc-save-send-hint" class="text-[10px] text-center opacity-50">Para usar este botón, elige o escribe una recomendación arriba.</p>
+                            <button type="submit" id="enc-save-only" class="w-full bg-[#2A2330] text-white py-4 uppercase text-[10px] tracking-widest font-bold hover:bg-[#1D1822] transition shadow-md rounded-lg">Guardar encuentro sin enviar recomendación</button>
                         </div>
                     </form>
                 </div>
@@ -1877,30 +1880,58 @@
             fetchRecommendationTemplates();
         }
 
-        // --- SEND RECOMMENDATION (inside the encounter form) ---
+        // --- RECOMMENDATION (inside the encounter form) ---
         // One recommendation at a time: pick a saved one (its text can be tweaked
         // for this patient without changing the saved template) or write a new
-        // one. It always lands in the patient portal (patient_messages, tied to
-        // this encounter) and can also go out by email and/or WhatsApp.
+        // one. It's sent only through "Guardar encuentro y enviar recomendación",
+        // which saves the encounter first and then sends — one step, so the
+        // encounter and the message tied to it can't get out of sync. It always
+        // lands in the patient portal (patient_messages) and can also go out by
+        // email and/or WhatsApp.
         function populateEncounterRecommendationOptions() {
             const select = document.getElementById('enc-rec-template');
-            select.innerHTML = '<option value="">Elegir una recomendación guardada…</option>'
+            select.innerHTML = '<option value="">Sin recomendación</option>'
                 + recommendationTemplates.map(rec => `<option value="${escapeHtml(rec.id)}">${escapeHtml(rec.title)}</option>`).join('')
                 + '<option value="__custom">✍️ Escribir una nueva</option>';
             document.getElementById('enc-rec-editor').classList.add('hidden');
             document.getElementById('enc-rec-title').value = '';
             document.getElementById('enc-rec-body').value = '';
+            updateSaveAndSendButton();
         }
 
         function onEncounterRecommendationPick() {
             const value = document.getElementById('enc-rec-template').value;
-            const editor = document.getElementById('enc-rec-editor');
-            editor.classList.toggle('hidden', !value);
-            if (!value) return;
+            document.getElementById('enc-rec-editor').classList.toggle('hidden', !value);
             const rec = recommendationTemplates.find(r => r.id === value);
             document.getElementById('enc-rec-title').value = rec?.title || '';
             document.getElementById('enc-rec-body').value = rec?.body || '';
-            document.getElementById(rec ? 'enc-rec-body' : 'enc-rec-title').focus();
+            updateSaveAndSendButton();
+            if (value) document.getElementById(rec ? 'enc-rec-body' : 'enc-rec-title').focus();
+        }
+
+        function encounterRecommendationReady() {
+            return !!(document.getElementById('enc-rec-template').value
+                && document.getElementById('enc-rec-title').value.trim()
+                && document.getElementById('enc-rec-body').value.trim());
+        }
+
+        // "Guardar y enviar" only works once there's a recommendation to send.
+        function updateSaveAndSendButton() {
+            const ready = encounterRecommendationReady();
+            document.getElementById('enc-save-send').disabled = !ready;
+            document.getElementById('enc-save-send-hint').classList.toggle('hidden', ready);
+        }
+        document.getElementById('enc-rec-title').addEventListener('input', updateSaveAndSendButton);
+        document.getElementById('enc-rec-body').addEventListener('input', updateSaveAndSendButton);
+
+        // Both buttons are disabled while saving so a double click can't save twice.
+        function setEncounterButtonsBusy(busyWith) {
+            const sendBtn = document.getElementById('enc-save-send');
+            const saveBtn = document.getElementById('enc-save-only');
+            sendBtn.disabled = !!busyWith || !encounterRecommendationReady();
+            saveBtn.disabled = !!busyWith;
+            sendBtn.innerText = busyWith === 'send' ? 'Guardando y enviando…' : 'Guardar encuentro y enviar recomendación';
+            saveBtn.innerText = busyWith === 'save' ? 'Guardando…' : 'Guardar encuentro sin enviar recomendación';
         }
 
         // profiles.phone holds the full number with country code ("+15551234567");
@@ -1923,13 +1954,13 @@
             return `Hola${firstName ? ' ' + firstName : ''} 👋\n\n*${title.trim()}*\n\n${formattedBody}\n\n_Piel Spa_`;
         }
 
-        async function sendEncounterRecommendation() {
+        async function saveEncounterAndSendRecommendation() {
             const title = document.getElementById('enc-rec-title').value.trim();
             const body = document.getElementById('enc-rec-body').value.trim();
             if (!title || !body) { alert('Escribe el título y el texto de la recomendación.'); return; }
             const wantEmail = document.getElementById('enc-rec-email').checked;
             const wantWhatsApp = document.getElementById('enc-rec-whatsapp').checked;
-            if (wantEmail && !currentPatientEmail && !confirm('Este paciente no tiene correo registrado. ¿Enviar de todas formas (solo portal' + (wantWhatsApp ? ' y WhatsApp' : '') + ')?')) return;
+            if (wantEmail && !currentPatientEmail && !confirm('Este paciente no tiene correo registrado. ¿Continuar sin correo (portal' + (wantWhatsApp ? ' y WhatsApp' : '') + ')?')) return;
             const waNumber = wantWhatsApp ? whatsappNumber(currentPatientPhone) : null;
             if (wantWhatsApp && !waNumber) { alert('Este paciente no tiene un teléfono válido para WhatsApp. Desmarca WhatsApp o corrige su teléfono.'); return; }
 
@@ -1937,22 +1968,18 @@
             // user action — browsers block pop-ups opened after an await.
             const waWindow = wantWhatsApp ? window.open('', '_blank') : null;
 
-            const sendBtn = document.getElementById('enc-rec-send');
-            sendBtn.disabled = true;
-            sendBtn.innerText = 'Enviando…';
+            setEncounterButtonsBusy('send');
             try {
-                // The message is tied to this encounter, so an unsaved (or edited)
-                // encounter is saved first and the form stays open.
-                let encounterId = document.getElementById('edit-note-id').value;
-                if (!encounterId || soapDirty) {
-                    encounterId = await submitSoapForm({ keepOpen: true });
-                    if (!encounterId) { if (waWindow) waWindow.close(); return; }
-                }
+                // 1) Save the encounter (new or edited).
+                const encounterId = await submitSoapForm({ keepOpen: true });
+                if (!encounterId) { if (waWindow) waWindow.close(); return; }
                 const encounter = notesById[encounterId] || {
                     visit_date: document.getElementById('soap-date').value,
                     visit_time: document.getElementById('soap-time').value,
                 };
 
+                // 2) Send the recommendation tied to it.
+                const results = ['✓ Encuentro guardado.'];
                 const { error: insertError } = await _supabase.from('patient_messages').insert([{
                     patient_id: currentPatientId,
                     subject: title,
@@ -1963,37 +1990,38 @@
                 }]);
                 if (insertError) {
                     if (waWindow) waWindow.close();
-                    alert('Error guardando la recomendación: ' + insertError.message);
-                    return;
+                    results.push('✗ La recomendación NO se envió: ' + insertError.message, 'Puedes enviarla después con "Modificar" en este encuentro.');
+                } else {
+                    results.push('✓ Recomendación guardada en el portal del paciente.');
+                    if (wantEmail && currentPatientEmail) {
+                        const { error: mailError } = await _supabase.functions.invoke('send-patient-recommendations', {
+                            body: {
+                                patient_id: currentPatientId,
+                                patient_name: currentPatientName,
+                                patient_email: currentPatientEmail,
+                                visit_date: encounter.visit_date,
+                                visit_time: encounter.visit_time || null,
+                                recommendations: [{ title, body }],
+                            },
+                        });
+                        if (mailError) console.error('Send recommendation email error:', mailError.message);
+                        results.push(mailError ? '✗ No se pudo enviar el correo: ' + mailError.message : '✓ Correo enviado.');
+                    }
+                    if (wantWhatsApp) {
+                        const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(buildWhatsAppRecommendation(title, body))}`;
+                        if (waWindow) waWindow.location.href = waUrl;
+                        else window.open(waUrl, '_blank');
+                        results.push('✓ WhatsApp abierto con el mensaje listo: solo presiona enviar.');
+                    }
                 }
 
-                const results = ['Guardada en el portal del paciente.'];
-                if (wantEmail && currentPatientEmail) {
-                    const { error: mailError } = await _supabase.functions.invoke('send-patient-recommendations', {
-                        body: {
-                            patient_id: currentPatientId,
-                            patient_name: currentPatientName,
-                            patient_email: currentPatientEmail,
-                            visit_date: encounter.visit_date,
-                            visit_time: encounter.visit_time || null,
-                            recommendations: [{ title, body }],
-                        },
-                    });
-                    if (mailError) console.error('Send recommendation email error:', mailError.message);
-                    results.push(mailError ? 'No se pudo enviar el correo: ' + mailError.message : 'Correo enviado.');
-                }
-                if (wantWhatsApp) {
-                    const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(buildWhatsAppRecommendation(title, body))}`;
-                    if (waWindow) waWindow.location.href = waUrl;
-                    else window.open(waUrl, '_blank');
-                    results.push('WhatsApp abierto con el mensaje listo: solo presiona enviar.');
-                }
+                // 3) Done: close the encounter and show the updated history.
+                soapDirty = false;
+                await toggleSoapForm(false);
+                await loadNotes();
                 alert(results.join('\n'));
-                populateEncounterRecommendationOptions();
-                loadNotes();
             } finally {
-                sendBtn.disabled = false;
-                sendBtn.innerText = 'Enviar al paciente';
+                setEncounterButtonsBusy(null);
             }
         }
 
@@ -2432,8 +2460,8 @@
         }
 
         // Saves the open encounter. Returns its id on success, false on failure.
-        // keepOpen leaves the form open (used when a recommendation is sent from
-        // an encounter that wasn't saved yet).
+        // keepOpen leaves the form open (used by "Guardar encuentro y enviar
+        // recomendación", which sends right after saving and then closes it).
         async function submitSoapForm({ keepOpen = false } = {}) {
             const id = document.getElementById('edit-note-id').value;
             const amount = parseAmount(document.getElementById('enc-amount').value);
@@ -2499,9 +2527,17 @@
             return savedId;
         }
 
+        // "Guardar encuentro sin enviar recomendación" (the form's submit button).
         document.getElementById('soap-form').onsubmit = async (e) => {
             e.preventDefault();
-            await submitSoapForm();
+            if (encounterRecommendationReady()
+                && !confirm('Hay una recomendación escrita abajo y NO se va a enviar. ¿Guardar el encuentro sin enviarla?')) return;
+            setEncounterButtonsBusy('save');
+            try {
+                await submitSoapForm();
+            } finally {
+                setEncounterButtonsBusy(null);
+            }
         };
 
         function askUnsavedChanges() {
