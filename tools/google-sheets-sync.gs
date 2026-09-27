@@ -72,7 +72,39 @@ function onOpen() {
     .addItem('Configurar clave de sincronización…', 'setSyncToken')
     .addItem('Activar actualización automática (cada 10 min)', 'installTrigger')
     .addItem('Desactivar actualización automática', 'removeTriggers')
+    .addSeparator()
+    .addItem('Reparar mis columnas (errores por "=")', 'repairOwnColumns')
     .addToUi();
+}
+
+// One-time fix for cells damaged by an earlier version of this script, which
+// restored typed text as a formula ("Pagado" → "=Pagado", shown as an error).
+// Only touches the "· Sistema" tabs, columns L onward, and only cells that
+// show an error and whose formula has no function call in it.
+function repairOwnColumns() {
+  const ui = SpreadsheetApp.getUi();
+  const fixes = [];
+  SpreadsheetApp.getActiveSpreadsheet().getSheets()
+    .filter(sheet => / · Sistema$/.test(sheet.getName()))
+    .forEach(sheet => {
+      const lastRow = sheet.getLastRow();
+      const extraWidth = sheet.getLastColumn() - WIDTH;
+      if (lastRow < FIRST_DATA_ROW || extraWidth <= 0) return;
+      const range = sheet.getRange(FIRST_DATA_ROW, WIDTH + 1, lastRow - FIRST_DATA_ROW + 1, extraWidth);
+      const formulas = range.getFormulas();
+      const shown = range.getDisplayValues();
+      formulas.forEach((row, i) => row.forEach((f, j) => {
+        if (f && String(shown[i][j]).charAt(0) === '#' && f.indexOf('(') === -1) {
+          fixes.push({ cell: sheet.getRange(FIRST_DATA_ROW + i, WIDTH + 1 + j), text: f.slice(1) });
+        }
+      }));
+    });
+  if (!fixes.length) { ui.alert('No encontré celdas dañadas.'); return; }
+  const preview = fixes.slice(0, 5).map(f => `${f.cell.getSheet().getName()}!${f.cell.getA1Notation()}: "${f.text}"`).join('\n');
+  const answer = ui.alert('Reparar columnas', `Encontré ${fixes.length} celda(s) con "=" agregado por error. Ejemplos:\n\n${preview}\n\n¿Quitar el "=" y dejarlas como texto?`, ui.ButtonSet.YES_NO);
+  if (answer !== ui.Button.YES) return;
+  fixes.forEach(f => f.cell.setNumberFormat('@').setValue(f.text));
+  ui.alert(`Listo: ${fixes.length} celda(s) reparada(s).`);
 }
 
 function setSyncToken() {
@@ -167,13 +199,18 @@ function writeMonth(sheet, year, month, visits) {
   if (lastRow >= FIRST_DATA_ROW && extraWidth > 0) {
     const n = lastRow - FIRST_DATA_ROW + 1;
     const keys = sheet.getRange(FIRST_DATA_ROW, COL_KEY, n, 1).getValues();
-    // Display values (as shown) so dates/currency come back exactly as typed.
-    const values = sheet.getRange(FIRST_DATA_ROW, WIDTH + 1, n, extraWidth).getDisplayValues();
-    const formulas = sheet.getRange(FIRST_DATA_ROW, WIDTH + 1, n, extraWidth).getFormulasR1C1();
+    const own = sheet.getRange(FIRST_DATA_ROW, WIDTH + 1, n, extraWidth);
+    const values = own.getValues();
+    const formulas = own.getFormulasR1C1();
+    const formats = own.getNumberFormats();
+    // Each cell keeps what it really was: a formula (R1C1, so relative
+    // references still point at its own row after moving) or a plain value.
     keys.forEach(([key], i) => {
       if (!key) return;
-      const row = values[i].map((v, j) => formulas[i][j] || v);
-      if (row.some(v => v !== '')) extras[key] = row;
+      const cells = values[i].map((v, j) => (formulas[i][j] ? { formula: formulas[i][j] } : { value: v }));
+      if (cells.some(c => c.formula || (c.value !== '' && c.value !== null))) {
+        extras[key] = { cells, formats: formats[i] };
+      }
     });
   }
 
@@ -198,7 +235,16 @@ function writeMonth(sheet, year, month, visits) {
   if (extraWidth > 0) {
     layout.rows.forEach((row, i) => {
       const saved = extras[row[COL_KEY - 1]];
-      if (saved) sheet.getRange(i + 1, WIDTH + 1, 1, extraWidth).setFormulasR1C1([saved.map(String)]);
+      if (!saved) return;
+      // Plain values go back as values (text stays text); only real formulas
+      // are written as formulas. Writing everything as a formula is what
+      // turned typed text like "Pagado" into "=Pagado" (#NAME?).
+      const target = sheet.getRange(i + 1, WIDTH + 1, 1, extraWidth);
+      target.setNumberFormats([saved.formats]);
+      target.setValues([saved.cells.map(c => (c.formula ? '' : c.value))]);
+      saved.cells.forEach((c, j) => {
+        if (c.formula) sheet.getRange(i + 1, WIDTH + 1 + j).setFormulaR1C1(c.formula);
+      });
     });
   }
 
