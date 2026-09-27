@@ -588,6 +588,26 @@
                             <input type="file" id="enc-photos-input" accept="image/*" multiple class="hidden">
                         </div>
 
+                        <div class="bg-[#FDFBFC] border border-[#EDE1E7] p-4 rounded-lg space-y-3">
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input type="checkbox" id="enc-fu-check" class="accent-[#B76E88]">
+                                <span class="text-sm font-semibold">📅 Recordarme contactar a este paciente</span>
+                            </label>
+                            <div id="enc-fu-fields" class="hidden space-y-3">
+                                <div class="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-3 items-start">
+                                    <div>
+                                        <label for="enc-fu-date" class="enc-label mb-1 block">Fecha para contactar</label>
+                                        <input type="date" id="enc-fu-date" class="enc-compact">
+                                    </div>
+                                    <div>
+                                        <label for="enc-fu-reason" class="enc-label mb-1 block">Motivo</label>
+                                        <input type="text" id="enc-fu-reason" placeholder="Ej: avisarle cuando haya citas disponibles">
+                                    </div>
+                                </div>
+                                <p id="enc-fu-note" class="text-[10px] opacity-60">Te llegará un correo a pielspanyc@gmail.com 3 días antes de esa fecha.</p>
+                            </div>
+                        </div>
+
                         <div id="enc-rec" class="bg-[#FBF0F3] border border-[#EDE1E7] p-4 rounded-lg space-y-3">
                             <p class="enc-label">Recomendaciones para el paciente (opcional)</p>
                             <p class="text-[10px] opacity-60">Marca una o varias. Cada una se agrega abajo en el orden en que la marques, y puedes editar su texto solo para este paciente.</p>
@@ -2303,6 +2323,78 @@
             }
         }
 
+        // ---------- ENCOUNTER: FOLLOW-UP REMINDER ----------
+        // "Recordarme contactar a este paciente": one reminder per encounter
+        // (public.follow_ups). The Google Sheets script emails it to the clinic
+        // 3 days before contact_date; changing the date re-arms that email.
+        let encFollowUp = null; // the saved reminder of the open encounter, if any
+
+        document.getElementById('enc-fu-check').addEventListener('change', (e) => {
+            document.getElementById('enc-fu-fields').classList.toggle('hidden', !e.target.checked);
+            if (e.target.checked && !document.getElementById('enc-fu-date').value) document.getElementById('enc-fu-date').focus();
+        });
+
+        function setEncounterFollowUpForm(followUp) {
+            encFollowUp = followUp || null;
+            const check = document.getElementById('enc-fu-check');
+            check.checked = !!followUp;
+            document.getElementById('enc-fu-fields').classList.toggle('hidden', !followUp);
+            document.getElementById('enc-fu-date').value = followUp?.contact_date || '';
+            document.getElementById('enc-fu-date').min = localIsoDate();
+            document.getElementById('enc-fu-reason').value = followUp?.reason || '';
+            document.getElementById('enc-fu-note').innerText = followUp?.reminder_sent_at
+                ? `✉️ El recordatorio ya se envió el ${new Date(followUp.reminder_sent_at).toLocaleDateString('es-ES')}. Si cambias la fecha, se enviará de nuevo.`
+                : 'Te llegará un correo a pielspanyc@gmail.com 3 días antes de esa fecha.';
+        }
+
+        async function loadEncounterFollowUp(encounterId) {
+            if (!encounterId) { setEncounterFollowUpForm(null); return; }
+            const { data, error } = await _supabase.from('follow_ups').select('*').eq('encounter_id', String(encounterId)).maybeSingle();
+            if (error) console.error('Load follow-up error:', error.message);
+            setEncounterFollowUpForm(data || null);
+        }
+
+        // Returns an error message, or null when the reminder fields are fine.
+        function encounterFollowUpError() {
+            if (!document.getElementById('enc-fu-check').checked) return null;
+            if (!document.getElementById('enc-fu-date').value) return 'Elige la fecha para contactar al paciente.';
+            if (!document.getElementById('enc-fu-reason').value.trim()) return 'Escribe el motivo del recordatorio.';
+            return null;
+        }
+
+        // Saves (or removes) the reminder for a just-saved encounter.
+        async function saveEncounterFollowUp(encounterId) {
+            const wanted = document.getElementById('enc-fu-check').checked;
+            if (!wanted) {
+                if (encFollowUp) {
+                    const { error } = await _supabase.from('follow_ups').delete().eq('id', encFollowUp.id);
+                    if (error) return 'No se pudo quitar el recordatorio: ' + error.message;
+                }
+                encFollowUp = null;
+                return null;
+            }
+            const contactDate = document.getElementById('enc-fu-date').value;
+            const payload = {
+                patient_id: currentPatientId,
+                encounter_id: String(encounterId),
+                contact_date: contactDate,
+                reason: document.getElementById('enc-fu-reason').value.trim(),
+            };
+            if (!encFollowUp || encFollowUp.contact_date !== contactDate) payload.reminder_sent_at = null;
+            const query = encFollowUp
+                ? _supabase.from('follow_ups').update(payload).eq('id', encFollowUp.id)
+                : _supabase.from('follow_ups').insert([payload]);
+            const { data, error } = await query.select('*').single();
+            if (error) {
+                const missingTable = /follow_ups|schema cache/i.test(error.message || '');
+                return missingTable
+                    ? 'Falta correr el SQL de supabase/migrations/20260927_follow_up_reminders.sql en Supabase; el recordatorio no se guardó.'
+                    : 'No se pudo guardar el recordatorio: ' + error.message;
+            }
+            encFollowUp = data;
+            return null;
+        }
+
         // ---------- ENCOUNTER: NOTES ("Notas y seguimiento") ----------
         // Every time the form opens, a new line starting with the current date
         // and time is added at the end, so follow-ups stay in order and dated.
@@ -2433,6 +2525,7 @@
                 resetEncounterPhotos([]);
             }
 
+            await loadEncounterFollowUp(note?.id || null);
             if (!recommendationTemplates.length) await fetchRecommendationTemplates();
             populateEncounterRecommendationOptions();
             soapDirty = false;
@@ -2482,12 +2575,22 @@
                 messagesByEncounter[m.encounter_id].push(m);
             });
 
+            // Follow-up reminders, shown on the encounter they were set from.
+            const { data: followUps, error: followUpsError } = await _supabase
+                .from('follow_ups')
+                .select('encounter_id, contact_date, reason, reminder_sent_at')
+                .eq('patient_id', currentPatientId);
+            if (followUpsError) console.error('Load follow-ups error:', followUpsError.message);
+            const followUpByEncounter = {};
+            (followUps || []).forEach(f => { if (f.encounter_id) followUpByEncounter[f.encounter_id] = f; });
+
             const sectionLabel = 'font-bold text-[#B76E88] uppercase tracking-widest text-[8px] mb-1';
             container.innerHTML = data.map(n => {
                 const summary = encounterSummaryText(n);
                 const photos = [...normalizePhotoArray(n.photos), ...legacyPhotoUrls(n)];
                 const legacy = legacySoapHtml(n);
                 const sent = messagesByEncounter[n.id] || [];
+                const followUp = followUpByEncounter[String(n.id)];
                 return `
                 <div class="p-5 md:p-6 bg-white border border-[#EDE1E7] rounded-xl shadow-sm hover:border-[#B76E88] transition-colors">
                     <div class="flex justify-between items-start gap-3 mb-3 border-b border-gray-50 pb-3">
@@ -2501,6 +2604,7 @@
                         <div><p class="${sectionLabel}">Procedimientos</p><p class="text-gray-700">${escapeHtml(summary || '—')}</p></div>
                         <div><p class="${sectionLabel}">Monto a cobrar</p><p class="text-gray-800 font-semibold text-sm">${escapeHtml(formatAmount(n.amount) || '—')}</p></div>
                     </div>
+                    ${followUp ? `<div class="mt-4 text-xs bg-[#FBF0F3] border border-[#EDE1E7] rounded-lg px-3 py-2"><span class="font-semibold">📅 Contactar el ${escapeHtml(formatVisitDate(followUp.contact_date))}</span>${followUp.reason ? ` — ${escapeHtml(followUp.reason)}` : ''}<span class="opacity-60"> · ${followUp.reminder_sent_at ? '✉️ recordatorio enviado' : 'recordatorio pendiente'}</span></div>` : ''}
                     ${n.notes ? `<div class="mt-4 text-xs leading-relaxed"><p class="${sectionLabel}">Notas y seguimiento</p><p class="text-gray-700 whitespace-pre-wrap">${escapeHtml(n.notes)}</p></div>` : ''}
                     ${legacy ? `<details class="mt-4 text-xs"><summary class="cursor-pointer ${sectionLabel}">Notas anteriores (SOAP)</summary><div class="mt-2 space-y-2">${legacy}</div></details>` : ''}
                     ${photos.length ? `<div class="mt-4"><p class="${sectionLabel}">Fotos (${photos.length})</p><div class="flex flex-wrap gap-2 mt-1">${photos.map(url => `<img src="${escapeHtml(url)}" class="photo-thumb" onclick="openImageLightbox('${escapeHtml(url)}')" alt="Foto del encuentro">`).join('')}</div></div>` : ''}
@@ -2528,6 +2632,7 @@
 
         async function deleteNote(id) {
             if (confirm('¿Eliminar este encuentro de forma permanente?')) {
+                await _supabase.from('follow_ups').delete().eq('encounter_id', String(id));
                 await _supabase.from('clinical_history').delete().eq('id', id);
                 loadNotes();
             }
@@ -2542,6 +2647,11 @@
             if (amount === undefined) {
                 alert('El monto a cobrar no es válido. Escribe solo el número, por ejemplo 250 o 250.50.');
                 document.getElementById('enc-amount').focus();
+                return false;
+            }
+            const followUpProblem = encounterFollowUpError();
+            if (followUpProblem) {
+                alert(followUpProblem);
                 return false;
             }
 
@@ -2585,6 +2695,10 @@
 
             const savedId = result.data.id;
             soapDirty = false;
+            // The encounter is saved either way; a reminder problem is reported
+            // but doesn't undo it.
+            const followUpSaveError = await saveEncounterFollowUp(savedId);
+            if (followUpSaveError) alert('El encuentro se guardó, pero: ' + followUpSaveError);
             if (keepOpen) {
                 // Stay in the form as "Modificar" on the saved row; uploaded photos
                 // are now saved URLs and the notes keep what was just written.
@@ -2847,6 +2961,8 @@
         }
 
         const ADM_CONCERN_OPTIONS = [
+            { id: 'facial_assessment', label: 'Valoración General de la Cara' },
+            { id: 'dark_circles', label: 'Ojeras' },
             { id: 'fine_lines_wrinkles', label: 'Líneas Finas y Arrugas' },
             { id: 'volume_loss', label: 'Pérdida de Volumen Facial' },
             { id: 'skin_laxity', label: 'Flacidez Cutánea' },
@@ -2888,20 +3004,20 @@
             { id: 'seborrheic_dermatitis', label: '🧴 Dermatitis Seborreica' },
         ];
         const ADM_BLOOD_THINNERS = [
+            { id: 'none_blood_thinners', label: '🚫 Ninguna' },
             { id: 'prescription_anticoagulants', label: 'Anticoagulantes Recetados' },
             { id: 'aspirin', label: 'Aspirina' },
             { id: 'daily_nsaids', label: 'AINEs Diarios' },
             { id: 'bruising_supplements', label: 'Suplementos (Omega-3, Vit. E, Ginkgo, Ajo)' },
-            { id: 'none_blood_thinners', label: 'Ninguna de las anteriores' },
         ];
         const ADM_ALLERGY_OPTIONS = [
+            { id: 'none_allergies', label: '🚫 Ninguna' },
             { id: 'lidocaine_anesthetics', label: 'Lidocaína / Anestésicos Tópicos' },
             { id: 'latex_nitrile', label: 'Látex / Nitrilo' },
             { id: 'antibiotics_allergy', label: 'Antibióticos' },
             { id: 'chlorhexidine_iodine_alcohol', label: 'Clorhexidina / Yodo / Alcohol' },
             { id: 'albumin_milk_protein', label: 'Albúmina Humana / Proteína de Leche' },
             { id: 'bee_wasp_stings', label: 'Picaduras de Abeja / Avispa' },
-            { id: 'none_allergies', label: 'Ninguna alergia conocida' },
         ];
         const ADM_SURGICAL_FACIAL = [
             { id: 'rhinoplasty_septoplasty', label: 'Rinoplastia / Septoplastia' },
@@ -2919,6 +3035,7 @@
             { id: 'liposuction', label: 'Liposucción' },
             { id: 'fat_transfer_bbl', label: 'Transferencia de Grasa / BBL' },
             { id: 'abdominoplasty', label: 'Abdominoplastia' },
+            { id: 'hysterectomy', label: 'Histerectomía' },
             { id: 'cholecystectomy_appendectomy_hernia', label: 'Colecistectomía / Apendicectomía / Hernia' },
             { id: 'biopolymer_injections', label: 'Biopolímeros / Rellenos Permanentes' },
         ];

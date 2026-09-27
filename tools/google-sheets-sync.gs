@@ -24,6 +24,10 @@ const SUPABASE_URL = 'https://qkjmrnqkoipdltauweub.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFram1ybnFrb2lwZGx0YXV3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTkyMjgsImV4cCI6MjA4OTA5NTIyOH0.EGqgJ9RNY9vYfuVeeEcGoMu_cIaygRq0hnyT-iE7zTw';
 const TIME_ZONE = 'America/New_York';
 const TOKEN_PROPERTY = 'PIEL_SPA_SYNC_TOKEN';
+// Follow-up reminders ("Recordarme contactar a este paciente" in the admin).
+const REMINDER_EMAIL = 'pielspanyc@gmail.com';
+const REMINDER_DAYS_AHEAD = 3;
+const REMINDER_HOUR = 8; // every morning, New York time
 
 const HEADERS = ['#', 'Hora', 'Paciente', 'F. nacimiento', 'Edad', 'Teléfono', 'Ubicación', 'Procedimientos', 'Monto', 'Observaciones', 'ID'];
 const WIDTH = HEADERS.length;        // A–K are managed by the sync
@@ -73,8 +77,92 @@ function onOpen() {
     .addItem('Activar actualización automática (cada 10 min)', 'installTrigger')
     .addItem('Desactivar actualización automática', 'removeTriggers')
     .addSeparator()
+    .addItem('Activar recordatorios por correo (cada mañana)', 'installReminderTrigger')
+    .addItem('Revisar recordatorios ahora', 'sendFollowUpRemindersNow')
+    .addSeparator()
     .addItem('Reparar mis columnas (errores por "=")', 'repairOwnColumns')
     .addToUi();
+}
+
+// ---------- Follow-up reminders by email ----------
+
+function installReminderTrigger() {
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'sendFollowUpReminders')
+    .forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('sendFollowUpReminders').timeBased().atHour(REMINDER_HOUR).everyDays(1).inTimezone(TIME_ZONE).create();
+  SpreadsheetApp.getUi().alert(`Listo: cada mañana (~${REMINDER_HOUR} AM) se revisan los recordatorios y, si hay alguno, llega un correo a ${REMINDER_EMAIL}.`);
+}
+
+function sendFollowUpRemindersNow() {
+  const sent = sendFollowUpReminders();
+  SpreadsheetApp.getUi().alert(sent ? `Listo: se envió un correo a ${REMINDER_EMAIL} con ${sent} recordatorio(s).` : 'No hay recordatorios pendientes por ahora.');
+}
+
+// Emails every reminder due within REMINDER_DAYS_AHEAD days that hasn't been
+// emailed yet (one email listing them all), then marks them as sent so each
+// reminder is emailed once. Returns how many were sent.
+function sendFollowUpReminders() {
+  const token = PropertiesService.getScriptProperties().getProperty(TOKEN_PROPERTY);
+  if (!token) throw new Error('Falta la clave. Usa el menú "Piel Spa → Configurar clave de sincronización".');
+  const due = callRpc('follow_up_reminders', { p_token: token, p_days_ahead: REMINDER_DAYS_AHEAD });
+  if (!due.length) return 0;
+
+  const today = todayIso();
+  const lines = due.map(f => {
+    const name = [f.first_name, f.last_name].filter(Boolean).join(' ') || 'Paciente';
+    return {
+      when: `${formatDayTitle(f.contact_date)}${relativeDays(today, f.contact_date)}`,
+      name,
+      contact: [formatPhone(f.phone), f.email].filter(Boolean).join(' · '),
+      reason: f.reason || '',
+    };
+  });
+  const subject = due.length === 1
+    ? `Piel Spa · Recordatorio: contactar a ${lines[0].name}`
+    : `Piel Spa · Recordatorio: contactar a ${due.length} pacientes`;
+  const body = 'Recordatorios de pacientes por contactar:\n\n'
+    + lines.map(l => `• ${l.when}\n  ${l.name}${l.contact ? ` — ${l.contact}` : ''}${l.reason ? `\n  Motivo: ${l.reason}` : ''}`).join('\n\n')
+    + '\n\n— Sistema Piel Spa';
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const htmlBody = `<div style="font-family:Arial,sans-serif;color:#2A2330;max-width:560px;">
+    <p style="font-size:15px;">Recordatorios de pacientes por contactar:</p>
+    ${lines.map(l => `<div style="border:1px solid #EDE1E7;border-radius:10px;padding:12px 16px;margin:10px 0;">
+      <div style="color:#B76E88;font-weight:bold;font-size:13px;">📅 ${esc(l.when)}</div>
+      <div style="font-size:15px;font-weight:bold;margin-top:4px;">${esc(l.name)}</div>
+      ${l.contact ? `<div style="font-size:13px;color:#555;">${esc(l.contact)}</div>` : ''}
+      ${l.reason ? `<div style="font-size:13px;margin-top:6px;"><b>Motivo:</b> ${esc(l.reason)}</div>` : ''}
+    </div>`).join('')}
+    <p style="font-size:11px;color:#999;">— Sistema Piel Spa</p></div>`;
+
+  MailApp.sendEmail({ to: REMINDER_EMAIL, subject, body, htmlBody });
+  callRpc('mark_follow_up_reminders_sent', { p_token: token, p_ids: due.map(f => f.id) });
+  return due.length;
+}
+
+// " (en 3 días)", " (mañana)", " (hoy)" or " (hace 2 días)".
+function relativeDays(fromIso, toIso) {
+  const toUtc = iso => { const [y, m, d] = iso.split('-').map(Number); return Date.UTC(y, m - 1, d); };
+  const days = Math.round((toUtc(toIso) - toUtc(fromIso)) / 86400000);
+  if (days === 0) return ' (hoy)';
+  if (days === 1) return ' (mañana)';
+  if (days > 1) return ` (en ${days} días)`;
+  return days === -1 ? ' (ayer)' : ` (hace ${-days} días)`;
+}
+
+function callRpc(name, args) {
+  const res = UrlFetchApp.fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    payload: JSON.stringify(args),
+    muteHttpExceptions: true,
+  });
+  const code = res.getResponseCode();
+  if (code === 401 || code === 403) throw new Error('La clave de sincronización no es válida. Vuelve a configurarla.');
+  if (code >= 300) throw new Error(`Supabase respondió ${code}: ${res.getContentText().slice(0, 300)}`);
+  const text = res.getContentText();
+  return text ? JSON.parse(text) : null;
 }
 
 // One-time fix for cells damaged by an earlier version of this script, which
