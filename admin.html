@@ -217,6 +217,33 @@
         </div>
     </div>
 
+    <!-- ===== WHATSAPP MODAL ===== -->
+    <!-- Stays open until closed: the admin picks app or web (an iPad without
+         the app used to fail on the automatic app redirect and lose the message). -->
+    <div id="wa-modal" class="fixed inset-0 z-[80] hidden bg-black/40 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 space-y-4 max-h-[92vh] overflow-y-auto">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <h3 class="text-2xl italic">Enviar por WhatsApp</h3>
+                    <p id="wa-modal-to" class="text-xs opacity-60 mt-1"></p>
+                </div>
+                <button type="button" onclick="closeWhatsAppModal()" class="text-2xl opacity-40 hover:opacity-100">&times;</button>
+            </div>
+            <textarea id="wa-modal-text" rows="9" oninput="updateWhatsAppLinks()" placeholder="Escribe el mensaje…" style="padding:10px;font-size:13px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;resize:vertical;"></textarea>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <a id="wa-modal-web" target="_blank" rel="noopener" class="text-center bg-[#25D366] text-white py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg hover:opacity-90 transition">💻 WhatsApp Web</a>
+                <a id="wa-modal-app" class="text-center border border-[#25D366] text-[#128C7E] py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg hover:bg-[#25D366] hover:text-white transition">📱 Abrir la app</a>
+            </div>
+            <button type="button" id="wa-modal-copy" onclick="copyWhatsAppText()" class="w-full text-[10px] uppercase tracking-widest font-bold text-[#2A2330] opacity-60 hover:opacity-100">📋 Copiar mensaje</button>
+            <p class="text-[10px] opacity-50">Si no tienes la app instalada (por ejemplo en el iPad), usa WhatsApp Web. Esta ventana sigue abierta hasta que la cierres.</p>
+            <div id="wa-modal-undo" class="hidden border-t border-[#EDE1E7] pt-3 space-y-2">
+                <p class="text-[10px] opacity-60">La recomendación ya quedó registrada en la historia y en el portal del paciente. Si al final no se envió y no quieres ese registro:</p>
+                <button type="button" onclick="undoWhatsAppSentMessages()" class="text-[10px] uppercase tracking-widest font-bold text-red-500 hover:text-red-700">No se envió — borrar el registro</button>
+            </div>
+            <button type="button" onclick="closeWhatsAppModal()" class="w-full bg-[#2A2330] text-white py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition rounded-lg">Cerrar</button>
+        </div>
+    </div>
+
     <!-- ===== HISTORY MODAL ===== -->
     <div id="history-modal" class="fixed inset-0 z-50 overflow-y-auto bg-white md:bg-black/60 md:backdrop-blur-sm md:items-center md:justify-center md:p-4">
         <div class="w-full max-w-5xl bg-white md:h-[90vh] p-4 md:p-8 md:rounded-2xl md:shadow-2xl flex flex-col relative md:overflow-y-auto">
@@ -234,6 +261,7 @@
                     <h3 class="text-2xl md:text-3xl italic">Historia Clínica: <span id="history-patient-name" class="font-bold"></span><span id="history-patient-age" class="text-lg font-normal opacity-50 ml-3"></span></h3>
                     <p class="text-[10px] uppercase tracking-widest opacity-40">Registro clínico del paciente</p>
                     <p id="history-patient-contact" class="text-xs opacity-70 mt-1"></p>
+                    <button type="button" id="history-whatsapp-btn" onclick="openWhatsAppForCurrentPatient()" class="hidden mt-2 text-[10px] uppercase tracking-widest font-bold text-[#128C7E] border border-[#25D366] px-3 py-1.5 rounded-full hover:bg-[#25D366] hover:text-white transition">💬 Enviar WhatsApp</button>
                 </div>
                 <button onclick="closeHistoryModal()" class="hidden md:block text-2xl opacity-40 hover:opacity-100 ml-4 flex-shrink-0">&times;</button>
             </div>
@@ -853,6 +881,8 @@
             { id: 'facial_harmonization', category: 'fillers', label: 'Facial Harmonization', es: 'Armonización Facial' },
             { id: 'jawline_masculinization', category: 'fillers', label: 'Jawline Masculinization', es: 'Masculinización de la Mandíbula' },
             { id: 'facial_feminization', category: 'fillers', label: 'Facial Feminization', es: 'Feminización Facial' },
+            // Encounter-only (its own check category below); not offered for booking.
+            { id: 'filler_dissolution', category: 'filler_dissolution', label: 'Filler Removal (Filler Dissolution)', es: 'Disolución de Rellenos' },
 
             { id: 'sculptra', category: 'biostimulators', label: 'Sculptra (Poly-L-Lactic Acid)', es: 'Sculptra (Ácido Poliláctico)' },
             { id: 'radiesse', category: 'biostimulators', label: 'Radiesse (Calcium Hydroxylapatite)', es: 'Radiesse (Hidroxiapatita de Calcio)' },
@@ -940,6 +970,7 @@
             { id: 'consultation', title: 'Consulta', mode: 'check', itemId: 'general_consultation' },
             { id: 'neuromodulators', title: 'Neuromoduladores (Botox)', short: 'Botox', mode: 'category_qty', qtyLabel: 'Unidades', unit: ['unidad', 'unidades'] },
             { id: 'fillers', title: 'Rellenos dérmicos (ácido hialurónico)', short: 'Relleno', mode: 'category_qty', qtyLabel: 'Jeringas', unit: ['jeringa', 'jeringas'] },
+            { id: 'filler_dissolution', title: 'Disolución de rellenos (filler removal)', mode: 'check', itemId: 'filler_dissolution' },
             { id: 'biostimulators', title: 'Bioestimuladores', mode: 'item_qty' },
             { id: 'lasers', title: 'Estética regenerativa y láser', mode: 'item_qty' },
         ];
@@ -1627,6 +1658,7 @@
                     <td class="px-5 py-4">
                         <div class="flex items-center gap-3 flex-wrap">
                             <button onclick="openHistoryById('${p.id}')" class="text-[#B76E88] font-bold text-[10px] uppercase hover:underline">Historia</button>
+                            ${whatsappNumber(p.phone) ? `<button onclick="openWhatsAppForPatient('${p.id}')" class="text-[#128C7E] font-bold text-[10px] uppercase hover:underline">WhatsApp</button>` : ''}
                             <button onclick="openEditPatient('${p.id}')" class="text-blue-500 font-bold text-[10px] uppercase hover:underline">Editar</button>
                             <button onclick="deletePatient('${p.id}')" class="text-red-400 font-bold text-[10px] uppercase hover:underline">Eliminar</button>
                         </div>
@@ -1962,7 +1994,8 @@
                     <button type="button" class="enc-rec-card-remove text-red-400 hover:text-red-600 text-xl leading-none px-1" aria-label="Quitar">&times;</button>
                 </div>
                 <input type="text" class="enc-rec-card-title" placeholder="Título">
-                <textarea class="enc-rec-card-body resize-y" rows="6" placeholder="Escribe la recomendación.&#10;&#10;- Usa guion al inicio para viñetas&#10;1. Usa números para una lista numerada"></textarea>`;
+                <textarea class="enc-rec-card-body resize-y" rows="6" placeholder="Escribe la recomendación.&#10;&#10;- Usa guion al inicio para viñetas&#10;1. Usa números para una lista numerada"></textarea>
+                ${rec ? '' : `<label class="flex items-center gap-2 text-xs opacity-70 cursor-pointer select-none"><input type="checkbox" class="enc-rec-card-keep accent-[#B76E88]" checked> Guardar también en mi lista de recomendaciones</label>`}`;
             card.querySelector('.enc-rec-card-title').value = rec?.title || '';
             card.querySelector('.enc-rec-card-body').value = rec?.body || '';
             card.querySelector('.enc-rec-card-remove').addEventListener('click', () => removeEncounterRecommendationCard(key));
@@ -1990,6 +2023,31 @@
                 title: card.querySelector('.enc-rec-card-title').value.trim(),
                 body: card.querySelector('.enc-rec-card-body').value.trim(),
             }));
+        }
+
+        // New recommendations written in the encounter ("Escribir una nueva") are
+        // added to the saved list too, unless unchecked, so they can be reused
+        // with other patients. A title already in the list isn't added twice.
+        // Returns a line for the result message, or null if nothing was added.
+        async function saveNewEncounterRecommendationsToLibrary() {
+            const known = new Set(recommendationTemplates.map(r => String(r.title || '').trim().toLowerCase()));
+            const rows = [];
+            document.querySelectorAll('#enc-rec-cards .enc-rec-card').forEach(card => {
+                if (!card.querySelector('.enc-rec-card-keep')?.checked) return;
+                const title = card.querySelector('.enc-rec-card-title').value.trim();
+                const body = card.querySelector('.enc-rec-card-body').value.trim();
+                if (!title || !body || known.has(title.toLowerCase())) return;
+                known.add(title.toLowerCase());
+                rows.push({ title, body, updated_at: new Date().toISOString() });
+            });
+            if (!rows.length) return null;
+            const { error } = await _supabase.from('recommendation_templates').insert(rows);
+            if (error) {
+                console.error('Save recommendation template error:', error.message);
+                return '✗ No se pudo guardar en tu lista de recomendaciones: ' + error.message;
+            }
+            await fetchRecommendationTemplates();
+            return rows.length > 1 ? `✓ ${rows.length} recomendaciones nuevas agregadas a tu lista.` : '✓ Recomendación nueva agregada a tu lista.';
         }
 
         // Ready to send: at least one recommendation, and none left half-empty.
@@ -2049,6 +2107,100 @@
             return `Hola${firstName ? ' ' + firstName : ''} 👋\n\n${sections.join('\n\n')}\n\n_Piel Spa_`;
         }
 
+        // --- WHATSAPP MODAL ---
+        // Nothing opens on its own: wa.me sends to api.whatsapp.com, which on an
+        // iPad without the app tried to open it, failed, and closed the tab with
+        // the message. Here the admin picks the app or WhatsApp Web, and the
+        // modal stays open (message included) until they close it.
+        // sentMessageIds: the patient_messages rows just created for this
+        // message, so "No se envió" can remove them from the history.
+        let waModalNumber = null;
+        let waModalSentIds = [];
+
+        function openWhatsAppModal({ name, phone, text = '', sentMessageIds = [] }) {
+            const number = whatsappNumber(phone);
+            if (!number) { alert('Este paciente no tiene un teléfono válido para WhatsApp.'); return; }
+            waModalNumber = number;
+            waModalSentIds = sentMessageIds;
+            const firstName = String(name || '').trim().split(/\s+/)[0] || '';
+            document.getElementById('wa-modal-to').innerText = `Para: ${String(name || '').trim() || 'Paciente'} · +${number}`;
+            document.getElementById('wa-modal-text').value = text || `Hola${firstName ? ' ' + firstName : ''} 👋\n\n`;
+            document.getElementById('wa-modal-undo').classList.toggle('hidden', !sentMessageIds.length);
+            document.getElementById('wa-modal-copy').innerText = '📋 Copiar mensaje';
+            updateWhatsAppLinks();
+            const modal = document.getElementById('wa-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeWhatsAppModal() {
+            const modal = document.getElementById('wa-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            waModalSentIds = [];
+        }
+
+        function updateWhatsAppLinks() {
+            const text = document.getElementById('wa-modal-text').value;
+            const textParam = text.trim() ? `&text=${encodeURIComponent(text)}` : '';
+            document.getElementById('wa-modal-web').href = `https://web.whatsapp.com/send?phone=${waModalNumber}${textParam}`;
+            // Same tab, no pop-up: if the app isn't installed, the browser just
+            // says so and this page (and the modal) stay as they are.
+            document.getElementById('wa-modal-app').href = `whatsapp://send?phone=${waModalNumber}${textParam}`;
+        }
+
+        async function copyWhatsAppText() {
+            const text = document.getElementById('wa-modal-text').value;
+            const btn = document.getElementById('wa-modal-copy');
+            try {
+                await navigator.clipboard.writeText(text);
+                btn.innerText = '✓ Mensaje copiado';
+            } catch (err) {
+                document.getElementById('wa-modal-text').select();
+                btn.innerText = 'Selecciónalo y cópialo manualmente';
+            }
+        }
+
+        function openWhatsAppForPatient(patientId) {
+            const p = allPatients.find(x => x.id === patientId);
+            if (!p) return;
+            openWhatsAppModal({ name: `${p.first_name || ''} ${p.last_name || ''}`, phone: p.phone });
+        }
+
+        function openWhatsAppForCurrentPatient() {
+            openWhatsAppModal({ name: currentPatientName, phone: currentPatientPhone });
+        }
+
+        async function undoWhatsAppSentMessages() {
+            if (!waModalSentIds.length) return;
+            if (!confirm('¿Borrar el registro de esta recomendación? También se quitará del portal del paciente.')) return;
+            const problem = await deletePatientMessages(waModalSentIds);
+            if (problem) { alert('No se pudo borrar: ' + problem); return; }
+            closeWhatsAppModal();
+            if (currentPatientId) loadNotes();
+        }
+
+        // Removes sent recommendations (history log + patient portal). Returns
+        // null on success, or the problem as text.
+        async function deletePatientMessages(ids) {
+            const { data, error } = await _supabase.from('patient_messages').delete().in('id', ids).select('id');
+            if (!error && (data || []).length === ids.length) return null;
+            // Table policies may not allow deleting directly; the admin-only RPC does.
+            const { error: rpcError } = await _supabase.rpc('admin_delete_patient_messages', { p_ids: ids.map(String) });
+            if (!rpcError) return null;
+            console.error('Delete patient messages error:', error?.message, rpcError.message);
+            return /function|schema cache/i.test(rpcError.message)
+                ? 'falta correr el SQL supabase/migrations/20261003_delete_patient_messages.sql en Supabase.'
+                : rpcError.message;
+        }
+
+        async function deleteSentMessage(id) {
+            if (!confirm('¿Borrar este registro de recomendación enviada? También se quitará del portal del paciente.')) return;
+            const problem = await deletePatientMessages([id]);
+            if (problem) { alert('No se pudo borrar: ' + problem); return; }
+            loadNotes();
+        }
+
         async function saveEncounterAndSendRecommendation() {
             const recs = getEncounterRecommendations();
             if (!encounterRecommendationReady()) { alert('Completa el título y el texto de cada recomendación.'); return; }
@@ -2058,15 +2210,11 @@
             const waNumber = wantWhatsApp ? whatsappNumber(currentPatientPhone) : null;
             if (wantWhatsApp && !waNumber) { alert('Este paciente no tiene un teléfono válido para WhatsApp. Desmarca WhatsApp o corrige su teléfono.'); return; }
 
-            // Open the WhatsApp tab right away, while this click still counts as a
-            // user action — browsers block pop-ups opened after an await.
-            const waWindow = wantWhatsApp ? window.open('', '_blank') : null;
-
             setEncounterButtonsBusy('send');
             try {
                 // 1) Save the encounter (new or edited).
                 const encounterId = await submitSoapForm({ keepOpen: true });
-                if (!encounterId) { if (waWindow) waWindow.close(); return; }
+                if (!encounterId) return;
                 const encounter = notesById[encounterId] || {
                     visit_date: document.getElementById('soap-date').value,
                     visit_time: document.getElementById('soap-time').value,
@@ -2074,18 +2222,21 @@
 
                 // 2) Send the recommendations tied to it.
                 const results = ['✓ Encuentro guardado.'];
-                const { error: insertError } = await _supabase.from('patient_messages').insert(recs.map(({ title, body }) => ({
+                const libraryResult = await saveNewEncounterRecommendationsToLibrary();
+                if (libraryResult) results.push(libraryResult);
+                let sentIds = [];
+                const { data: inserted, error: insertError } = await _supabase.from('patient_messages').insert(recs.map(({ title, body }) => ({
                     patient_id: currentPatientId,
                     subject: title,
                     body,
                     encounter_id: encounterId,
                     visit_date: encounter.visit_date,
                     visit_time: encounter.visit_time || null,
-                })));
+                }))).select('id');
                 if (insertError) {
-                    if (waWindow) waWindow.close();
                     results.push('✗ Las recomendaciones NO se enviaron: ' + insertError.message, 'Puedes enviarlas después con "Modificar" en este encuentro.');
                 } else {
+                    sentIds = (inserted || []).map(m => m.id);
                     results.push(recs.length > 1 ? `✓ ${recs.length} recomendaciones guardadas en el portal del paciente.` : '✓ Recomendación guardada en el portal del paciente.');
                     if (wantEmail && currentPatientEmail) {
                         const { error: mailError } = await _supabase.functions.invoke('send-patient-recommendations', {
@@ -2101,12 +2252,7 @@
                         if (mailError) console.error('Send recommendation email error:', mailError.message);
                         results.push(mailError ? '✗ No se pudo enviar el correo: ' + mailError.message : '✓ Correo enviado.');
                     }
-                    if (wantWhatsApp) {
-                        const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(buildWhatsAppRecommendations(recs))}`;
-                        if (waWindow) waWindow.location.href = waUrl;
-                        else window.open(waUrl, '_blank');
-                        results.push('✓ WhatsApp abierto con el mensaje listo: solo presiona enviar.');
-                    }
+                    if (wantWhatsApp) results.push('→ Ahora elige cómo abrir WhatsApp (app o web) para enviarlo.');
                 }
 
                 // 3) Done: close the encounter and show the updated history.
@@ -2114,6 +2260,10 @@
                 await toggleSoapForm(false);
                 await loadNotes();
                 alert(results.join('\n'));
+                // 4) WhatsApp: the admin opens it from the modal (app or web).
+                if (wantWhatsApp && !insertError) {
+                    openWhatsAppModal({ name: currentPatientName, phone: currentPatientPhone, text: buildWhatsAppRecommendations(recs), sentMessageIds: sentIds });
+                }
             } finally {
                 setEncounterButtonsBusy(null);
             }
@@ -2286,6 +2436,7 @@
                 ].filter(Boolean);
                 contactEl.innerText = parts.join('   ·   ') || 'Sin correo/teléfono registrado.';
             }
+            document.getElementById('history-whatsapp-btn').classList.toggle('hidden', !whatsappNumber(currentPatientPhone));
             const cbFs = document.getElementById('clinic-fs');
             const cbViva = document.getElementById('clinic-viva');
             const cbDivine = document.getElementById('clinic-divine');
@@ -2615,7 +2766,10 @@
                                 ${sent.map(m => `
                                     <div class="flex items-center justify-between gap-3 text-gray-500">
                                         <span class="italic">${escapeHtml(m.subject || 'Recomendación')}</span>
-                                        <span class="opacity-60 whitespace-nowrap">${new Date(m.created_at).toLocaleString('es-ES')}</span>
+                                        <span class="flex items-center gap-3">
+                                            <span class="opacity-60 whitespace-nowrap">${new Date(m.created_at).toLocaleString('es-ES')}</span>
+                                            <button onclick="deleteSentMessage('${escapeHtml(m.id)}')" class="text-[9px] uppercase font-bold text-red-400 hover:text-red-600 underline">Borrar</button>
+                                        </span>
                                     </div>
                                 `).join('')}
                             </div>
@@ -2722,7 +2876,12 @@
                 && !confirm('Hay una recomendación escrita abajo y NO se va a enviar. ¿Guardar el encuentro sin enviarla?')) return;
             setEncounterButtonsBusy('save');
             try {
-                await submitSoapForm();
+                // A new recommendation written here is kept in the list even if
+                // it isn't sent this time.
+                if (await submitSoapForm()) {
+                    const libraryResult = await saveNewEncounterRecommendationsToLibrary();
+                    if (libraryResult) alert(libraryResult);
+                }
             } finally {
                 setEncounterButtonsBusy(null);
             }
@@ -2972,6 +3131,7 @@
             { id: 'acne_breakouts', label: 'Acné / Brotes Activos' },
             { id: 'acne_scarring', label: 'Cicatrices de Acné' },
             { id: 'lip_volume', label: 'Definición / Volumen Labial' },
+            { id: 'filler_dissolution', label: 'Disolución de Rellenos (Filler Removal)' },
             { id: 'double_chin', label: 'Papada' },
             { id: 'uneven_tone', label: 'Tono de Piel Desigual' },
             { id: 'asymmetry', label: 'Asimetría / Balance Facial' },
