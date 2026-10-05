@@ -63,6 +63,10 @@
         </div>
         <nav class="flex-1 space-y-2">
             <a onclick="switchAdminView('today-view', this)" class="nav-link active-link block px-4 py-3 text-[10px] uppercase tracking-widest">Hoy</a>
+            <a id="nav-messages" onclick="switchAdminView('messages-view', this)" class="admin-only nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest flex items-center justify-between">
+                <span>Mensajes</span>
+                <span id="wa-badge" class="hidden bg-[#25D366] text-white text-[9px] font-bold px-2 py-0.5 rounded-full leading-none">0</span>
+            </a>
             <a onclick="switchAdminView('patients-view', this)" class="admin-only nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">Pacientes</a>
             <a onclick="switchAdminView('appointments-view', this)" class="admin-only nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest flex items-center justify-between">
                 <span>Citas</span>
@@ -191,6 +195,58 @@
                 </div>
                 <div id="recommendations-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 <p id="recommendations-empty" class="hidden text-center text-sm opacity-40 italic py-10">Aún no has creado ninguna recomendación.</p>
+            </div>
+        </div>
+
+        <!-- Messages View: WhatsApp inbox (wa_conversations / wa_messages, live via Supabase Realtime) -->
+        <div id="messages-view" class="flex-1 flex overflow-hidden min-h-0 hidden">
+            <!-- Chat list -->
+            <div id="wa-list-pane" class="w-full md:w-80 lg:w-96 flex-shrink-0 border-r border-[#EDE1E7] bg-white flex flex-col min-h-0">
+                <div class="p-3 border-b border-[#EDE1E7] space-y-2">
+                    <input id="wa-search" oninput="renderConversationList()" placeholder="Buscar nombre o teléfono" style="padding:8px 12px;font-size:13px;width:100%;border:1px solid #EDE1E7;border-radius:9999px;outline-color:#B76E88;">
+                    <div id="wa-filters" class="flex gap-1 flex-wrap"></div>
+                    <div class="flex items-center justify-between gap-2">
+                        <span id="wa-live-status" class="text-[9px] uppercase tracking-widest opacity-50"></span>
+                        <button id="wa-notify-btn" onclick="enableWhatsAppNotifications()" class="hidden text-[9px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline">🔔 Activar avisos</button>
+                    </div>
+                </div>
+                <div id="wa-conv-list" class="flex-1 overflow-y-auto"></div>
+            </div>
+
+            <!-- Open chat -->
+            <div id="wa-chat-pane" class="hidden md:flex flex-1 flex-col min-h-0 min-w-0">
+                <div id="wa-chat-empty" class="flex-1 flex items-center justify-center text-sm opacity-40 p-6 text-center">Elige una conversación de la lista</div>
+                <div id="wa-chat" class="hidden flex-1 flex flex-col min-h-0">
+                    <div class="bg-white border-b border-[#EDE1E7] px-3 md:px-5 py-3 flex items-center gap-3">
+                        <button onclick="closeConversation()" class="md:hidden text-2xl opacity-50 hover:opacity-100 px-1" aria-label="Volver">&larr;</button>
+                        <div class="min-w-0 flex-1">
+                            <div id="wa-chat-name" class="font-semibold truncate"></div>
+                            <div class="flex items-center gap-2 flex-wrap text-[10px]">
+                                <span id="wa-chat-phone" class="opacity-50"></span>
+                                <button id="wa-chat-patient-link" class="hidden uppercase tracking-widest font-bold text-[#B76E88] hover:underline">Ver ficha</button>
+                                <span id="wa-chat-mode" class="uppercase tracking-widest font-bold"></span>
+                            </div>
+                        </div>
+                        <button id="wa-chat-action" class="flex-shrink-0 text-[9px] uppercase tracking-widest font-bold px-3 py-2 rounded-full transition"></button>
+                    </div>
+                    <div id="wa-thread" class="flex-1 overflow-y-auto p-3 md:p-5 space-y-2 bg-[#F7F2F4]"></div>
+                    <div id="wa-window-note" class="hidden bg-amber-50 border-t border-amber-200 text-amber-800 text-[11px] px-4 py-2">
+                        Pasaron más de 24 horas desde el último mensaje del paciente. WhatsApp solo permite escribirle de nuevo con una plantilla aprobada por Meta (se agregará con los recordatorios automáticos).
+                    </div>
+                    <div class="bg-white border-t border-[#EDE1E7] p-2 md:p-3">
+                        <div id="wa-attachment" class="hidden mb-2 flex items-center gap-2 text-[11px] bg-[#FBF0F3] rounded-lg px-3 py-2">
+                            <span id="wa-attachment-name" class="truncate flex-1"></span>
+                            <button onclick="clearWhatsAppAttachment()" class="text-lg leading-none opacity-50 hover:opacity-100">&times;</button>
+                        </div>
+                        <div class="flex items-end gap-2">
+                            <label class="cursor-pointer text-xl opacity-60 hover:opacity-100 px-1 pb-2" title="Adjuntar foto o PDF">
+                                📎<input id="wa-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" class="hidden" onchange="pickWhatsAppAttachment(this)">
+                            </label>
+                            <textarea id="wa-input" rows="1" placeholder="Escribe un mensaje…" oninput="autoGrowWhatsAppInput()" onkeydown="whatsAppInputKey(event)" style="flex:1;resize:none;max-height:140px;padding:10px 14px;font-size:14px;border:1px solid #EDE1E7;border-radius:20px;outline-color:#B76E88;"></textarea>
+                            <button id="wa-send-btn" onclick="sendWhatsAppReply()" class="bg-[#25D366] text-white w-11 h-11 rounded-full flex items-center justify-center text-lg hover:opacity-90 transition flex-shrink-0" aria-label="Enviar">➤</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -1449,6 +1505,8 @@
             fetchPatients();
             refreshPendingBadge(); // Show pending count on sidebar from the start
             renderAdmissionOptionLists();
+            startWhatsAppInbox(); // live badge + alerts for new WhatsApp messages, in every view
+            if (window.location.hash === '#mensajes') switchAdminView('messages-view', document.getElementById('nav-messages'));
         }
 
         const ADMIN_VIEWS = {
@@ -1456,6 +1514,7 @@
             'patients-view': 'Pacientes',
             'appointments-view': 'Citas',
             'recommendations-view': 'Recomendaciones',
+            'messages-view': 'Mensajes',
         };
 
         function currentAdminView() {
@@ -1480,6 +1539,7 @@
             if (viewId === 'today-view') loadToday();
             else if (viewId === 'appointments-view') fetchAppointments();
             else if (viewId === 'recommendations-view') fetchRecommendationTemplates();
+            else if (viewId === 'messages-view') loadConversations();
             else fetchPatients();
         }
 
@@ -2293,6 +2353,424 @@
             if (appt.whatsapp_reminder_at) lines.push('<span class="text-[#128C7E]">💬 WhatsApp enviado</span>');
             else if (appt.reminder_channel === 'none') lines.push('<span class="text-amber-700">⚠️ Sin correo: recordar por teléfono</span>');
             return lines.length ? `<div class="mt-1 text-[9px] font-bold space-y-0.5">${lines.map(l => `<div>${l}</div>`).join('')}</div>` : '';
+        }
+
+        // --- WHATSAPP INBOX ("Mensajes") ---
+        // Chats come from wa_conversations / wa_messages, written by the
+        // whatsapp-webhook edge function and kept live here with Supabase
+        // Realtime. Staff replies (text, photo or PDF) go through the
+        // whatsapp-send edge function. Started once for admins at sign-in, so
+        // the sidebar badge, the chime and desktop notifications work in every view.
+        let waConversations = [];
+        let waSettings = { bot_enabled: false };
+        let waActiveId = null;
+        let waMessages = [];
+        let waFilter = 'attention';
+        let waLiveStatus = '';
+        let waPendingFile = null;
+        const waPatientNames = {};
+        const waMediaUrls = {};
+
+        async function startWhatsAppInbox() {
+            const { data: settings } = await _supabase.from('wa_settings').select('*').eq('id', 1).maybeSingle();
+            if (settings) waSettings = settings;
+            await loadConversations();
+            _supabase.channel('wa-inbox')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations' }, onWaConversationChange)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_messages' }, onWaMessageChange)
+                .subscribe(status => { waLiveStatus = status; renderWaStatus(); });
+            // Browsers only allow sound after the user has interacted with the page.
+            document.addEventListener('click', unlockWaChime, { once: true });
+        }
+
+        async function loadConversations() {
+            const { data, error } = await _supabase
+                .from('wa_conversations').select('*')
+                .order('last_message_at', { ascending: false, nullsFirst: false }).limit(300);
+            if (error) {
+                document.getElementById('wa-conv-list').innerHTML = `<p class="p-6 text-sm opacity-50">No se pudieron cargar los chats (${escapeHtml(error.message)}).</p>`;
+                return;
+            }
+            waConversations = data || [];
+            await loadWaPatientNames();
+            renderConversationList();
+            updateWaBadge();
+            if (waActiveId) renderChatHeader();
+        }
+
+        async function loadWaPatientNames() {
+            const missing = [...new Set(waConversations.map(c => c.patient_id).filter(id => id && !waPatientNames[id]))];
+            if (!missing.length) return;
+            const { data } = await _supabase.from('profiles').select('id, first_name, last_name').in('id', missing);
+            (data || []).forEach(p => { waPatientNames[p.id] = `${p.first_name || ''} ${p.last_name || ''}`.trim(); });
+        }
+
+        function waName(c) {
+            return (c.patient_id && waPatientNames[c.patient_id]) || c.profile_name || `+${c.phone}`;
+        }
+        function waWindowOpen(c) {
+            return !!c.last_inbound_at && Date.now() - new Date(c.last_inbound_at).getTime() < 24 * 3600 * 1000;
+        }
+        function waShortTime(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            const sameDay = d.toDateString() === new Date().toDateString();
+            return sameDay ? d.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' }) : d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+        }
+
+        function setWaFilter(filter) { waFilter = filter; renderConversationList(); }
+
+        function renderConversationList() {
+            const filters = [['attention', 'Por responder'], ['all', 'Todos'], ['human', 'Atención humana']];
+            if (waSettings.bot_enabled) filters.push(['bot', 'IA']);
+            const counts = { attention: waConversations.filter(c => c.needs_attention).length };
+            document.getElementById('wa-filters').innerHTML = filters.map(([id, label]) => `
+                <button onclick="setWaFilter('${id}')" class="text-[9px] uppercase tracking-widest font-bold px-2.5 py-1 rounded-full border transition ${waFilter === id ? 'bg-[#2A2330] text-white border-[#2A2330]' : 'border-[#EDE1E7] opacity-70 hover:opacity-100'}">
+                    ${label}${counts[id] ? ` (${counts[id]})` : ''}
+                </button>`).join('');
+
+            const query = document.getElementById('wa-search').value.trim().toLowerCase();
+            const digits = query.replace(/\D/g, '');
+            const list = waConversations.filter(c => {
+                if (waFilter === 'attention' && !c.needs_attention) return false;
+                if (waFilter === 'human' && (c.bot_active && waSettings.bot_enabled)) return false;
+                if (waFilter === 'bot' && !(c.bot_active && waSettings.bot_enabled)) return false;
+                if (!query) return true;
+                return waName(c).toLowerCase().includes(query) || (digits.length >= 3 && c.phone.includes(digits));
+            });
+
+            const el = document.getElementById('wa-conv-list');
+            if (!list.length) {
+                el.innerHTML = `<p class="p-6 text-sm opacity-40 text-center">${waFilter === 'attention' && !query ? '✨ No hay mensajes por responder.' : 'No hay conversaciones.'}</p>`;
+                return;
+            }
+            el.innerHTML = list.map(c => `
+                <button onclick="openConversation('${c.id}')" class="w-full text-left px-4 py-3 border-b border-[#F3EAEE] hover:bg-[#FDFBFC] transition flex gap-3 items-start ${c.id === waActiveId ? 'bg-[#FBF0F3]' : ''}">
+                    <div class="w-10 h-10 rounded-full bg-[#EDE1E7] flex items-center justify-center text-sm font-bold text-[#B76E88] flex-shrink-0">${escapeHtml(waName(c).replace(/^\+/, '').charAt(0).toUpperCase())}</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-semibold text-sm truncate">${escapeHtml(waName(c))}</span>
+                            <span class="text-[10px] flex-shrink-0 ${c.unread_count ? 'text-[#128C7E] font-bold' : 'opacity-40'}">${waShortTime(c.last_message_at)}</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-2 mt-0.5">
+                            <span class="text-xs opacity-60 truncate">${c.last_message_direction === 'out' ? '↪ ' : ''}${escapeHtml(c.last_message_preview || '')}</span>
+                            ${c.unread_count ? `<span class="bg-[#25D366] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">${c.unread_count}</span>` : ''}
+                        </div>
+                        <div class="flex gap-2 mt-1 text-[8px] uppercase tracking-widest font-bold">
+                            ${c.needs_attention ? '<span class="text-amber-700">● Por responder</span>' : ''}
+                            ${!c.patient_id ? '<span class="opacity-40">Nuevo contacto</span>' : ''}
+                            ${waSettings.bot_enabled ? (c.bot_active ? '<span class="text-purple-600">🤖 IA</span>' : '<span class="text-[#B76E88]">👤 Humano</span>') : ''}
+                        </div>
+                    </div>
+                </button>`).join('');
+        }
+
+        function updateWaBadge() {
+            const n = waConversations.filter(c => c.needs_attention).length;
+            const badge = document.getElementById('wa-badge');
+            badge.textContent = n;
+            badge.classList.toggle('hidden', !n);
+            document.title = (n ? `(${n}) ` : '') + document.title.replace(/^\(\d+\)\s*/, '');
+        }
+
+        function renderWaStatus() {
+            const live = waLiveStatus === 'SUBSCRIBED';
+            document.getElementById('wa-live-status').innerHTML = live ? '<span class="text-green-600">●</span> En vivo' : '<span class="text-amber-500">●</span> Conectando…';
+            const canNotify = 'Notification' in window && Notification.permission === 'default';
+            document.getElementById('wa-notify-btn').classList.toggle('hidden', !canNotify);
+        }
+
+        function setWaPanes(chatOpen) {
+            document.getElementById('wa-list-pane').className = `${chatOpen ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 flex-shrink-0 border-r border-[#EDE1E7] bg-white flex-col min-h-0`;
+            document.getElementById('wa-chat-pane').className = `${chatOpen ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-h-0 min-w-0`;
+        }
+
+        async function openConversation(id) {
+            waActiveId = id;
+            setWaPanes(true);
+            document.getElementById('wa-chat-empty').classList.add('hidden');
+            document.getElementById('wa-chat').classList.remove('hidden');
+            document.getElementById('wa-thread').innerHTML = '<p class="text-center text-xs opacity-40 py-6">Cargando…</p>';
+            clearWhatsAppAttachment();
+            renderChatHeader();
+            renderConversationList();
+            const { data, error } = await _supabase.from('wa_messages').select('*')
+                .eq('conversation_id', id).order('created_at', { ascending: false }).limit(200);
+            if (waActiveId !== id) return;
+            if (error) { document.getElementById('wa-thread').innerHTML = `<p class="text-center text-xs text-red-500 py-6">${escapeHtml(error.message)}</p>`; return; }
+            waMessages = (data || []).reverse();
+            renderThread(true);
+            markWaRead(id);
+            if (window.matchMedia('(pointer: fine)').matches) document.getElementById('wa-input').focus();
+        }
+
+        function closeConversation() {
+            waActiveId = null;
+            setWaPanes(false);
+            document.getElementById('wa-chat').classList.add('hidden');
+            document.getElementById('wa-chat-empty').classList.remove('hidden');
+            renderConversationList();
+        }
+
+        async function markWaRead(id) {
+            const c = waConversations.find(x => x.id === id);
+            if (!c || !c.unread_count) return;
+            c.unread_count = 0;
+            renderConversationList();
+            await _supabase.from('wa_conversations').update({ unread_count: 0 }).eq('id', id);
+        }
+
+        function renderChatHeader() {
+            const c = waConversations.find(x => x.id === waActiveId);
+            if (!c) return;
+            document.getElementById('wa-chat-name').innerText = waName(c);
+            document.getElementById('wa-chat-phone').innerText = `+${c.phone}`;
+            const link = document.getElementById('wa-chat-patient-link');
+            link.classList.toggle('hidden', !c.patient_id);
+            link.onclick = () => openHistoryById(c.patient_id);
+
+            const mode = document.getElementById('wa-chat-mode');
+            const action = document.getElementById('wa-chat-action');
+            if (waSettings.bot_enabled && c.bot_active) {
+                mode.innerHTML = '<span class="text-purple-600">🤖 IA atendiendo</span>';
+                action.innerText = 'Tomar conversación';
+                action.className = 'flex-shrink-0 text-[9px] uppercase tracking-widest font-bold px-3 py-2 rounded-full transition bg-[#2A2330] text-white hover:bg-[#B76E88]';
+                action.disabled = false;
+                action.onclick = () => takeWaConversation(c.id);
+            } else {
+                mode.innerHTML = waSettings.bot_enabled ? '<span class="text-[#B76E88]">👤 Atención humana</span>' : '';
+                action.innerText = waSettings.bot_enabled ? 'Resolver · reactivar IA' : (c.needs_attention ? '✓ Marcar resuelto' : 'Resuelto');
+                action.className = 'flex-shrink-0 text-[9px] uppercase tracking-widest font-bold px-3 py-2 rounded-full transition border border-[#25D366] text-[#128C7E] hover:bg-[#25D366] hover:text-white';
+                action.disabled = !waSettings.bot_enabled && !c.needs_attention;
+                action.onclick = () => resolveWaConversation(c.id);
+            }
+
+            const windowOpen = waWindowOpen(c);
+            document.getElementById('wa-window-note').classList.toggle('hidden', windowOpen);
+            ['wa-input', 'wa-send-btn', 'wa-file'].forEach(id => { document.getElementById(id).disabled = !windowOpen; });
+        }
+
+        async function takeWaConversation(id) {
+            const { data: { user } } = await _supabase.auth.getUser();
+            await _supabase.from('wa_conversations').update({ bot_active: false, human_since: new Date().toISOString(), human_by: user?.id || null }).eq('id', id);
+        }
+
+        // "Resolver": nobody needs to answer anymore; with the AI on, it takes
+        // the chat back (bot_active = true).
+        async function resolveWaConversation(id) {
+            const updates = { needs_attention: false, unread_count: 0 };
+            if (waSettings.bot_enabled) Object.assign(updates, { bot_active: true, human_since: null, human_by: null });
+            const { error } = await _supabase.from('wa_conversations').update(updates).eq('id', id);
+            if (error) alert('No se pudo actualizar: ' + error.message);
+        }
+
+        function renderThread(scrollToEnd) {
+            const thread = document.getElementById('wa-thread');
+            const nearBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 120;
+            let lastDay = '';
+            thread.innerHTML = waMessages.map(m => {
+                const day = new Date(m.created_at).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+                const sep = day !== lastDay ? `<div class="text-center my-3"><span class="text-[9px] uppercase tracking-widest bg-white/80 px-3 py-1 rounded-full opacity-60">${escapeHtml(day)}</span></div>` : '';
+                lastDay = day;
+                if (m.sender === 'system') return sep + `<div class="text-center text-[10px] opacity-50 italic">${escapeHtml(m.body || '')}</div>`;
+                const out = m.direction === 'out';
+                const bubble = out ? (m.sender === 'bot' ? 'bg-[#EFE7F7]' : 'bg-[#DCF8C6]') : 'bg-white';
+                const who = out ? (m.sender === 'bot' ? '🤖 IA' : '') : '';
+                const ticks = !out ? '' : m.status === 'failed' ? '<span class="text-red-500" title="' + escapeHtml(m.error || '') + '">⚠️ No enviado</span>'
+                    : m.status === 'read' ? '<span class="text-sky-500">✓✓</span>' : m.status === 'delivered' ? '✓✓' : '✓';
+                const time = new Date(m.created_at).toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' });
+                return sep + `
+                    <div class="flex ${out ? 'justify-end' : 'justify-start'}">
+                        <div class="${bubble} max-w-[85%] md:max-w-[70%] rounded-2xl ${out ? 'rounded-br-sm' : 'rounded-bl-sm'} px-3 py-2 shadow-sm">
+                            ${who ? `<div class="text-[9px] font-bold uppercase tracking-widest text-purple-600 mb-0.5">${who}</div>` : ''}
+                            ${renderWaMedia(m)}
+                            ${m.body ? `<div class="text-sm whitespace-pre-wrap break-words">${linkifyWa(escapeHtml(m.body))}</div>` : ''}
+                            ${m.error && !out ? `<div class="text-[10px] text-red-500">No se pudo descargar el archivo</div>` : ''}
+                            <div class="text-[9px] opacity-50 text-right mt-0.5 flex justify-end gap-1">${time} ${ticks}</div>
+                        </div>
+                    </div>`;
+            }).join('') || '<p class="text-center text-xs opacity-40 py-6">Sin mensajes todavía.</p>';
+            loadWaMediaUrls();
+            if (scrollToEnd || nearBottom) thread.scrollTop = thread.scrollHeight;
+        }
+
+        function linkifyWa(html) {
+            return html.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="underline text-[#128C7E] break-all">$1</a>');
+        }
+
+        function renderWaMedia(m) {
+            if (!m.media_path) return '';
+            const path = escapeHtml(m.media_path);
+            if (m.media_type === 'image' || m.media_type === 'sticker') {
+                return `<a data-wa-media-link="${path}" target="_blank" rel="noopener"><img data-wa-media="${path}" alt="Foto" class="rounded-lg mb-1 max-h-72 bg-[#EDE1E7] min-w-[120px] min-h-[80px] object-cover"></a>`;
+            }
+            if (m.media_type === 'audio') return `<audio data-wa-media="${path}" controls class="mb-1 max-w-full"></audio>`;
+            if (m.media_type === 'video') return `<video data-wa-media="${path}" controls class="rounded-lg mb-1 max-h-72 max-w-full"></video>`;
+            return `<a data-wa-media-link="${path}" target="_blank" rel="noopener" class="flex items-center gap-2 bg-black/5 rounded-lg px-3 py-2 mb-1 text-sm">📄 <span class="truncate">${escapeHtml(m.media_filename || 'Documento')}</span></a>`;
+        }
+
+        // Files are in a private bucket: show them through short-lived links.
+        async function loadWaMediaUrls() {
+            const els = [...document.querySelectorAll('#wa-thread [data-wa-media], #wa-thread [data-wa-media-link]')];
+            for (const el of els) {
+                const path = el.getAttribute('data-wa-media') || el.getAttribute('data-wa-media-link');
+                if (!waMediaUrls[path]) {
+                    const { data } = await _supabase.storage.from('wa-media').createSignedUrl(path, 3600);
+                    if (!data?.signedUrl) continue;
+                    waMediaUrls[path] = data.signedUrl;
+                }
+                if (el.hasAttribute('data-wa-media')) el.src = waMediaUrls[path];
+                else el.href = waMediaUrls[path];
+            }
+        }
+
+        // ---------- Live updates ----------
+        async function onWaConversationChange(payload) {
+            const row = payload.new;
+            if (payload.eventType === 'DELETE') {
+                waConversations = waConversations.filter(c => c.id !== payload.old.id);
+            } else {
+                const i = waConversations.findIndex(c => c.id === row.id);
+                if (i >= 0) waConversations[i] = row; else waConversations.push(row);
+                // An open, visible chat is being read as it arrives.
+                if (row.id === waActiveId && row.unread_count && currentAdminView() === 'messages-view' && !document.hidden) markWaRead(row.id);
+            }
+            waConversations.sort((a, b) => String(b.last_message_at || '').localeCompare(String(a.last_message_at || '')));
+            await loadWaPatientNames();
+            renderConversationList();
+            updateWaBadge();
+            if (waActiveId) renderChatHeader();
+        }
+
+        function onWaMessageChange(payload) {
+            const m = payload.new;
+            if (payload.eventType === 'INSERT') {
+                if (m.conversation_id === waActiveId && !waMessages.some(x => x.id === m.id)) {
+                    waMessages.push(m);
+                    renderThread(false);
+                }
+                if (m.direction === 'in') notifyWaIncoming(m);
+            } else if (payload.eventType === 'UPDATE' && m.conversation_id === waActiveId) {
+                const i = waMessages.findIndex(x => x.id === m.id);
+                if (i >= 0) { waMessages[i] = m; renderThread(false); }
+            }
+        }
+
+        // ---------- Alerts: chime + desktop notification ----------
+        let waAudio = null;
+        function unlockWaChime() {
+            try { waAudio = waAudio || new (window.AudioContext || window.webkitAudioContext)(); waAudio.resume(); } catch (_) {}
+        }
+        function playWaChime() {
+            if (!waAudio) return;
+            try {
+                [880, 1320].forEach((freq, i) => {
+                    const osc = waAudio.createOscillator();
+                    const gain = waAudio.createGain();
+                    osc.frequency.value = freq;
+                    const t0 = waAudio.currentTime + i * 0.15;
+                    gain.gain.setValueAtTime(0.0001, t0);
+                    gain.gain.exponentialRampToValueAtTime(0.2, t0 + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.25);
+                    osc.connect(gain).connect(waAudio.destination);
+                    osc.start(t0);
+                    osc.stop(t0 + 0.3);
+                });
+            } catch (_) {}
+        }
+
+        function notifyWaIncoming(m) {
+            const viewingThis = currentAdminView() === 'messages-view' && waActiveId === m.conversation_id && !document.hidden;
+            if (viewingThis) return;
+            playWaChime();
+            if (!('Notification' in window) || Notification.permission !== 'granted') return;
+            const c = waConversations.find(x => x.id === m.conversation_id);
+            const body = m.body || ({ image: '📷 Foto', document: '📄 Documento', audio: '🎤 Audio', video: '🎥 Video' }[m.media_type] || 'Nuevo mensaje');
+            const n = new Notification(`WhatsApp · ${c ? waName(c) : 'Paciente'}`, { body, tag: m.conversation_id, icon: 'images/logo.png' });
+            n.onclick = () => {
+                window.focus();
+                switchAdminView('messages-view', document.getElementById('nav-messages'));
+                openConversation(m.conversation_id);
+                n.close();
+            };
+        }
+
+        async function enableWhatsAppNotifications() {
+            unlockWaChime();
+            if ('Notification' in window) await Notification.requestPermission();
+            renderWaStatus();
+            playWaChime();
+        }
+
+        // ---------- Sending ----------
+        function autoGrowWhatsAppInput() {
+            const el = document.getElementById('wa-input');
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+        }
+        function whatsAppInputKey(e) {
+            // Enter sends on a computer; on a phone/tablet Enter is a new line.
+            if (e.key === 'Enter' && !e.shiftKey && window.matchMedia('(pointer: fine)').matches) {
+                e.preventDefault();
+                sendWhatsAppReply();
+            }
+        }
+        function pickWhatsAppAttachment(input) {
+            const file = input.files?.[0];
+            input.value = '';
+            if (!file) return;
+            const isImage = /^image\/(jpeg|png|webp)$/.test(file.type);
+            const isPdf = file.type === 'application/pdf';
+            if (!isImage && !isPdf) { alert('Solo se pueden enviar fotos (JPG, PNG, WEBP) o PDF.'); return; }
+            if (isImage && file.size > 5 * 1024 * 1024) { alert('La foto pesa más de 5 MB (límite de WhatsApp).'); return; }
+            if (isPdf && file.size > 16 * 1024 * 1024) { alert('El PDF pesa más de 16 MB.'); return; }
+            waPendingFile = file;
+            document.getElementById('wa-attachment-name').innerText = `${isImage ? '📷' : '📄'} ${file.name}`;
+            document.getElementById('wa-attachment').classList.remove('hidden');
+        }
+        function clearWhatsAppAttachment() {
+            waPendingFile = null;
+            document.getElementById('wa-attachment').classList.add('hidden');
+        }
+
+        async function sendWhatsAppReply() {
+            const convId = waActiveId;
+            const input = document.getElementById('wa-input');
+            const text = input.value.trim();
+            if (!convId || (!text && !waPendingFile)) return;
+            const btn = document.getElementById('wa-send-btn');
+            btn.disabled = true;
+            try {
+                const body = { conversation_id: convId, text };
+                if (waPendingFile) {
+                    const file = waPendingFile;
+                    const safeName = file.name.replace(/[^\w.\-]+/g, '_').slice(-80);
+                    const path = `outbound/${convId}/${Date.now()}-${safeName}`;
+                    const { error: upError } = await _supabase.storage.from('wa-media').upload(path, file, { contentType: file.type });
+                    if (upError) { alert('No se pudo subir el archivo: ' + upError.message); return; }
+                    Object.assign(body, {
+                        media_path: path, media_type: file.type === 'application/pdf' ? 'document' : 'image',
+                        media_mime: file.type, media_filename: file.name,
+                    });
+                }
+                const { data, error } = await _supabase.functions.invoke('whatsapp-send', { body });
+                let code = data?.error, detail = data?.detail;
+                if (error && !code) { try { const j = await error.context.json(); code = j.error; detail = j.detail; } catch (_) { code = error.message; } }
+                if (code) {
+                    const messages = {
+                        whatsapp_not_connected: 'WhatsApp todavía no está conectado (falta terminar la conexión con Meta).',
+                        window_closed: 'Pasaron más de 24 horas desde el último mensaje del paciente: WhatsApp no permite escribirle libremente.',
+                        send_failed: 'WhatsApp no aceptó el mensaje' + (detail ? `: ${detail}` : '.'),
+                    };
+                    alert(messages[code] || ('No se pudo enviar: ' + code));
+                    return;
+                }
+                input.value = '';
+                autoGrowWhatsAppInput();
+                clearWhatsAppAttachment();
+            } finally {
+                btn.disabled = false;
+            }
         }
 
         // --- TOMORROW'S REMINDERS (WhatsApp, sent by the admin) ---
