@@ -438,6 +438,15 @@
     // Opened from the admin's "+ Nuevo paciente": staff fill it in with the
     // patient, and on success the admin page takes over (see submitIntake).
     const ADMIN_MODE = NEW_MODE_REQUESTED && window.location.hash.includes('by=admin');
+    // Opened from the admin (patient history / appointments → "Completar historia")
+    // for an existing patient whose intake isn't finished — typically someone who
+    // booked online with only the basics. Runs on the admin's own session (admin
+    // RLS) and saves to that patient; the patient reviews and signs on the device.
+    const COMPLETE_FOR_PATIENT_ID = (() => {
+        if (!window.location.hash.includes('mode=complete')) return null;
+        const m = window.location.hash.match(/patient=([0-9a-fA-F-]{36})/);
+        return m ? m[1] : null;
+    })();
     // New-patient mode runs on a shared clinic device, so it must never read or
     // write the browser's stored session: reading it sent the next patient into
     // the previous patient's dashboard, and writing it would log the admin out.
@@ -461,6 +470,9 @@
     let currentModule = 1;
     const TOTAL_MODULES = 5;
     let currentUser = null;
+    // Whose intake this is: the signed-in patient, or the patient the admin is
+    // completing it for (COMPLETE_FOR_PATIENT_ID). Null in new-account mode.
+    let patientId = null;
     let currentAdmissionId = null;
     // In new-account mode (no session yet, opened as ?mode=new from the Patient Portal
     // modal's iframe) there is no auth user or admission_history row until Module 5 is
@@ -486,7 +498,7 @@
             window.parent.postMessage({ type: 'close-intake-modal' }, window.location.origin);
             return;
         }
-        window.location.href = currentUser ? 'dashboard.html' : 'index.html';
+        window.location.href = COMPLETE_FOR_PATIENT_ID ? 'admin.html' : (currentUser ? 'dashboard.html' : 'index.html');
     }
 
     const MODULE_TITLES = {
@@ -1834,7 +1846,7 @@
     // ---------- COLLECT / FILL FORM STATE ----------
     function collectFormData() {
         return {
-            ...(currentUser ? { patient_id: currentUser.id } : {}),
+            ...(patientId ? { patient_id: patientId } : {}),
             address_line1: document.getElementById('m1-addr1').value.trim() || null,
             city: document.getElementById('m1-city').value.trim() || null,
             state: document.getElementById('m1-state').value || null,
@@ -1978,7 +1990,7 @@
         // Only reached on a direct (non-embedded) visit. New-account mode never
         // signs the patient in (currentUser stays null), so send them to the
         // marketing site, not a dashboard they have no session for.
-        window.location.href = currentUser ? 'dashboard.html' : 'index.html';
+        window.location.href = COMPLETE_FOR_PATIENT_ID ? 'admin.html' : (currentUser ? 'dashboard.html' : 'index.html');
     }
 
     async function submitIntake() {
@@ -2072,7 +2084,7 @@
             updates.phone = document.getElementById('m1-phone-input').value.trim() || null;
         }
         if (Object.keys(updates).length) {
-            await _supabase.from('profiles').update(updates).eq('id', currentUser.id);
+            await _supabase.from('profiles').update(updates).eq('id', patientId);
         }
     }
 
@@ -2083,6 +2095,7 @@
         if (!user && !NEW_MODE_REQUESTED) { allowUnload = true; window.location.href = 'index.html'; return; }
         currentUser = user || null;
         isNewAccountMode = !currentUser;
+        patientId = COMPLETE_FOR_PATIENT_ID || currentUser?.id || null;
 
         renderCheckGroup('m2-concerns', CONCERN_OPTIONS, 'concern-checkbox');
         renderCheckGroup('m3-conditions', MEDICAL_CONDITIONS, 'medical-checkbox');
@@ -2120,10 +2133,11 @@
             const timeEstimateEl = document.getElementById('m1-time-estimate');
             timeEstimateEl.setAttribute('data-en', '⏱ Takes about 5 minutes · Your progress is saved automatically as you go');
             timeEstimateEl.setAttribute('data-es', '⏱ Toma aproximadamente 5 minutos · Tu progreso se guarda automáticamente');
-            const { data: profile } = await _supabase.from('profiles').select('first_name, last_name, dob, sex, phone').eq('id', currentUser.id).maybeSingle();
+            const { data: profile } = await _supabase.from('profiles').select('first_name, last_name, dob, sex, phone, email').eq('id', patientId).maybeSingle();
             currentProfile = profile;
             document.getElementById('m1-full-name').innerText = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || '—';
-            document.getElementById('m1-email').innerText = currentUser.email || '—';
+            // profiles.email is the real address; the auth email is the internal login id.
+            document.getElementById('m1-email').innerText = profile?.email || '—';
 
             if (profile?.dob) {
                 document.getElementById('m1-dob').innerText = profile.dob;
@@ -2154,10 +2168,10 @@
             document.getElementById('m1-dob-input').addEventListener('change', (e) => updateAgeDisplay(e.target.value, 'm1-age-input-display'));
             document.getElementById('m1-sex-input').addEventListener('change', (e) => { updatePregnancyVisibility(e.target.value); renderGlogauGroup(); });
 
-            const { data: existing } = await _supabase.from('admission_history').select('*').eq('patient_id', currentUser.id).maybeSingle();
+            const { data: existing } = await _supabase.from('admission_history').select('*').eq('patient_id', patientId).maybeSingle();
             if (existing) {
                 currentAdmissionId = existing.id;
-                if (existing.intake_completed_at) { allowUnload = true; window.location.href = 'dashboard.html'; return; }
+                if (existing.intake_completed_at && !COMPLETE_FOR_PATIENT_ID) { allowUnload = true; window.location.href = 'dashboard.html'; return; }
                 fillFormFromData(existing);
             }
         }

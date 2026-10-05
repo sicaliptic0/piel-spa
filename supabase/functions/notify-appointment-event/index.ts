@@ -267,13 +267,12 @@ Deno.serve(async (req) => {
 
     // ── STATUS UPDATE (confirmed / modified / cancelled) ─────────────────────
     if (eventType === "appointment_status_update") {
-      // Resolve patient email: body takes priority, fallback to auth lookup
+      // Resolve patient email: body takes priority, fallback to the profile. (The
+      // auth email of phone-login patients is an internal id, not a real inbox.)
       let patientEmail = patientEmailFromBody;
       if (!patientEmail) {
-        const { data: authUser, error: authErr } = await adminClient.auth.admin.getUserById(patientId);
-        if (!authErr && authUser?.user?.email) {
-          patientEmail = authUser.user.email;
-        }
+        const { data: profile } = await adminClient.from("profiles").select("email").eq("id", patientId).maybeSingle();
+        patientEmail = String(profile?.email || "").trim();
       }
 
       if (!patientEmail) {

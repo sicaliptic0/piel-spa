@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendar cita | Piel Spa</title>
+    <meta name="description" content="Agenda tu cita en Piel Spa en menos de un minuto.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://piel-spa.com/agendar.html">
+    <meta property="og:title" content="Agenda tu cita | Piel Spa">
+    <meta property="og:description" content="Elige tu tratamiento, el día y la hora. Confirmación inmediata.">
+    <meta property="og:image" content="https://piel-spa.com/images/og-image.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;500&family=Outfit:wght@300;400;500&family=Montserrat:wght@600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --soft-gold: #B76E88;
+            --gold-hover: #9C5570;
+            --deep-bronze: #2A2330;
+            --cream-bg: #FDFBFC;
+            --line: #EDE1E7;
+            --iris-gradient: linear-gradient(135deg, #F6D9E3 0%, #E7D6EE 50%, #DCE6F3 100%);
+            --iris-gradient-text: linear-gradient(120deg, #D97CA0 0%, #B87CD1 50%, #7CA3D9 100%);
+        }
+        body { font-family: 'Outfit', sans-serif; background-color: var(--cream-bg); color: var(--deep-bronze); }
+        h1, h2, h3 { font-family: 'Cormorant Garamond', serif; }
+        .brand-piel {
+            font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
+            background-image: var(--iris-gradient-text); -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        .brand-spa { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500; color: var(--deep-bronze); }
+        .btn-gold { background-image: var(--iris-gradient); background-color: var(--soft-gold); color: var(--deep-bronze); }
+        .btn-gold:hover:not(:disabled) { background-image: none; background-color: var(--gold-hover); color: white; }
+        .btn-gold:disabled { opacity: 0.45; cursor: not-allowed; }
+        .field { width: 100%; padding: 14px 16px; border: 1px solid var(--line); background: #fff; border-radius: 10px; font-size: 15px; outline: none; }
+        .field:focus { border-color: var(--soft-gold); }
+        .chip { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 12px 14px; text-align: left; font-size: 14px; transition: 0.15s; }
+        .chip:hover { border-color: var(--soft-gold); }
+        .chip.selected { border-color: var(--soft-gold); background: #FBF0F3; box-shadow: inset 0 0 0 1px var(--soft-gold); }
+        .chip:disabled { opacity: 0.35; cursor: not-allowed; }
+        .day-chip { min-width: 74px; text-align: center; padding: 10px 8px; flex-shrink: 0; }
+        .days-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+        .days-strip > * { scroll-snap-align: start; }
+        .step-dot { width: 26px; height: 26px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; border: 2px solid var(--line); color: #C9BAC2; background: #fff; flex-shrink: 0; }
+        .step-dot.active { border-color: var(--soft-gold); color: var(--soft-gold); }
+        .step-dot.done { border-color: var(--soft-gold); background: var(--soft-gold); color: #fff; }
+        .label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600; opacity: 0.6; margin-bottom: 6px; }
+        .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <header class="w-full py-4 px-4 md:px-12 flex justify-between items-center bg-white border-b border-[#EDE1E7] sticky top-0 z-40">
+        <a href="index.html" class="text-[15px] md:text-xl whitespace-nowrap"><span class="brand-piel">Piel</span> <span class="brand-spa">spa</span></a>
+        <button id="lang-toggle" class="whitespace-nowrap text-[10px] tracking-widest text-[#B76E88] hover:text-[#2A2330] uppercase transition">EN / ES</button>
+    </header>
+
+    <main class="max-w-2xl mx-auto px-4 py-8 md:py-12">
+        <div id="booking-flow">
+            <h1 class="text-4xl md:text-5xl text-center mb-2" data-en="Book your appointment" data-es="Agenda tu cita">Agenda tu cita</h1>
+            <p class="text-center text-sm opacity-60 mb-8" data-en="Instant confirmation · Takes less than a minute" data-es="Confirmación inmediata · Toma menos de un minuto">Confirmación inmediata · Toma menos de un minuto</p>
+
+            <!-- Stepper -->
+            <div class="flex items-center justify-center gap-2 mb-8 text-[10px] uppercase tracking-widest font-semibold">
+                <div class="step-dot" data-step-dot="1">1</div><span class="hidden sm:inline opacity-70" data-en="Treatment" data-es="Tratamiento">Tratamiento</span>
+                <div class="w-6 h-px bg-[#EDE1E7]"></div>
+                <div class="step-dot" data-step-dot="2">2</div><span class="hidden sm:inline opacity-70" data-en="Date & time" data-es="Fecha y hora">Fecha y hora</span>
+                <div class="w-6 h-px bg-[#EDE1E7]"></div>
+                <div class="step-dot" data-step-dot="3">3</div><span class="hidden sm:inline opacity-70" data-en="Your details" data-es="Tus datos">Tus datos</span>
+            </div>
+
+            <!-- Selection summary (steps 2–3) -->
+            <div id="summary" class="hidden bg-white border border-[#EDE1E7] rounded-xl p-4 mb-6 text-sm space-y-1">
+                <div class="flex justify-between gap-3">
+                    <span id="summary-treatments" class="font-medium"></span>
+                    <button onclick="goToStep(1)" class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold shrink-0" data-en="Change" data-es="Cambiar">Cambiar</button>
+                </div>
+                <div id="summary-slot-row" class="hidden flex justify-between gap-3">
+                    <span id="summary-slot" class="opacity-70"></span>
+                    <button onclick="goToStep(2)" class="text-[10px] uppercase tracking-widest text-[#B76E88] font-bold shrink-0" data-en="Change" data-es="Cambiar">Cambiar</button>
+                </div>
+            </div>
+
+            <!-- STEP 1: Treatments -->
+            <section id="step-1" class="hidden">
+                <p class="text-sm opacity-70 mb-4" data-en="Choose one or more. Not sure? Pick “General Consultation”." data-es="Elige uno o varios. ¿No estás seguro(a)? Elige “Consulta General”.">Elige uno o varios. ¿No estás seguro(a)? Elige “Consulta General”.</p>
+                <div id="treatment-groups" class="space-y-6"></div>
+                <div class="sticky bottom-0 bg-gradient-to-t from-[#FDFBFC] via-[#FDFBFC] pt-6 pb-4 mt-6">
+                    <button id="step1-next" onclick="goToStep(2)" disabled class="btn-gold w-full py-4 uppercase text-xs tracking-widest font-bold rounded-xl shadow-md transition" data-en="Continue" data-es="Continuar">Continuar</button>
+                </div>
+            </section>
+
+            <!-- STEP 2: Date & time -->
+            <section id="step-2" class="hidden">
+                <div id="slots-loading" class="text-center text-sm opacity-60 py-10" data-en="Loading availability…" data-es="Cargando disponibilidad…">Cargando disponibilidad…</div>
+                <div id="slots-empty" class="hidden text-center text-sm py-10 space-y-3">
+                    <p data-en="No times available right now." data-es="No hay horarios disponibles en este momento.">No hay horarios disponibles en este momento.</p>
+                    <a href="https://wa.me/19295613388" target="_blank" rel="noopener" class="inline-block text-[#128C7E] font-bold text-xs uppercase tracking-widest" data-en="Write to us on WhatsApp" data-es="Escríbenos por WhatsApp">Escríbenos por WhatsApp</a>
+                </div>
+                <div id="slots-ui" class="hidden">
+                    <span class="label" data-en="Day" data-es="Día">Día</span>
+                    <div id="days-strip" class="days-strip mb-6"></div>
+                    <span class="label" data-en="Time (New York)" data-es="Hora (Nueva York)">Hora (Nueva York)</span>
+                    <div id="times-grid" class="grid grid-cols-3 sm:grid-cols-4 gap-2"></div>
+                </div>
+                <div class="sticky bottom-0 bg-gradient-to-t from-[#FDFBFC] via-[#FDFBFC] pt-6 pb-4 mt-6">
+                    <button id="step2-next" onclick="goToStep(3)" disabled class="btn-gold w-full py-4 uppercase text-xs tracking-widest font-bold rounded-xl shadow-md transition" data-en="Continue" data-es="Continuar">Continuar</button>
+                </div>
+            </section>
+
+            <!-- STEP 3: Who -->
+            <section id="step-3" class="hidden space-y-5">
+                <!-- Already signed in as a patient -->
+                <div id="who-session" class="hidden bg-white border border-[#EDE1E7] rounded-xl p-5">
+                    <p class="text-sm"><span data-en="Booking as" data-es="Agendando como">Agendando como</span> <strong id="session-name"></strong></p>
+                    <button onclick="signOutAndReset()" class="mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88]" data-en="Not you? Change" data-es="¿No eres tú? Cambiar">¿No eres tú? Cambiar</button>
+                </div>
+
+                <!-- Phone first -->
+                <div id="who-phone">
+                    <span class="label" data-en="Mobile phone (WhatsApp)" data-es="Teléfono celular (WhatsApp)">Teléfono celular (WhatsApp)</span>
+                    <div class="flex gap-2">
+                        <select id="phone-country" class="field" style="width:118px;flex-shrink:0;"></select>
+                        <input id="phone" type="tel" inputmode="tel" autocomplete="tel-national" class="field" placeholder="(929) 000-0000">
+                    </div>
+                    <p id="phone-hint" class="text-[11px] opacity-50 mt-2" data-en="If you're already our patient we'll recognize you by your phone." data-es="Si ya eres paciente, te reconocemos por tu teléfono.">Si ya eres paciente, te reconocemos por tu teléfono.</p>
+                    <button id="phone-continue" onclick="checkPhone()" class="btn-gold w-full py-4 mt-4 uppercase text-xs tracking-widest font-bold rounded-xl shadow-md transition" data-en="Continue" data-es="Continuar">Continuar</button>
+                </div>
+
+                <!-- Returning patient: sign in -->
+                <div id="who-returning" class="hidden space-y-3">
+                    <div class="bg-[#FBF0F3] border border-[#EDE1E7] rounded-xl p-4 text-sm">
+                        <p class="font-semibold" data-en="Welcome back! 👋" data-es="¡Hola de nuevo! 👋">¡Hola de nuevo! 👋</p>
+                        <p class="opacity-70 mt-1" data-en="This phone is already registered. Enter your password to confirm — if you never changed it, it's your phone number." data-es="Este teléfono ya está registrado. Ingresa tu contraseña para confirmar — si nunca la cambiaste, es tu número de teléfono.">Este teléfono ya está registrado. Ingresa tu contraseña para confirmar — si nunca la cambiaste, es tu número de teléfono.</p>
+                    </div>
+                    <input id="password" type="password" autocomplete="current-password" class="field" placeholder="Contraseña / Password">
+                    <div class="flex justify-between items-center">
+                        <button onclick="changePhone()" class="text-[10px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100" data-en="Use another phone" data-es="Usar otro teléfono">Usar otro teléfono</button>
+                        <button onclick="forgotPassword()" class="text-[10px] uppercase tracking-widest font-bold opacity-60 hover:text-[#B76E88]" data-en="Forgot password?" data-es="¿Olvidaste tu contraseña?">¿Olvidaste tu contraseña?</button>
+                    </div>
+                </div>
+
+                <!-- New patient: Step 1 basics only -->
+                <div id="who-new" class="hidden space-y-4">
+                    <div class="flex justify-between items-center">
+                        <p class="text-sm opacity-70" data-en="First visit — just a few details." data-es="Primera visita — solo unos datos.">Primera visita — solo unos datos.</p>
+                        <button onclick="changePhone()" class="text-[10px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100" data-en="Change phone" data-es="Cambiar teléfono">Cambiar teléfono</button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div><span class="label" data-en="First name" data-es="Nombre">Nombre</span><input id="first-name" class="field" autocomplete="given-name"></div>
+                        <div><span class="label" data-en="Last name" data-es="Apellido">Apellido</span><input id="last-name" class="field" autocomplete="family-name"></div>
+                    </div>
+                    <div><span class="label" data-en="Email" data-es="Correo electrónico">Correo electrónico</span><input id="email" type="email" class="field" autocomplete="email" placeholder="tu@correo.com"></div>
+                    <div>
+                        <span class="label" data-en="Date of birth" data-es="Fecha de nacimiento">Fecha de nacimiento</span>
+                        <div class="grid grid-cols-3 gap-2">
+                            <select id="dob-month" class="field"></select>
+                            <input id="dob-day" type="number" inputmode="numeric" min="1" max="31" class="field" placeholder="Día / Day">
+                            <input id="dob-year" type="number" inputmode="numeric" min="1900" class="field" placeholder="Año / Year">
+                        </div>
+                    </div>
+                    <div>
+                        <span class="label" data-en="Sex" data-es="Sexo">Sexo</span>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" class="chip text-center" data-sex="female" onclick="pickSex('female')" data-en="Female" data-es="Femenino">Femenino</button>
+                            <button type="button" class="chip text-center" data-sex="male" onclick="pickSex('male')" data-en="Male" data-es="Masculino">Masculino</button>
+                        </div>
+                    </div>
+                    <div class="hp" aria-hidden="true"><label>Website <input id="website" tabindex="-1" autocomplete="off"></label></div>
+                    <p class="text-[11px] opacity-50" data-en="We'll create your Patient Portal account so you can see your appointments. Your phone number will be your username and password." data-es="Crearemos tu cuenta del Portal del Paciente para que veas tus citas. Tu teléfono será tu usuario y contraseña.">Crearemos tu cuenta del Portal del Paciente para que veas tus citas. Tu teléfono será tu usuario y contraseña.</p>
+                </div>
+
+                <button id="confirm-btn" onclick="confirmBooking()" class="hidden btn-gold w-full py-4 uppercase text-xs tracking-widest font-bold rounded-xl shadow-md transition" data-en="Confirm appointment" data-es="Confirmar cita">Confirmar cita</button>
+            </section>
+        </div>
+
+        <!-- DONE -->
+        <section id="done" class="hidden text-center py-6">
+            <div class="text-5xl mb-4">✨</div>
+            <h1 class="text-4xl md:text-5xl mb-3" data-en="Appointment confirmed!" data-es="¡Cita confirmada!">¡Cita confirmada!</h1>
+            <p id="done-slot" class="text-lg mb-1"></p>
+            <p id="done-treatments" class="text-sm opacity-60 mb-6"></p>
+            <div id="done-new-account" class="hidden bg-white border border-[#EDE1E7] rounded-xl p-4 text-sm mb-6 text-left">
+                <p data-en="We sent your confirmation and your Patient Portal access to your email. Your phone number (without country code) is your username and password." data-es="Te enviamos la confirmación y tu acceso al Portal del Paciente a tu correo. Tu teléfono (sin código de país) es tu usuario y contraseña.">Te enviamos la confirmación y tu acceso al Portal del Paciente a tu correo. Tu teléfono (sin código de país) es tu usuario y contraseña.</p>
+                <p class="opacity-60 mt-2 text-xs" data-en="Don't see it? Check your spam folder." data-es="¿No lo ves? Revisa la carpeta de spam.">¿No lo ves? Revisa la carpeta de spam.</p>
+            </div>
+            <div id="done-intake" class="hidden bg-[#FBF0F3] border border-[#EDE1E7] rounded-xl p-5 mb-6 text-left">
+                <p class="font-semibold mb-1" data-en="📋 One more step: your health history" data-es="📋 Un paso más: tu historia clínica">📋 Un paso más: tu historia clínica</p>
+                <p class="text-sm opacity-70" data-en="It takes about 5 minutes and saves time at your visit. You can also do it later from the Patient Portal, or we'll finish it together at the clinic." data-es="Toma unos 5 minutos y ahorra tiempo en tu consulta. También puedes hacerla después desde el Portal del Paciente, o la terminamos juntos en la clínica.">Toma unos 5 minutos y ahorra tiempo en tu consulta. También puedes hacerla después desde el Portal del Paciente, o la terminamos juntos en la clínica.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+                    <button id="intake-now-btn" onclick="completeIntakeNow()" class="btn-gold py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg" data-en="Complete it now" data-es="Completarla ahora">Completarla ahora</button>
+                    <a href="index.html" class="text-center border border-[#B76E88] text-[#B76E88] py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg" data-en="Later" data-es="Más tarde">Más tarde</a>
+                </div>
+            </div>
+            <div id="done-portal" class="hidden">
+                <a href="dashboard.html" class="btn-gold inline-block px-10 py-4 uppercase text-xs tracking-widest font-bold rounded-xl" data-en="Go to my portal" data-es="Ir a mi portal">Ir a mi portal</a>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // ---------- Language (shared with index/intake via localStorage) ----------
+        let currentLang = 'es';
+        try { currentLang = localStorage.getItem('preferredLang') || 'es'; } catch (_) {}
+        const t = (en, es) => currentLang === 'en' ? en : es;
+        function applyLanguage() {
+            document.documentElement.lang = currentLang;
+            document.querySelectorAll('[data-en]').forEach(el => { el.innerText = el.getAttribute(`data-${currentLang}`); });
+            document.getElementById('lang-toggle').innerText = currentLang === 'en' ? 'ES / EN' : 'EN / ES';
+            renderTreatments();
+            renderMonths();
+            if (slotsLoaded) renderDays();
+            renderSummary();
+        }
+        document.getElementById('lang-toggle').addEventListener('click', () => {
+            currentLang = currentLang === 'en' ? 'es' : 'en';
+            try { localStorage.setItem('preferredLang', currentLang); } catch (_) {}
+            applyLanguage();
+        });
+
+        // ---------- Supabase ----------
+        const SUPABASE_URL = 'https://qkjmrnqkoipdltauweub.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFram1ybnFrb2lwZGx0YXV3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTkyMjgsImV4cCI6MjA4OTA5NTIyOH0.EGqgJ9RNY9vYfuVeeEcGoMu_cIaygRq0hnyT-iE7zTw';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Must match create-patient-account / book-appointment / index.html.
+        const syntheticEmail = (digits) => `${digits}@patients.piel-spa.internal`;
+        const isPatientUser = (user) => !!user && String(user.email || '').endsWith('@patients.piel-spa.internal');
+        const onlyDigits = (v) => String(v || '').replace(/\D/g, '');
+
+        // ---------- Catalog (same ids as dashboard.html TREATMENT_OPTIONS) ----------
+        const TREATMENT_OPTIONS = [
+            { id: 'general_consultation', category: 'consultation', en: 'General Consultation', es: 'Consulta General' },
+            { id: 'upper_face_rejuvenation', category: 'neuromodulators', en: 'Upper Face Rejuvenation', es: 'Rejuvenecimiento de la Parte Superior' },
+            { id: 'masseter_reduction_bruxism', category: 'neuromodulators', en: 'Masseter Reduction (Bruxism)', es: 'Reducción del Masetero (Bruxismo)' },
+            { id: 'gummy_smile_correction', category: 'neuromodulators', en: 'Gummy Smile Correction', es: 'Corrección de Sonrisa Gingival' },
+            { id: 'nasal_profiling', category: 'neuromodulators', en: 'Nasal Profiling', es: 'Perfilado Nasal' },
+            { id: 'hyperhidrosis_treatment', category: 'neuromodulators', en: 'Hyperhidrosis Treatment', es: 'Tratamiento de Hiperhidrosis' },
+            { id: 'lip_augmentation', category: 'fillers', en: 'Lip Augmentation', es: 'Aumento de Labios' },
+            { id: 'facial_harmonization', category: 'fillers', en: 'Facial Harmonization', es: 'Armonización Facial' },
+            { id: 'jawline_masculinization', category: 'fillers', en: 'Jawline Masculinization', es: 'Masculinización de la Mandíbula' },
+            { id: 'facial_feminization', category: 'fillers', en: 'Facial Feminization', es: 'Feminización Facial' },
+            { id: 'sculptra', category: 'biostimulators', en: 'Sculptra (Poly-L-Lactic Acid)', es: 'Sculptra (Acido Polilactico)' },
+            { id: 'radiesse', category: 'biostimulators', en: 'Radiesse (Calcium Hydroxylapatite)', es: 'Radiesse (Hidroxiapatita de Calcio)' },
+            { id: 'exosomes_therapy_direct_injection', category: 'lasers', en: 'Exosomes Therapy (Direct Injection)', es: 'Terapia con Exosomas (Inyección Directa)' },
+            { id: 'microneedling_exosomes', category: 'lasers', en: 'Microneedling + Exosomes', es: 'Microneedling + Exosomas' },
+            { id: 'salmon_pdrn_direct_injection', category: 'lasers', en: 'Salmon PDRN (Direct Injection)', es: 'Salmon PDRN (Inyección Directa)' },
+            { id: 'microneedling_salmon_pdrn', category: 'lasers', en: 'Microneedling + Salmon PDRN', es: 'Microneedling + Salmon PDRN' },
+            { id: 'nctf_skin_boosting', category: 'lasers', en: 'NCTF Skin Boosting', es: 'Impulso de la Piel con NCTF' },
+            { id: 'fractional_co2_laser_resurfacing', category: 'lasers', en: 'Fractional CO2 Laser Resurfacing', es: 'Resurfacing con Láser CO2 Fraccionado' },
+            { id: 'facial_cleansing', category: 'lasers', en: 'Facial Cleansing', es: 'Limpieza Facial' },
+        ];
+        const TREATMENT_CATEGORIES = [
+            { id: 'consultation', en: 'Consultations', es: 'Consultas' },
+            { id: 'neuromodulators', en: 'Neuromodulators (Botox)', es: 'Neuromoduladores (Botox)' },
+            { id: 'fillers', en: 'Dermal Fillers (Hyaluronic Acid)', es: 'Rellenos Dérmicos (Ácido Hialurónico)' },
+            { id: 'biostimulators', en: 'Biostimulators (Collagen Inducers)', es: 'Bioestimuladores (Inductores de Colágeno)' },
+            { id: 'lasers', en: 'Regenerative Aesthetics & Lasers', es: 'Estética Regenerativa y Láseres' },
+        ];
+        const COUNTRY_CODES = [
+            ['US', '+1'], ['MX', '+52'], ['CO', '+57'], ['VE', '+58'], ['DO', '+1'], ['PR', '+1'], ['EC', '+593'], ['PE', '+51'],
+            ['AR', '+54'], ['CL', '+56'], ['ES', '+34'], ['GT', '+502'], ['SV', '+503'], ['HN', '+504'], ['NI', '+505'],
+            ['CR', '+506'], ['PA', '+507'], ['CU', '+53'], ['BO', '+591'], ['PY', '+595'], ['UY', '+598'], ['BR', '+55'],
+        ];
+        const flag = (iso) => String.fromCodePoint(...[...iso].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+        const MONTHS = {
+            en: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+            es: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
+        };
+
+        // ---------- State ----------
+        const selectedTreatments = new Set();
+        let slotsByDay = new Map(); // 'YYYY-MM-DD' -> ['10:00', ...]
+        let slotsLoaded = false;
+        let selectedDay = null;
+        let selectedTime = null;
+        let selectedSex = '';
+        let patientMode = null; // 'session' | 'returning' | 'new'
+        let sessionUser = null;
+        let bookedPhoneDigits = '';
+        let currentStep = 1;
+
+        function escapeHtml(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]));
+        }
+        function formatTime12h(time) {
+            const [h, m] = time.split(':').map(Number);
+            return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+        }
+        function formatDay(iso, opts) {
+            return new Date(iso + 'T12:00:00Z').toLocaleDateString(currentLang === 'en' ? 'en-US' : 'es-ES', { timeZone: 'UTC', ...opts });
+        }
+        const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+        // ---------- Step navigation ----------
+        function goToStep(step) {
+            if (step >= 2 && !selectedTreatments.size) step = 1;
+            if (step >= 3 && !(selectedDay && selectedTime)) step = 2;
+            currentStep = step;
+            [1, 2, 3].forEach(n => document.getElementById(`step-${n}`).classList.toggle('hidden', n !== step));
+            document.querySelectorAll('[data-step-dot]').forEach(dot => {
+                const n = Number(dot.dataset.stepDot);
+                dot.className = 'step-dot' + (n < step ? ' done' : n === step ? ' active' : '');
+                dot.innerText = n < step ? '✓' : n;
+            });
+            document.getElementById('summary').classList.toggle('hidden', step === 1);
+            renderSummary();
+            if (step === 2 && !slotsLoaded) loadSlots();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderSummary() {
+            const labels = TREATMENT_OPTIONS.filter(o => selectedTreatments.has(o.id)).map(o => t(o.en, o.es));
+            document.getElementById('summary-treatments').innerText = labels.join(', ');
+            const hasSlot = !!(selectedDay && selectedTime) && currentStep === 3;
+            document.getElementById('summary-slot-row').classList.toggle('hidden', !hasSlot);
+            if (hasSlot) {
+                document.getElementById('summary-slot').innerText =
+                    `${capitalize(formatDay(selectedDay, { weekday: 'long', day: 'numeric', month: 'long' }))} · ${formatTime12h(selectedTime)}`;
+            }
+        }
+
+        // ---------- Step 1 ----------
+        function renderTreatments() {
+            document.getElementById('treatment-groups').innerHTML = TREATMENT_CATEGORIES.map(cat => `
+                <div>
+                    <span class="label">${escapeHtml(t(cat.en, cat.es))}</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        ${TREATMENT_OPTIONS.filter(o => o.category === cat.id).map(o => `
+                            <button type="button" class="chip ${selectedTreatments.has(o.id) ? 'selected' : ''}" onclick="toggleTreatment('${o.id}', this)">
+                                ${escapeHtml(t(o.en, o.es))}
+                            </button>`).join('')}
+                    </div>
+                </div>`).join('');
+        }
+        function toggleTreatment(id, el) {
+            if (selectedTreatments.has(id)) selectedTreatments.delete(id); else selectedTreatments.add(id);
+            el.classList.toggle('selected', selectedTreatments.has(id));
+            document.getElementById('step1-next').disabled = !selectedTreatments.size;
+        }
+
+        // ---------- Step 2 ----------
+        async function loadSlots() {
+            document.getElementById('slots-loading').classList.remove('hidden');
+            document.getElementById('slots-ui').classList.add('hidden');
+            document.getElementById('slots-empty').classList.add('hidden');
+            const { data, error } = await _supabase.rpc('available_slots');
+            document.getElementById('slots-loading').classList.add('hidden');
+            if (error) {
+                console.error('available_slots error:', error.message);
+                document.getElementById('slots-empty').classList.remove('hidden');
+                return;
+            }
+            slotsByDay = new Map();
+            (data || []).forEach(s => {
+                const time = String(s.slot_time).substring(0, 5);
+                if (!slotsByDay.has(s.slot_date)) slotsByDay.set(s.slot_date, []);
+                slotsByDay.get(s.slot_date).push(time);
+            });
+            slotsLoaded = true;
+            if (selectedDay && !(slotsByDay.get(selectedDay) || []).includes(selectedTime)) { selectedTime = null; }
+            if (!selectedDay || !slotsByDay.has(selectedDay)) selectedDay = slotsByDay.keys().next().value || null;
+            if (!slotsByDay.size) { document.getElementById('slots-empty').classList.remove('hidden'); return; }
+            document.getElementById('slots-ui').classList.remove('hidden');
+            renderDays();
+        }
+        function renderDays() {
+            const strip = document.getElementById('days-strip');
+            strip.innerHTML = [...slotsByDay.keys()].map(day => `
+                <button type="button" class="chip day-chip ${day === selectedDay ? 'selected' : ''}" onclick="pickDay('${day}')">
+                    <div class="text-[10px] uppercase tracking-widest opacity-60">${escapeHtml(formatDay(day, { weekday: 'short' }).replace('.', ''))}</div>
+                    <div class="text-xl font-semibold leading-tight">${escapeHtml(formatDay(day, { day: 'numeric' }))}</div>
+                    <div class="text-[10px] uppercase opacity-60">${escapeHtml(formatDay(day, { month: 'short' }).replace('.', ''))}</div>
+                </button>`).join('');
+            renderTimes();
+        }
+        function renderTimes() {
+            const times = slotsByDay.get(selectedDay) || [];
+            document.getElementById('times-grid').innerHTML = times.map(time => `
+                <button type="button" class="chip text-center ${time === selectedTime ? 'selected' : ''}" onclick="pickTime('${time}')">${formatTime12h(time)}</button>`).join('');
+            document.getElementById('step2-next').disabled = !(selectedDay && selectedTime);
+        }
+        function pickDay(day) { selectedDay = day; selectedTime = null; renderDays(); }
+        function pickTime(time) { selectedTime = time; renderTimes(); }
+
+        // ---------- Step 3 ----------
+        function renderMonths() {
+            const sel = document.getElementById('dob-month');
+            const keep = sel.value;
+            sel.innerHTML = `<option value="">${t('Month', 'Mes')}</option>` +
+                MONTHS[currentLang].map((m, i) => `<option value="${String(i + 1).padStart(2, '0')}">${m}</option>`).join('');
+            sel.value = keep;
+        }
+        function pickSex(value) {
+            selectedSex = value;
+            document.querySelectorAll('[data-sex]').forEach(b => b.classList.toggle('selected', b.dataset.sex === value));
+        }
+        function showWho(mode) {
+            patientMode = mode;
+            document.getElementById('who-session').classList.toggle('hidden', mode !== 'session');
+            // The phone stays on screen (locked) once checked, so it can be double-checked.
+            document.getElementById('who-phone').classList.toggle('hidden', mode === 'session');
+            document.getElementById('phone-continue').classList.toggle('hidden', mode !== null);
+            document.getElementById('phone-hint').classList.toggle('hidden', mode !== null);
+            document.getElementById('who-returning').classList.toggle('hidden', mode !== 'returning');
+            document.getElementById('who-new').classList.toggle('hidden', mode !== 'new');
+            document.getElementById('confirm-btn').classList.toggle('hidden', mode === null);
+            document.getElementById('phone').disabled = mode !== null;
+            document.getElementById('phone-country').disabled = mode !== null;
+            if (mode === 'returning') setTimeout(() => document.getElementById('password').focus(), 50);
+            if (mode === 'new') setTimeout(() => document.getElementById('first-name').focus(), 50);
+        }
+        function changePhone() { showWho(null); document.getElementById('phone').focus(); }
+
+        async function checkPhone() {
+            const digits = onlyDigits(document.getElementById('phone').value);
+            if (digits.length < 7 || digits.length > 15) {
+                alert(t('Please enter a valid phone number.', 'Ingresa un número de teléfono válido.'));
+                return;
+            }
+            const btn = document.getElementById('phone-continue');
+            btn.disabled = true;
+            try {
+                const { data, error } = await _supabase.functions.invoke('check-phone-available', { body: { phone: digits } });
+                // Fail open to the new-patient form; the server re-checks before creating anything.
+                showWho(!error && data && data.available === false ? 'returning' : 'new');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function forgotPassword() {
+            const digits = onlyDigits(document.getElementById('phone').value);
+            const { error } = await _supabase.functions.invoke('request-password-reset', {
+                body: { phone: digits, redirect_to: window.location.origin + '/reset-password.html' },
+            });
+            alert(error
+                ? 'Error: ' + error.message
+                : t('If that phone is registered, we sent a reset link to the email on file.', 'Si ese teléfono está registrado, enviamos un enlace para cambiar la contraseña al correo asociado.'));
+        }
+
+        async function signOutAndReset() {
+            await _supabase.auth.signOut();
+            sessionUser = null;
+            showWho(null);
+        }
+
+        function collectNewPatient() {
+            const month = document.getElementById('dob-month').value;
+            const day = Number(document.getElementById('dob-day').value);
+            const year = Number(document.getElementById('dob-year').value);
+            const thisYear = new Date().getFullYear();
+            const dobValid = month && day >= 1 && day <= 31 && year >= 1900 && year <= thisYear;
+            const dob = dobValid ? `${year}-${month}-${String(day).padStart(2, '0')}` : '';
+            const data = {
+                first_name: document.getElementById('first-name').value.trim(),
+                last_name: document.getElementById('last-name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                phone: onlyDigits(document.getElementById('phone').value),
+                phone_country_code: document.getElementById('phone-country').value || '+1',
+                dob,
+                sex: selectedSex,
+            };
+            if (!data.first_name || !data.last_name) return { error: t('Please enter your first and last name.', 'Ingresa tu nombre y apellido.') };
+            if (!/^\S+@\S+\.\S+$/.test(data.email)) return { error: t('Please enter a valid email.', 'Ingresa un correo válido.') };
+            if (!dob || isNaN(new Date(dob + 'T12:00:00Z'))) return { error: t('Please enter your date of birth.', 'Ingresa tu fecha de nacimiento.') };
+            if (!data.sex) return { error: t('Please select your sex.', 'Selecciona tu sexo.') };
+            return { data };
+        }
+
+        const ERROR_MESSAGES = {
+            slot_not_available: ['That time was just taken. Please pick another one.', 'Ese horario se acaba de ocupar. Elige otro, por favor.'],
+            phone_already_registered: ['This phone is already registered. Enter your password to continue.', 'Este teléfono ya está registrado. Ingresa tu contraseña para continuar.'],
+            email_already_registered: ['This email belongs to another patient. Please use a different one, or contact us.', 'Este correo ya pertenece a otro paciente. Usa uno diferente o contáctanos.'],
+            too_many_upcoming: ['You already have 3 upcoming appointments. Please contact us to book more.', 'Ya tienes 3 citas próximas. Contáctanos para agendar más.'],
+            not_signed_in: ['Your session expired. Please sign in again.', 'Tu sesión expiró. Inicia sesión de nuevo.'],
+        };
+
+        async function confirmBooking() {
+            const btn = document.getElementById('confirm-btn');
+            const body = {
+                treatments: [...selectedTreatments],
+                date: selectedDay,
+                time: selectedTime,
+                website: document.getElementById('website').value,
+            };
+
+            if (patientMode === 'new') {
+                const result = collectNewPatient();
+                if (result.error) { alert(result.error); return; }
+                body.new_patient = result.data;
+                bookedPhoneDigits = result.data.phone;
+            }
+
+            btn.disabled = true;
+            btn.innerText = t('Confirming…', 'Confirmando…');
+            try {
+                if (patientMode === 'returning') {
+                    const digits = onlyDigits(document.getElementById('phone').value);
+                    const password = document.getElementById('password').value;
+                    if (!password) { alert(t('Please enter your password.', 'Ingresa tu contraseña.')); return; }
+                    const { data: signIn, error: signInError } = await _supabase.auth.signInWithPassword({ email: syntheticEmail(digits), password });
+                    if (signInError) {
+                        alert(t('Incorrect password. If you never changed it, it is your phone number without the country code.', 'Contraseña incorrecta. Si nunca la cambiaste, es tu número de teléfono sin el código de país.'));
+                        return;
+                    }
+                    sessionUser = signIn.user;
+                }
+                if (patientMode === 'session' || patientMode === 'returning') body.use_session = true;
+
+                const { data, error } = await _supabase.functions.invoke('book-appointment', { body });
+                let code = data?.error;
+                if (error && !code) {
+                    // supabase-js puts non-2xx bodies on error.context
+                    try { code = (await error.context.json()).error; } catch (_) { code = error.message; }
+                }
+                if (code || !data?.ok) {
+                    const msg = ERROR_MESSAGES[code];
+                    alert(msg ? t(msg[0], msg[1]) : t('We could not book your appointment. Please try again.', 'No se pudo agendar tu cita. Intenta de nuevo.') + (code ? `\n\n(${code})` : ''));
+                    if (code === 'slot_not_available') { slotsLoaded = false; selectedTime = null; goToStep(2); }
+                    if (code === 'phone_already_registered') showWho('returning');
+                    return;
+                }
+                showDone(data);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = t('Confirm appointment', 'Confirmar cita');
+            }
+        }
+
+        function showDone(result) {
+            document.getElementById('booking-flow').classList.add('hidden');
+            document.getElementById('done').classList.remove('hidden');
+            document.getElementById('done-slot').innerText =
+                `${capitalize(formatDay(result.date, { weekday: 'long', day: 'numeric', month: 'long' }))} · ${formatTime12h(result.time)}`;
+            document.getElementById('done-treatments').innerText =
+                TREATMENT_OPTIONS.filter(o => selectedTreatments.has(o.id)).map(o => t(o.en, o.es)).join(', ');
+            document.getElementById('done-new-account').classList.toggle('hidden', !result.is_new);
+            document.getElementById('done-intake').classList.toggle('hidden', !!result.intake_complete);
+            document.getElementById('done-portal').classList.toggle('hidden', !result.intake_complete);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function completeIntakeNow() {
+            const btn = document.getElementById('intake-now-btn');
+            btn.disabled = true;
+            // A new patient isn't signed in yet: their password is their phone digits.
+            if (!sessionUser && bookedPhoneDigits) {
+                const { error } = await _supabase.auth.signInWithPassword({ email: syntheticEmail(bookedPhoneDigits), password: bookedPhoneDigits });
+                if (error) { btn.disabled = false; window.location.href = 'index.html'; return; }
+            }
+            window.location.href = 'intake.html';
+        }
+
+        // ---------- Init ----------
+        (async function init() {
+            document.getElementById('phone-country').innerHTML =
+                COUNTRY_CODES.map(([iso, dial]) => `<option value="${dial}" ${iso === 'US' ? 'selected' : ''}>${flag(iso)} ${dial}</option>`).join('');
+            applyLanguage();
+
+            // Preselect treatments from the link, e.g. agendar.html?t=lip_augmentation
+            const preset = new URLSearchParams(window.location.search).get('t');
+            (preset ? preset.split(',') : []).forEach(id => { if (TREATMENT_OPTIONS.some(o => o.id === id)) selectedTreatments.add(id); });
+            renderTreatments();
+            document.getElementById('step1-next').disabled = !selectedTreatments.size;
+
+            // A patient already signed in skips the phone step. Staff sessions
+            // (e.g. the clinic iPad) are ignored — they book from the admin.
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (isPatientUser(user)) {
+                sessionUser = user;
+                const { data: profile } = await _supabase.from('profiles').select('first_name, last_name').eq('id', user.id).maybeSingle();
+                document.getElementById('session-name').innerText = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || '—';
+                showWho('session');
+            } else {
+                showWho(null);
+            }
+            goToStep(selectedTreatments.size ? 2 : 1);
+        })();
+    </script>
+</body>
+</html>

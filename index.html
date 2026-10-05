@@ -133,6 +133,8 @@
                 EN / ES
             </button>
             
+            <a href="agendar.html" class="btn-gold whitespace-nowrap px-3 md:px-5 py-1.5 md:py-2 uppercase text-[8px] md:text-[9px] tracking-[0.1em] font-semibold transition" data-en="Book" data-es="Agendar">Book</a>
+
             <!-- Botón Portal: Menos padding lateral (px-2) y letra más pequeña (text-[8px]) solo en móviles -->
             <button onclick="openAuthModal('login')" class="btn-outline whitespace-nowrap px-2 md:px-4 py-1.5 md:py-2 uppercase text-[8px] md:text-[9px] tracking-[0.1em] hover:bg-[#B76E88] hover:text-white transition" data-en="Patient Portal" data-es="Portal del Paciente">
                 Patient Portal
@@ -181,7 +183,8 @@
             </p>
 
             <div class="flex flex-col md:flex-row justify-center gap-5">
-                <button onclick="openAuthModal('signup')" class="btn-gold px-12 py-4 uppercase text-[10px] md:text-xs tracking-[0.2em] hover:bg-[#9C5570] transition shadow-lg" data-en="New Patient Registration" data-es="Registro de Nuevo Paciente">New Patient Registration</button>
+                <a href="agendar.html" class="btn-gold px-12 py-4 uppercase text-[10px] md:text-xs tracking-[0.2em] font-semibold hover:bg-[#9C5570] transition shadow-lg" data-en="Book an Appointment" data-es="Agendar Cita">Book an Appointment</a>
+                <button onclick="openAuthModal('signup')" class="btn-outline bg-white/60 px-12 py-4 uppercase text-[10px] md:text-xs tracking-[0.2em] hover:bg-[#B76E88] hover:text-white transition shadow-lg" data-en="New Patient Registration" data-es="Registro de Nuevo Paciente">New Patient Registration</button>
                 <button onclick="openAuthModal('login')" class="btn-outline px-12 py-4 uppercase text-[10px] md:text-xs tracking-[0.2em] hover:bg-[#B76E88] hover:text-white transition shadow-lg" data-en="Patient Portal" data-es="Portal del Paciente">Patient Portal</button>
             </div>
         </div>
@@ -366,7 +369,10 @@
             <div>
                 <h4 class="text-xl mb-6 italic text-[#B76E88]" data-en="Patient Portal" data-es="Portal del Paciente">Patient Portal</h4>
                 <p class="font-light opacity-70 text-sm mb-4" data-en="Manage your appointments and clinical gallery securely." data-es="Gestione sus citas y galería clínica de forma segura.">Manage your appointments and clinical gallery securely.</p>
-                <button onclick="openAuthModal('login')" class="bg-[#B76E88] text-white px-6 py-2 uppercase text-[10px] tracking-widest hover:bg-white hover:text-[#2A2330] transition" data-en="Login / Book" data-es="Ingresar / Agendar">Login / Book</button>
+                <div class="flex flex-wrap gap-2">
+                    <a href="agendar.html" class="bg-[#B76E88] text-white px-6 py-2 uppercase text-[10px] tracking-widest hover:bg-white hover:text-[#2A2330] transition" data-en="Book" data-es="Agendar">Book</a>
+                    <button onclick="openAuthModal('login')" class="border border-[#B76E88] text-[#B76E88] px-6 py-2 uppercase text-[10px] tracking-widest hover:bg-[#B76E88] hover:text-white transition" data-en="Login" data-es="Ingresar">Login</button>
+                </div>
             </div>
         </div>
         <div class="border-t border-white/10 pt-8 flex flex-col items-center gap-4">

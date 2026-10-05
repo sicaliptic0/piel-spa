@@ -288,6 +288,7 @@
                 <button type="button" onclick="toggleAdmissionSection()" class="w-full flex items-center justify-between px-4 py-3 hover:bg-[#FDFBFC] transition">
                     <div class="flex items-center gap-3">
                         <span class="text-[9px] uppercase tracking-widest text-[#B76E88] font-bold">Historia de Ingreso</span>
+                        <span id="adm-incomplete-badge" class="hidden text-[8px] uppercase tracking-widest font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">⚠️ Incompleta</span>
                         <span id="adm-save-indicator" class="hidden text-[8px] uppercase tracking-widest text-green-600 font-bold">✓ Guardado</span>
                     </div>
                     <svg id="adm-chevron" class="w-4 h-4 text-[#B76E88] transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -298,7 +299,8 @@
                     <div id="admission-summary-view" class="space-y-3">
                         <div class="flex items-center justify-between gap-2 flex-wrap">
                             <p class="text-[9px] uppercase tracking-widest opacity-40" id="adm-source-note">Cuestionario completado por el paciente.</p>
-                            <div class="flex gap-2 flex-shrink-0">
+                            <div class="flex gap-2 flex-shrink-0 flex-wrap">
+                                <button type="button" id="adm-complete-btn" onclick="openCompleteIntakeModal(currentPatientId, currentPatientName)" class="hidden text-[9px] uppercase tracking-widest font-bold text-white bg-[#2A2330] px-3 py-1.5 rounded-full hover:bg-[#B76E88] transition">📝 Completar con el paciente</button>
                                 <button type="button" onclick="copyAdmissionSummary(this)" class="text-[9px] uppercase tracking-widest font-bold text-[#2A2330] border border-[#EDE1E7] px-3 py-1.5 rounded-full hover:border-[#B76E88] transition">📋 Copiar</button>
                                 <button type="button" onclick="setAdmissionMode('edit')" class="text-[9px] uppercase tracking-widest font-bold text-white bg-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#9C5570] transition">✏️ Editar</button>
                             </div>
@@ -667,8 +669,8 @@
         <div class="bg-white w-full max-w-3xl md:rounded-2xl shadow-2xl flex flex-col h-full md:h-[92vh] overflow-hidden">
             <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#EDE1E7]">
                 <div class="min-w-0">
-                    <h3 class="text-xl italic">Nuevo paciente</h3>
-                    <p class="text-[10px] uppercase tracking-widest opacity-40">Al terminar se abre su historia clínica con el encuentro de hoy</p>
+                    <h3 id="new-patient-modal-title" class="text-xl italic">Nuevo paciente</h3>
+                    <p id="new-patient-modal-subtitle" class="text-[10px] uppercase tracking-widest opacity-40">Al terminar se abre su historia clínica con el encuentro de hoy</p>
                 </div>
                 <button onclick="closeNewPatientModal()" class="text-2xl opacity-40 hover:opacity-100 transition flex-shrink-0" aria-label="Cerrar">&times;</button>
             </div>
@@ -2275,9 +2277,28 @@
             if (error) { console.error("Fetch Appts Error:", error); return; }
             refreshPendingBadge();
 
+            // Patients who booked online may not have finished their health history yet.
+            const patientIds = [...new Set(data.map(a => a.patient_id).filter(Boolean))];
+            const intakeDone = new Set();
+            if (patientIds.length) {
+                const { data: intakes, error: intakeError } = await _supabase
+                    .from('admission_history').select('patient_id, intake_completed_at').in('patient_id', patientIds);
+                if (intakeError) console.error('Fetch intake status error:', intakeError.message);
+                (intakes || []).forEach(i => { if (i.intake_completed_at) intakeDone.add(String(i.patient_id)); });
+            }
+            const nameFor = (appt) => `${appt.profiles?.first_name || ''} ${appt.profiles?.last_name || ''}`.trim();
+
             document.getElementById('appointment-table-body').innerHTML = data.map(appt => `
                 <tr class="border-t border-gray-50 hover:bg-gray-50 transition">
-                    <td class="p-6 font-medium">${appt.profiles?.last_name || 'N/A'}, ${appt.profiles?.first_name || ''}</td>
+                    <td class="p-6 font-medium">
+                        ${appt.profiles?.last_name || 'N/A'}, ${appt.profiles?.first_name || ''}
+                        ${appt.booked_via === 'web' ? '<span class="ml-1 text-[8px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#EDE1E7] px-1.5 py-0.5 rounded-full">web</span>' : ''}
+                        ${appt.patient_id && !intakeDone.has(String(appt.patient_id)) ? `
+                            <div class="mt-1 flex items-center gap-2 flex-wrap">
+                                <span class="text-[8px] uppercase tracking-widest font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">⚠️ Historia incompleta</span>
+                                <button data-name="${escapeHtml(nameFor(appt))}" onclick="openCompleteIntakeModal('${appt.patient_id}', this.dataset.name)" class="text-[9px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline">Completar</button>
+                            </div>` : ''}
+                    </td>
                     <td class="p-6 uppercase text-[9px] tracking-widest">${Array.isArray(appt.service_type_ids) && appt.service_type_ids.length ? formatTreatmentIds(appt.service_type_ids) : (appt.service_type || '')}</td>
                     <td class="p-6 text-xs">${appt.appointment_date} @ ${appt.appointment_time.substring(0,5)}</td>
                     <td class="p-6"><span class="status-badge status-${appt.status}">${appt.status}</span></td>
@@ -3015,8 +3036,27 @@
         }
 
         function openNewPatientModal() {
+            completingIntakeFor = null;
+            document.getElementById('new-patient-modal-title').innerText = 'Nuevo paciente';
+            document.getElementById('new-patient-modal-subtitle').innerText = 'Al terminar se abre su historia clínica con el encuentro de hoy';
             resetNewPatientFrame('intake.html#mode=new&by=admin');
             newPatientInProgress = true;
+            const modal = document.getElementById('new-patient-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // "Completar historia": the same intake, for an existing patient whose
+        // intake isn't finished (e.g. booked online with only the basics). Step 1
+        // comes pre-filled for review; the patient signs the consent on this device.
+        let completingIntakeFor = null;
+        function openCompleteIntakeModal(patientId, name) {
+            if (!patientId) return;
+            completingIntakeFor = patientId;
+            document.getElementById('new-patient-modal-title').innerText = `Completar historia · ${String(name || '').trim()}`;
+            document.getElementById('new-patient-modal-subtitle').innerText = 'Revisa el paso 1 con el paciente y completa el resto · lo guardado no se pierde';
+            resetNewPatientFrame(`intake.html#mode=complete&by=admin&patient=${encodeURIComponent(patientId)}`);
+            newPatientInProgress = false; // progress is saved at every step
             const modal = document.getElementById('new-patient-modal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -3029,6 +3069,13 @@
             modal.classList.add('hidden');
             modal.classList.remove('flex');
             resetNewPatientFrame(null);
+            // After "Completar historia" (finished or not — each step was saved), show the update.
+            const completedFor = completingIntakeFor;
+            completingIntakeFor = null;
+            if (completedFor) {
+                if (completedFor === currentPatientId) loadAdmissionHistory(completedFor);
+                if (currentAdminView() === 'appointments-view') fetchAppointments();
+            }
         }
 
         function localDateAndTimeNow() {
@@ -3061,6 +3108,7 @@
             const frame = document.getElementById('new-patient-frame');
             if (!frame || event.source !== frame.contentWindow) return;
             if (event.data?.type === 'close-intake-modal') closeNewPatientModal(true);
+            if (event.data?.type === 'intake-complete' && completingIntakeFor) closeNewPatientModal(true);
             if (event.data?.type === 'intake-created' && event.data.patientId) onAdminCreatedPatient(event.data);
         });
 
@@ -3390,6 +3438,9 @@
             const ageBox = document.getElementById('adm-age-estimate');
             const sourceNote = document.getElementById('adm-source-note');
             if (!contentEl) return;
+            const intakeDone = !!data?.intake_completed_at;
+            document.getElementById('adm-incomplete-badge')?.classList.toggle('hidden', intakeDone);
+            document.getElementById('adm-complete-btn')?.classList.toggle('hidden', intakeDone);
 
             if (!data) {
                 contentEl.innerHTML = '<p class="opacity-40 italic">El paciente todavía no ha completado el cuestionario de ingreso. Usa "Editar" para capturarlo manualmente.</p>';
