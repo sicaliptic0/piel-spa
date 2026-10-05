@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clinical Admin | Piel Spa</title>
+    <!-- Installable as an app ("Agregar a pantalla de inicio") so phone notifications work with it closed -->
+    <link rel="manifest" href="admin-manifest.webmanifest">
+    <meta name="theme-color" content="#FDFBFC">
+    <link rel="apple-touch-icon" href="images/icon-180.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Piel Admin">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;500&family=Outfit:wght@300;400;500&family=Montserrat:wght@600&display=swap" rel="stylesheet">
     <style>
@@ -207,7 +215,24 @@
                     <div id="wa-filters" class="flex gap-1 flex-wrap"></div>
                     <div class="flex items-center justify-between gap-2">
                         <span id="wa-live-status" class="text-[9px] uppercase tracking-widest opacity-50"></span>
-                        <button id="wa-notify-btn" onclick="enableWhatsAppNotifications()" class="hidden text-[9px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline">🔔 Activar avisos</button>
+                        <span class="flex items-center gap-3">
+                            <button id="wa-notify-btn" onclick="enableWhatsAppNotifications()" class="hidden text-[9px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline">🔔 Activar avisos</button>
+                            <span id="wa-notify-on" class="hidden text-[9px] uppercase tracking-widest font-bold text-green-700">🔔 Avisos activos</span>
+                            <button id="wa-notify-test" onclick="testPushNotification()" class="hidden text-[9px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100 hover:underline">Probar</button>
+                        </span>
+                    </div>
+                    <!-- iPhone/iPad: Web Push only works from the home-screen app -->
+                    <div id="wa-install-help" class="hidden text-[11px] bg-[#FBF0F3] border border-[#EDE1E7] rounded-lg p-3 leading-relaxed">
+                        <div class="flex justify-between gap-2">
+                            <strong>📲 Avisos en el iPhone</strong>
+                            <button onclick="document.getElementById('wa-install-help').classList.add('hidden')" class="opacity-50 hover:opacity-100">&times;</button>
+                        </div>
+                        <ol class="list-decimal pl-4 mt-1 space-y-0.5">
+                            <li>Abre <strong>piel-spa.com/admin.html</strong> en <strong>Safari</strong>.</li>
+                            <li>Toca <strong>Compartir</strong> (cuadro con flecha ↑) → <strong>Agregar a pantalla de inicio</strong>.</li>
+                            <li>Abre el ícono <strong>Piel Admin</strong> desde la pantalla de inicio e inicia sesión.</li>
+                            <li>En Mensajes toca <strong>🔔 Activar avisos</strong> y acepta.</li>
+                        </ol>
                     </div>
                 </div>
                 <div id="wa-conv-list" class="flex-1 overflow-y-auto"></div>
@@ -1506,7 +1531,6 @@
             refreshPendingBadge(); // Show pending count on sidebar from the start
             renderAdmissionOptionLists();
             startWhatsAppInbox(); // live badge + alerts for new WhatsApp messages, in every view
-            if (window.location.hash === '#mensajes') switchAdminView('messages-view', document.getElementById('nav-messages'));
         }
 
         const ADMIN_VIEWS = {
@@ -2381,6 +2405,13 @@
                 .subscribe(status => { waLiveStatus = status; renderWaStatus(); });
             // Browsers only allow sound after the user has interacted with the page.
             document.addEventListener('click', unlockWaChime, { once: true });
+            checkPushState();
+            // Opened from a notification or the email link: #mensajes or #mensajes&chat=<id>
+            if (window.location.hash.startsWith('#mensajes')) {
+                switchAdminView('messages-view', document.getElementById('nav-messages'));
+                const chat = new URLSearchParams(window.location.hash.slice(1)).get('chat');
+                if (chat) openConversation(chat);
+            }
         }
 
         async function loadConversations() {
@@ -2476,8 +2507,9 @@
         function renderWaStatus() {
             const live = waLiveStatus === 'SUBSCRIBED';
             document.getElementById('wa-live-status').innerHTML = live ? '<span class="text-green-600">●</span> En vivo' : '<span class="text-amber-500">●</span> Conectando…';
-            const canNotify = 'Notification' in window && Notification.permission === 'default';
-            document.getElementById('wa-notify-btn').classList.toggle('hidden', !canNotify);
+            document.getElementById('wa-notify-btn').classList.toggle('hidden', waPushActive);
+            document.getElementById('wa-notify-on').classList.toggle('hidden', !waPushActive);
+            document.getElementById('wa-notify-test').classList.toggle('hidden', !waPushActive);
         }
 
         function setWaPanes(chatOpen) {
@@ -2683,6 +2715,8 @@
             const viewingThis = currentAdminView() === 'messages-view' && waActiveId === m.conversation_id && !document.hidden;
             if (viewingThis) return;
             playWaChime();
+            // With push on, this device already gets the system notification from sw-admin.js.
+            if (waPushActive) return;
             if (!('Notification' in window) || Notification.permission !== 'granted') return;
             const c = waConversations.find(x => x.id === m.conversation_id);
             const body = m.body || ({ image: '📷 Foto', document: '📄 Documento', audio: '🎤 Audio', video: '🎥 Video' }[m.media_type] || 'Nuevo mensaje');
@@ -2695,11 +2729,90 @@
             };
         }
 
+        // ---------- Phone / computer notifications (Web Push) ----------
+        // Public half of the VAPID key pair; the private half is a Supabase secret.
+        const VAPID_PUBLIC_KEY = 'BCpJaMYNOhwjER5-1HNWduwy7gWXJXKturYW57ZOWvu9ZZ-nfE_6rT_t_uxCdXSfwTqyEEpJpTA93B_OwB8L2Tk';
+        let waPushActive = false;
+
+        const isIosDevice = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isInstalledApp = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+
+        function urlBase64ToUint8Array(base64) {
+            const padded = (base64 + '='.repeat((4 - base64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+            return Uint8Array.from(atob(padded), c => c.charCodeAt(0));
+        }
+
+        // Is this device already subscribed? Re-saves it, in case the browser
+        // rotated the subscription.
+        async function checkPushState() {
+            waPushActive = false;
+            try {
+                if (pushSupported() && Notification.permission === 'granted') {
+                    const reg = await navigator.serviceWorker.getRegistration('/');
+                    const sub = reg && await reg.pushManager.getSubscription();
+                    if (sub) waPushActive = await savePushSubscription(sub);
+                }
+            } catch (e) {
+                console.warn('push state:', e.message);
+            }
+            renderWaStatus();
+        }
+
+        async function savePushSubscription(sub) {
+            const json = sub.toJSON();
+            const { data: { user } } = await _supabase.auth.getUser();
+            const device = (isIosDevice() ? 'iPhone/iPad' : /Android/.test(navigator.userAgent) ? 'Android' : 'Computadora') + (isInstalledApp() ? ' (app)' : '');
+            const { error } = await _supabase.from('push_subscriptions').upsert({
+                user_id: user?.id, endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth, device,
+            }, { onConflict: 'endpoint' });
+            if (error) console.error('push subscription not saved:', error.message);
+            return !error;
+        }
+
         async function enableWhatsAppNotifications() {
             unlockWaChime();
-            if ('Notification' in window) await Notification.requestPermission();
-            renderWaStatus();
             playWaChime();
+            if (isIosDevice() && !isInstalledApp()) {
+                document.getElementById('wa-install-help').classList.remove('hidden');
+                return;
+            }
+            if (!pushSupported()) {
+                alert('Este navegador no permite avisos. En el iPhone usa el ícono "Piel Admin" de la pantalla de inicio; en Android o computadora usa Chrome.');
+                return;
+            }
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                alert('No se dieron permisos de notificación. Actívalos en los ajustes del navegador o del teléfono y vuelve a intentarlo.');
+                return;
+            }
+            try {
+                const reg = await navigator.serviceWorker.register('/sw-admin.js', { scope: '/' });
+                await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.getSubscription()
+                    || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
+                waPushActive = await savePushSubscription(sub);
+                renderWaStatus();
+                if (waPushActive) testPushNotification();
+                else alert('No se pudo guardar este dispositivo. Intenta de nuevo.');
+            } catch (e) {
+                alert('No se pudieron activar los avisos: ' + e.message);
+            }
+        }
+
+        async function testPushNotification() {
+            const { data, error } = await _supabase.functions.invoke('push-test', { body: {} });
+            if (error || !data?.ok) { alert('No se pudo enviar la prueba.'); return; }
+            if (!data.delivered) alert('La prueba no llegó a ningún dispositivo. Toca "Activar avisos" de nuevo.');
+        }
+
+        // Tapping a notification while the admin is open: jump to that chat.
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data?.type !== 'open-chat') return;
+                switchAdminView('messages-view', document.getElementById('nav-messages'));
+                if (event.data.conversationId) openConversation(event.data.conversationId);
+            });
         }
 
         // ---------- Sending ----------

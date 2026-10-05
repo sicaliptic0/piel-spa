@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emailConfig, escapeHtml, sendEmail } from "../_shared/clinic.ts";
+import { sendPushToStaff } from "../_shared/push.ts";
 import { downloadWhatsAppMedia, extensionFor, validWebhookSignature, whatsappConfig } from "../_shared/whatsapp.ts";
 
 // Meta calls this for every incoming WhatsApp message and every delivery
@@ -9,8 +10,9 @@ import { downloadWhatsAppMedia, extensionFor, validWebhookSignature, whatsappCon
 //   POST — messages: find/create the conversation (matched to the patient by
 //          phone), save the message, download any photo/file into wa-media;
 //          statuses: sent → delivered → read / failed on our own messages.
-// When a chat starts waiting for staff, the clinic gets an email (once per
-// waiting period, not per message).
+// Every incoming message pushes a notification to the staff phones that turned
+// alerts on (one per chat, updated in place). When a chat starts waiting for
+// staff, the clinic also gets an email (once per waiting period, not per message).
 
 const MEDIA_TYPES = ["image", "document", "audio", "video", "sticker"];
 
@@ -99,19 +101,36 @@ async function handleMessage(db: SupabaseClient, m: Json, contacts: Json[]) {
   if (error && !String(error.message).includes("duplicate")) console.error("save message:", error.message);
   if (error) return;
 
-  // First message of a new waiting period → email the clinic.
   const { data: after } = await db.from("wa_conversations").select("needs_attention, profile_name, patient_id").eq("id", conv.id).single();
-  if (after?.needs_attention && !conv.needs_attention) await alertStaff(db, waId, after, String(row.body || "📎 Archivo"));
+  const name = await displayName(db, waId, after ?? conv);
+  const preview = String(row.body || ({ image: "📷 Foto", document: "📄 Documento", audio: "🎤 Audio", video: "🎥 Video" } as Record<string, string>)[String(row.media_type)] || "📎 Archivo");
+
+  // While the AI handles the chat (Phase 4) staff phones stay quiet.
+  if (after?.needs_attention) {
+    await sendPushToStaff(db, {
+      title: `WhatsApp · ${name}`,
+      body: preview.slice(0, 180),
+      tag: conv.id,
+      conversationId: conv.id,
+      url: `/admin.html#mensajes&chat=${conv.id}`,
+    });
+  }
+  // First message of a new waiting period → email the clinic.
+  if (after?.needs_attention && !conv.needs_attention) await alertStaff(waId, name, preview);
 }
 
-async function alertStaff(db: SupabaseClient, waId: string, conv: Json, preview: string) {
+async function displayName(db: SupabaseClient, waId: string, conv: Json): Promise<string> {
+  if (conv?.patient_id) {
+    const { data: p } = await db.from("profiles").select("first_name, last_name").eq("id", conv.patient_id).maybeSingle();
+    const full = `${p?.first_name ?? ""} ${p?.last_name ?? ""}`.trim();
+    if (full) return full;
+  }
+  return conv?.profile_name || `+${waId}`;
+}
+
+async function alertStaff(waId: string, name: string, preview: string) {
   const { resendApiKey, from, staffEmail } = emailConfig();
   if (!resendApiKey || !staffEmail) return;
-  let name = conv.profile_name || `+${waId}`;
-  if (conv.patient_id) {
-    const { data: p } = await db.from("profiles").select("first_name, last_name").eq("id", conv.patient_id).maybeSingle();
-    if (p) name = `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || name;
-  }
   try {
     await sendEmail(resendApiKey, from, [staffEmail], `💬 WhatsApp por responder: ${name}`, `
       <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #333;">
