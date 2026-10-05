@@ -217,7 +217,7 @@
                         <span id="wa-live-status" class="text-[9px] uppercase tracking-widest opacity-50"></span>
                         <span class="flex items-center gap-3">
                             <button id="wa-notify-btn" onclick="enableWhatsAppNotifications()" class="hidden text-[9px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline">🔔 Activar avisos</button>
-                            <span id="wa-notify-on" class="hidden text-[9px] uppercase tracking-widest font-bold text-green-700">🔔 Avisos activos</span>
+                            <button id="wa-notify-on" onclick="openPushDevices()" class="hidden text-[9px] uppercase tracking-widest font-bold text-green-700 hover:underline" title="Ver mis dispositivos con avisos">🔔 Avisos activos</button>
                             <button id="wa-notify-test" onclick="testPushNotification()" class="hidden text-[9px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100 hover:underline">Probar</button>
                         </span>
                     </div>
@@ -307,6 +307,21 @@
                     <button onclick="saveRecommendationTemplate()" class="ml-auto bg-[#2A2330] text-white px-6 py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition rounded-lg">Guardar</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ===== MY DEVICES WITH NOTIFICATIONS (push_subscriptions, own rows only) ===== -->
+    <div id="push-devices-modal" class="fixed inset-0 z-[80] hidden bg-black/40 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-4">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <h3 class="text-2xl italic">Mis dispositivos con avisos</h3>
+                    <p class="text-[10px] uppercase tracking-widest opacity-40">Reciben las notificaciones de WhatsApp de tu cuenta</p>
+                </div>
+                <button onclick="closePushDevices()" class="text-2xl opacity-40 hover:opacity-100">&times;</button>
+            </div>
+            <div id="push-devices-list" class="divide-y divide-[#EDE1E7] text-sm"></div>
+            <p class="text-[11px] opacity-50">Para agregar otro teléfono, abre el admin en ese teléfono e inicia sesión con tu cuenta → Mensajes → Activar avisos.</p>
         </div>
     </div>
 
@@ -2804,6 +2819,53 @@
             const { data, error } = await _supabase.functions.invoke('push-test', { body: {} });
             if (error || !data?.ok) { alert('No se pudo enviar la prueba.'); return; }
             if (!data.delivered) alert('La prueba no llegó a ningún dispositivo. Toca "Activar avisos" de nuevo.');
+        }
+
+        // "Avisos activos" → this admin's devices; any of them can be removed.
+        async function openPushDevices() {
+            const modal = document.getElementById('push-devices-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            const listEl = document.getElementById('push-devices-list');
+            listEl.innerHTML = '<p class="py-3 opacity-40">Cargando…</p>';
+            let currentEndpoint = null;
+            try {
+                const reg = pushSupported() && await navigator.serviceWorker.getRegistration('/');
+                currentEndpoint = (reg && (await reg.pushManager.getSubscription())?.endpoint) || null;
+            } catch (_) {}
+            const { data, error } = await _supabase.from('push_subscriptions')
+                .select('id, endpoint, device, created_at, last_used_at').order('created_at', { ascending: false });
+            if (error) { listEl.innerHTML = `<p class="py-3 text-red-500">${escapeHtml(error.message)}</p>`; return; }
+            if (!data.length) { listEl.innerHTML = '<p class="py-3 opacity-40">Ningún dispositivo todavía.</p>'; return; }
+            listEl.innerHTML = data.map(d => `
+                <div class="py-3 flex items-center justify-between gap-3">
+                    <div>
+                        <div class="font-medium">${escapeHtml(d.device || 'Dispositivo')} ${d.endpoint === currentEndpoint ? '<span class="text-[9px] uppercase tracking-widest font-bold text-green-700">· este</span>' : ''}</div>
+                        <div class="text-[10px] opacity-50">Desde ${new Date(d.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}${d.last_used_at ? ' · último aviso ' + new Date(d.last_used_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : ''}</div>
+                    </div>
+                    <button onclick="removePushDevice('${d.id}', ${d.endpoint === currentEndpoint})" class="text-[9px] uppercase tracking-widest font-bold text-red-500 hover:text-red-700">Quitar</button>
+                </div>`).join('');
+        }
+
+        function closePushDevices() {
+            const modal = document.getElementById('push-devices-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function removePushDevice(id, isThisDevice) {
+            if (!confirm('¿Dejar de recibir avisos en este dispositivo?')) return;
+            if (isThisDevice) {
+                try {
+                    const reg = await navigator.serviceWorker.getRegistration('/');
+                    const sub = reg && await reg.pushManager.getSubscription();
+                    if (sub) await sub.unsubscribe();
+                } catch (_) {}
+                waPushActive = false;
+                renderWaStatus();
+            }
+            await _supabase.from('push_subscriptions').delete().eq('id', id);
+            openPushDevices();
         }
 
         // Tapping a notification while the admin is open: jump to that chat.
