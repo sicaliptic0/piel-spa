@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi cita | Piel Spa</title>
+    <meta name="robots" content="noindex">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;500&family=Outfit:wght@300;400;500&family=Montserrat:wght@600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --soft-gold: #B76E88; --gold-hover: #9C5570; --deep-bronze: #2A2330; --cream-bg: #FDFBFC; --line: #EDE1E7;
+            --iris-gradient: linear-gradient(135deg, #F6D9E3 0%, #E7D6EE 50%, #DCE6F3 100%);
+            --iris-gradient-text: linear-gradient(120deg, #D97CA0 0%, #B87CD1 50%, #7CA3D9 100%);
+        }
+        body { font-family: 'Outfit', sans-serif; background-color: var(--cream-bg); color: var(--deep-bronze); }
+        h1, h2 { font-family: 'Cormorant Garamond', serif; }
+        .brand-piel { font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
+            background-image: var(--iris-gradient-text); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .brand-spa { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500; }
+        .btn-gold { background-image: var(--iris-gradient); background-color: var(--soft-gold); color: var(--deep-bronze); }
+        .btn-gold:hover:not(:disabled) { background-image: none; background-color: var(--gold-hover); color: white; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .highlight { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--soft-gold); }
+    </style>
+</head>
+<body class="min-h-screen">
+    <header class="w-full py-4 px-4 md:px-12 flex justify-between items-center bg-white border-b border-[#EDE1E7]">
+        <a href="index.html" class="text-[15px] md:text-xl"><span class="brand-piel">Piel</span> <span class="brand-spa">spa</span></a>
+        <button id="lang-toggle" class="text-[10px] tracking-widest text-[#B76E88] uppercase">EN / ES</button>
+    </header>
+
+    <main class="max-w-md mx-auto px-4 py-10">
+        <p id="loading" class="text-center opacity-60 py-10"></p>
+        <div id="not-found" class="hidden text-center py-10 space-y-4">
+            <p id="not-found-text"></p>
+            <a id="wa-link-nf" target="_blank" rel="noopener" class="inline-block text-[#128C7E] font-bold text-xs uppercase tracking-widest"></a>
+        </div>
+
+        <div id="card" class="hidden">
+            <h1 id="greeting" class="text-4xl text-center mb-6"></h1>
+            <div class="bg-white border border-[#EDE1E7] rounded-2xl p-6 space-y-2 mb-6">
+                <p id="when" class="text-lg font-semibold"></p>
+                <p id="services" class="text-sm opacity-70"></p>
+                <p id="state" class="pt-2 text-sm font-semibold"></p>
+            </div>
+            <div id="actions" class="space-y-3">
+                <button id="btn-confirm" onclick="respond('confirm')" class="btn-gold w-full py-4 uppercase text-xs tracking-widest font-bold rounded-xl"></button>
+                <a id="btn-reschedule" target="_blank" rel="noopener" class="block text-center w-full py-4 uppercase text-xs tracking-widest font-bold rounded-xl border border-[#25D366] text-[#128C7E] bg-white"></a>
+                <button id="btn-cancel" onclick="askCancel()" class="w-full py-4 uppercase text-xs tracking-widest font-bold rounded-xl border border-red-200 text-red-700 bg-white"></button>
+            </div>
+            <p id="note" class="text-xs opacity-60 text-center mt-6"></p>
+        </div>
+    </main>
+
+    <script>
+        let currentLang = 'es';
+        try { currentLang = localStorage.getItem('preferredLang') || 'es'; } catch (_) {}
+        const t = (en, es) => currentLang === 'en' ? en : es;
+
+        const SUPABASE_URL = 'https://qkjmrnqkoipdltauweub.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFram1ybnFrb2lwZGx0YXV3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTkyMjgsImV4cCI6MjA4OTA5NTIyOH0.EGqgJ9RNY9vYfuVeeEcGoMu_cIaygRq0hnyT-iE7zTw';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+        const CLINIC_WHATSAPP = '19295613388';
+
+        // Link from the reminder email: cita.html#t=<token>&a=confirm|cancel.
+        // The action only highlights a button — nothing happens without a click
+        // (mail scanners open links on their own).
+        const params = new URLSearchParams(window.location.hash.slice(1));
+        const token = params.get('t') || '';
+        const suggested = params.get('a');
+        let appt = null;
+
+        function formatTime12h(time) {
+            const [h, m] = time.split(':').map(Number);
+            return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+        }
+        function formatDay(iso) {
+            const s = new Date(iso + 'T12:00:00Z').toLocaleDateString(currentLang === 'en' ? 'en-US' : 'es-ES',
+                { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' });
+            return s.charAt(0).toUpperCase() + s.slice(1);
+        }
+        function waLink() {
+            const text = appt
+                ? t(`Hi, I'd like to reschedule my appointment on ${appt.date} at ${appt.time}.`, `Hola, quisiera reprogramar mi cita del ${appt.date} a las ${appt.time}.`)
+                : t('Hi, I have a question about my appointment.', 'Hola, tengo una pregunta sobre mi cita.');
+            return `https://wa.me/${CLINIC_WHATSAPP}?text=${encodeURIComponent(text)}`;
+        }
+
+        function render() {
+            document.documentElement.lang = currentLang;
+            document.getElementById('lang-toggle').innerText = currentLang === 'en' ? 'ES / EN' : 'EN / ES';
+            document.getElementById('loading').innerText = t('Loading your appointment…', 'Cargando tu cita…');
+            document.getElementById('not-found-text').innerText = t('We could not find this appointment. The link may be incomplete.', 'No encontramos esta cita. Puede que el enlace esté incompleto.');
+            const nf = document.getElementById('wa-link-nf');
+            nf.href = waLink();
+            nf.innerText = t('Write to us on WhatsApp', 'Escríbenos por WhatsApp');
+            if (!appt) return;
+
+            document.getElementById('greeting').innerText = appt.first_name ? t(`Hi, ${appt.first_name}`, `Hola, ${appt.first_name}`) : t('Your appointment', 'Tu cita');
+            document.getElementById('when').innerText = `${formatDay(appt.date)} · ${formatTime12h(appt.time)}`;
+            document.getElementById('services').innerText = (currentLang === 'en' ? appt.treatments_en : appt.treatments_es).join(', ');
+
+            const cancelled = appt.status === 'cancelled';
+            const state = document.getElementById('state');
+            if (cancelled) { state.innerText = t('❌ This appointment is cancelled.', '❌ Esta cita está cancelada.'); state.className = 'pt-2 text-sm font-semibold text-red-700'; }
+            else if (appt.is_past) { state.innerText = t('This appointment has already passed.', 'Esta cita ya pasó.'); state.className = 'pt-2 text-sm font-semibold opacity-60'; }
+            else if (appt.confirmed) { state.innerText = t('✓ You confirmed your attendance. See you soon!', '✓ Confirmaste tu asistencia. ¡Te esperamos!'); state.className = 'pt-2 text-sm font-semibold text-green-700'; }
+            else { state.innerText = ''; }
+
+            const canAct = !cancelled && !appt.is_past;
+            document.getElementById('actions').classList.toggle('hidden', !canAct);
+            const confirmBtn = document.getElementById('btn-confirm');
+            confirmBtn.classList.toggle('hidden', appt.confirmed);
+            confirmBtn.innerText = t('✓ Confirm I will attend', '✓ Confirmo que asistiré');
+            confirmBtn.classList.toggle('highlight', suggested === 'confirm');
+            const reschedule = document.getElementById('btn-reschedule');
+            reschedule.href = waLink();
+            reschedule.innerText = t('Reschedule via WhatsApp', 'Reprogramar por WhatsApp');
+            const cancelBtn = document.getElementById('btn-cancel');
+            cancelBtn.innerText = t('Cancel appointment', 'Cancelar cita');
+            cancelBtn.classList.toggle('highlight', suggested === 'cancel');
+
+            document.getElementById('note').innerText = cancelled
+                ? t('Want to book again? Visit piel-spa.com', '¿Quieres agendar de nuevo? Visita piel-spa.com/agendar.html')
+                : t('Please arrive 15 minutes early, with a clean face and as little makeup as possible.', 'Llega 15 minutos antes, con la cara limpia y el menor maquillaje posible.');
+        }
+
+        async function call(action) {
+            const { data, error } = await _supabase.functions.invoke('appointment-response', { body: { token, action } });
+            let code = data?.error;
+            if (error && !code) { try { code = (await error.context.json()).error; } catch (_) { code = error.message; } }
+            return { data, code };
+        }
+
+        async function respond(action) {
+            const buttons = document.querySelectorAll('#actions button');
+            buttons.forEach(b => b.disabled = true);
+            try {
+                const { data, code } = await call(action);
+                if (code) {
+                    alert(code === 'past' ? t('This appointment has already passed.', 'Esta cita ya pasó.')
+                        : code === 'cancelled' ? t('This appointment is already cancelled.', 'Esta cita ya está cancelada.')
+                        : t('Something went wrong. Please try again or write to us on WhatsApp.', 'Algo salió mal. Intenta de nuevo o escríbenos por WhatsApp.'));
+                    return;
+                }
+                appt = data;
+                render();
+            } finally {
+                buttons.forEach(b => b.disabled = false);
+            }
+        }
+
+        function askCancel() {
+            if (confirm(t('Cancel this appointment? The time will be freed for other patients.', '¿Cancelar esta cita? El horario quedará libre para otros pacientes.'))) respond('cancel');
+        }
+
+        document.getElementById('lang-toggle').addEventListener('click', () => {
+            currentLang = currentLang === 'en' ? 'es' : 'en';
+            try { localStorage.setItem('preferredLang', currentLang); } catch (_) {}
+            render();
+        });
+
+        (async function init() {
+            render();
+            const { data, code } = await call('view');
+            document.getElementById('loading').classList.add('hidden');
+            if (code || !data) { document.getElementById('not-found').classList.remove('hidden'); return; }
+            appt = data;
+            document.getElementById('card').classList.remove('hidden');
+            render();
+        })();
+    </script>
+</body>
+</html>

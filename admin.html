@@ -152,6 +152,18 @@
 
         <!-- Appointments View -->
         <div id="appointments-view" class="flex-1 overflow-y-auto p-4 md:p-8 hidden">
+            <!-- Tomorrow's appointments: send the reminder by WhatsApp and record answers.
+                 Confirmation counts from any channel (email link, WhatsApp link, or a "Sí" reply marked here). -->
+            <div id="wa-reminders-panel" class="hidden bg-white rounded-xl shadow-sm border border-[#EDE1E7] p-4 md:p-6 mb-6">
+                <div class="flex items-start justify-between gap-3 flex-wrap mb-4">
+                    <div>
+                        <h3 class="text-xl italic">Recordatorios de mañana</h3>
+                        <p id="wa-reminders-date" class="text-[10px] uppercase tracking-widest opacity-40"></p>
+                    </div>
+                    <p class="text-[11px] opacity-60 max-w-md">El correo se envía solo. Aquí envías también el WhatsApp. Vale cualquier confirmación: el enlace del correo, el del WhatsApp, o si responde "Sí" (márcalo con ✅).</p>
+                </div>
+                <div id="wa-reminders-list" class="divide-y divide-[#EDE1E7]"></div>
+            </div>
             <div class="bg-white rounded-xl shadow-sm border border-[#EDE1E7] overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left min-w-[600px]">
@@ -2271,11 +2283,108 @@
             }
         }
 
+        // Reminder (sent the day before by send-appointment-reminders) and the
+        // patient's answer from the reminder link (cita.html).
+        function appointmentReminderNote(appt) {
+            const lines = [];
+            if (appt.patient_cancelled_at) lines.push('<span class="text-red-600">❌ Canceló el paciente</span>');
+            else if (appt.patient_confirmed_at) lines.push('<span class="text-green-700">✅ Paciente confirmó</span>');
+            if (appt.reminder_channel === 'email') lines.push('<span class="opacity-50">📧 Recordatorio enviado</span>');
+            if (appt.whatsapp_reminder_at) lines.push('<span class="text-[#128C7E]">💬 WhatsApp enviado</span>');
+            else if (appt.reminder_channel === 'none') lines.push('<span class="text-amber-700">⚠️ Sin correo: recordar por teléfono</span>');
+            return lines.length ? `<div class="mt-1 text-[9px] font-bold space-y-0.5">${lines.map(l => `<div>${l}</div>`).join('')}</div>` : '';
+        }
+
+        // --- TOMORROW'S REMINDERS (WhatsApp, sent by the admin) ---
+        // Until the WhatsApp API is connected, the WhatsApp reminder goes out
+        // from the clinic's own WhatsApp through the usual modal. Its link is the
+        // same cita.html page as the email's, so a confirmation from either one
+        // lands in patient_confirmed_at; a "Sí" typed in the chat is marked here.
+        let reminderAppointments = {};
+
+        function clinicDateIso(offsetDays) {
+            return new Date(Date.now() + offsetDays * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+        }
+        function formatTime12h(time) {
+            const [h, m] = String(time || '').split(':').map(Number);
+            return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+        }
+
+        function renderWhatsAppReminders(appointments) {
+            const tomorrow = clinicDateIso(1);
+            const due = (appointments || [])
+                .filter(a => a.appointment_date === tomorrow && a.status !== 'cancelled')
+                .sort((a, b) => String(a.appointment_time).localeCompare(String(b.appointment_time)));
+            reminderAppointments = Object.fromEntries(due.map(a => [a.id, a]));
+            const panel = document.getElementById('wa-reminders-panel');
+            panel.classList.toggle('hidden', !due.length);
+            if (!due.length) return;
+            const label = new Date(tomorrow + 'T12:00:00Z').toLocaleDateString('es-ES', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' });
+            document.getElementById('wa-reminders-date').innerText = `${label} · ${due.length} cita${due.length === 1 ? '' : 's'}`;
+            document.getElementById('wa-reminders-list').innerHTML = due.map(a => {
+                const name = `${a.profiles?.first_name || ''} ${a.profiles?.last_name || ''}`.trim() || 'Paciente';
+                const services = Array.isArray(a.service_type_ids) && a.service_type_ids.length ? formatTreatmentIds(a.service_type_ids) : (a.service_type || '');
+                const chips = [];
+                if (a.patient_confirmed_at) chips.push('<span class="text-green-700">✅ Confirmó</span>');
+                if (a.reminder_channel === 'email') chips.push('<span class="opacity-50">📧 Correo enviado</span>');
+                if (a.reminder_channel === 'none') chips.push('<span class="text-amber-700">⚠️ Sin correo</span>');
+                if (a.whatsapp_reminder_at) chips.push('<span class="text-[#128C7E]">💬 WhatsApp enviado</span>');
+                const hasPhone = !!whatsappNumber(a.profiles?.phone);
+                return `
+                    <div class="py-3 flex items-center justify-between gap-3 flex-wrap">
+                        <div class="min-w-0">
+                            <div class="font-medium text-sm">${escapeHtml(formatTime12h(a.appointment_time))} · ${escapeHtml(name)}</div>
+                            <div class="text-[10px] uppercase tracking-widest opacity-50">${escapeHtml(services)}</div>
+                            <div class="mt-1 flex gap-3 flex-wrap text-[9px] font-bold uppercase tracking-widest">${chips.join('')}</div>
+                        </div>
+                        <div class="flex gap-2 flex-shrink-0">
+                            ${hasPhone ? `<button onclick="sendWhatsAppReminder('${a.id}')" class="text-[9px] uppercase tracking-widest font-bold text-[#128C7E] border border-[#25D366] px-3 py-1.5 rounded-full hover:bg-[#25D366] hover:text-white transition">💬 Recordar</button>` : '<span class="text-[9px] uppercase tracking-widest opacity-40">Sin teléfono</span>'}
+                            ${a.patient_confirmed_at ? '' : `<button onclick="markPatientConfirmed('${a.id}')" class="text-[9px] uppercase tracking-widest font-bold text-green-700 border border-green-300 px-3 py-1.5 rounded-full hover:bg-green-600 hover:text-white transition">✅ Confirmó</button>`}
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        async function sendWhatsAppReminder(appointmentId) {
+            const a = reminderAppointments[appointmentId];
+            if (!a) return;
+            const name = `${a.profiles?.first_name || ''} ${a.profiles?.last_name || ''}`.trim();
+            const firstName = String(a.profiles?.first_name || '').trim();
+            const day = new Date(a.appointment_date + 'T12:00:00Z').toLocaleDateString('es-ES', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' });
+            // Spanish names for the patient (the admin list shows the English labels).
+            const services = Array.isArray(a.service_type_ids) && a.service_type_ids.length
+                ? a.service_type_ids.map(id => TREATMENT_OPTIONS.find(o => o.id === id)?.es || getTreatmentLabelById(id)).join(', ')
+                : (a.service_type || '');
+            const link = a.response_token ? `https://piel-spa.com/cita.html#t=${a.response_token}&a=confirm` : '';
+            const text = [
+                `Hola${firstName ? ' ' + firstName : ''} 👋`,
+                '',
+                `Te recordamos tu cita en *Piel Spa* mañana *${day}* a las *${formatTime12h(a.appointment_time)}*${services ? ` (${services})` : ''}.`,
+                '',
+                link ? `Por favor confírmanos tu asistencia aquí 👉 ${link}` : 'Por favor confírmanos tu asistencia.',
+                'O respóndenos *SÍ* por este chat. Si necesitas reprogramar, escríbenos por aquí.',
+                '',
+                'Llega 15 minutos antes, con la cara limpia y el menor maquillaje posible. ✨',
+            ].join('\n');
+            openWhatsAppModal({ name, phone: a.profiles?.phone, text });
+            // Mark it as sent (needs the whatsapp_reminder_at column; harmless if it isn't there yet).
+            const { error } = await _supabase.from('appointments').update({ whatsapp_reminder_at: new Date().toISOString() }).eq('id', appointmentId);
+            if (error) console.warn('whatsapp_reminder_at not saved:', error.message);
+            else { a.whatsapp_reminder_at = new Date().toISOString(); renderWhatsAppReminders(Object.values(reminderAppointments)); }
+        }
+
+        async function markPatientConfirmed(appointmentId) {
+            const { error } = await _supabase.from('appointments').update({ patient_confirmed_at: new Date().toISOString() }).eq('id', appointmentId);
+            if (error) { alert('No se pudo marcar: ' + error.message); return; }
+            fetchAppointments();
+        }
+
         // --- APPOINTMENTS FETCHING ---
         async function fetchAppointments() {
-            const { data, error } = await _supabase.from('appointments').select('*, profiles(first_name, last_name)').order('appointment_date', { ascending: false });
+            const { data, error } = await _supabase.from('appointments').select('*, profiles(first_name, last_name, phone)').order('appointment_date', { ascending: false });
             if (error) { console.error("Fetch Appts Error:", error); return; }
             refreshPendingBadge();
+            renderWhatsAppReminders(data);
 
             // Patients who booked online may not have finished their health history yet.
             const patientIds = [...new Set(data.map(a => a.patient_id).filter(Boolean))];
@@ -2301,7 +2410,10 @@
                     </td>
                     <td class="p-6 uppercase text-[9px] tracking-widest">${Array.isArray(appt.service_type_ids) && appt.service_type_ids.length ? formatTreatmentIds(appt.service_type_ids) : (appt.service_type || '')}</td>
                     <td class="p-6 text-xs">${appt.appointment_date} @ ${appt.appointment_time.substring(0,5)}</td>
-                    <td class="p-6"><span class="status-badge status-${appt.status}">${appt.status}</span></td>
+                    <td class="p-6">
+                        <span class="status-badge status-${appt.status}">${appt.status}</span>
+                        ${appointmentReminderNote(appt)}
+                    </td>
                     <td class="p-6">
                         <div class="flex items-center gap-4">
                             <button onclick="openAppointmentDecisionModal('${appt.id}', '${appt.patient_id || ''}', '${(appt.profiles?.first_name || '').replace(/'/g, "\\'")} ${(appt.profiles?.last_name || '').replace(/'/g, "\\'")}', 'confirmed', '${appt.appointment_date}', '${appt.appointment_time}')" class="text-green-600 font-bold text-[10px] uppercase hover:underline">Confirm</button>

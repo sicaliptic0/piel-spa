@@ -1,4 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  CORS_HEADERS, TREATMENTS, appointmentDetailsTable, emailConfig, emailShell, escapeHtml, formatDateLong,
+  formatTime12h, isBookableTreatment, jsonResponse, sendEmail,
+} from "../_shared/clinic.ts";
 
 // Public online booking (agendar.html). Two ways in:
 //  - New patient: only the Step 1 basics (name, phone, email, DOB, sex). Creates
@@ -11,27 +15,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // it's free under a lock, and the appointment is created already confirmed.
 // The WhatsApp assistant will book through this same function later.
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-  });
-}
-
-function escapeHtml(value: string): string {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 function onlyDigits(value: unknown): string {
   return String(value ?? "").replace(/\D/g, "");
 }
@@ -41,70 +24,11 @@ function syntheticEmail(phoneDigits: string): string {
   return `${phoneDigits}@patients.piel-spa.internal`;
 }
 
-// Same ids/labels as TREATMENT_OPTIONS in dashboard.html and agendar.html.
-// (filler_dissolution is visit-history only, not bookable.)
-const BOOKABLE_TREATMENTS: Record<string, { en: string; es: string }> = {
-  general_consultation: { en: "General Consultation", es: "Consulta General" },
-  upper_face_rejuvenation: { en: "Upper Face Rejuvenation", es: "Rejuvenecimiento de la Parte Superior" },
-  masseter_reduction_bruxism: { en: "Masseter Reduction (Bruxism)", es: "Reducción del Masetero (Bruxismo)" },
-  gummy_smile_correction: { en: "Gummy Smile Correction", es: "Corrección de Sonrisa Gingival" },
-  nasal_profiling: { en: "Nasal Profiling", es: "Perfilado Nasal" },
-  hyperhidrosis_treatment: { en: "Hyperhidrosis Treatment", es: "Tratamiento de Hiperhidrosis" },
-  lip_augmentation: { en: "Lip Augmentation", es: "Aumento de Labios" },
-  facial_harmonization: { en: "Facial Harmonization", es: "Armonización Facial" },
-  jawline_masculinization: { en: "Jawline Masculinization", es: "Masculinización de la Mandíbula" },
-  facial_feminization: { en: "Facial Feminization", es: "Feminización Facial" },
-  sculptra: { en: "Sculptra (Poly-L-Lactic Acid)", es: "Sculptra (Acido Polilactico)" },
-  radiesse: { en: "Radiesse (Calcium Hydroxylapatite)", es: "Radiesse (Hidroxiapatita de Calcio)" },
-  exosomes_therapy_direct_injection: { en: "Exosomes Therapy (Direct Injection)", es: "Terapia con Exosomas (Inyección Directa)" },
-  microneedling_exosomes: { en: "Microneedling + Exosomes", es: "Microneedling + Exosomas" },
-  salmon_pdrn_direct_injection: { en: "Salmon PDRN (Direct Injection)", es: "Salmon PDRN (Inyección Directa)" },
-  microneedling_salmon_pdrn: { en: "Microneedling + Salmon PDRN", es: "Microneedling + Salmon PDRN" },
-  nctf_skin_boosting: { en: "NCTF Skin Boosting", es: "Impulso de la Piel con NCTF" },
-  fractional_co2_laser_resurfacing: { en: "Fractional CO2 Laser Resurfacing", es: "Resurfacing con Láser CO2 Fraccionado" },
-  facial_cleansing: { en: "Facial Cleansing", es: "Limpieza Facial" },
-};
-
 // A patient can hold at most this many upcoming appointments — keeps the public
 // form from being used to fill the agenda.
 const MAX_UPCOMING_PER_PATIENT = 3;
 
-function formatDateLong(isoDate: string, lang: "es" | "en"): string {
-  const d = new Date(`${isoDate}T12:00:00Z`);
-  return d.toLocaleDateString(lang === "es" ? "es-ES" : "en-US", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC",
-  });
-}
-
-function formatTime12h(time: string): string {
-  const [h, m] = time.split(":").map(Number);
-  const suffix = h >= 12 ? "PM" : "AM";
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}:${String(m).padStart(2, "0")} ${suffix}`;
-}
-
-function emailShell(bannerText: string, bannerBg: string, bannerColor: string, body: string, contactEmail: string) {
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #333;">
-      <div style="background:#FDFBFC; padding: 24px 32px; text-align: center; border-bottom: 1px solid #EDE1E7;">
-        <img src="https://piel-spa.com/images/logo.png" alt="Piel Spa" style="max-width:220px; width:100%; height:auto; display:inline-block;">
-      </div>
-      <div style="background:${bannerBg}; padding: 16px 32px; text-align:center; border-bottom: 1px solid #EDE1E7;">
-        <p style="margin:0; font-size:13px; text-transform:uppercase; letter-spacing:2px; color:${bannerColor}; font-weight:bold;">${bannerText}</p>
-      </div>
-      <div style="background:#fff; padding: 32px;">${body}</div>
-      <div style="background:#FBF0F3; padding:20px 32px; text-align:center; border-top:1px solid #EDE1E7;">
-        <p style="margin:0; font-size:11px; color:#888; line-height:1.8;">
-          Piel Spa LLC<br>
-          <a href="https://piel-spa.com" style="color:#B76E88; text-decoration:none;">www.piel-spa.com</a> &nbsp;·&nbsp;
-          <a href="mailto:${contactEmail}" style="color:#B76E88; text-decoration:none;">${contactEmail}</a>
-        </p>
-      </div>
-    </div>
-  `;
-}
-
-function renderWelcomeEmail(input: { firstName: string; phoneDigits: string; contactEmail: string }) {
+function renderWelcomeEmail(input: { firstName: string; phoneDigits: string }) {
   const body = `
     <p style="font-size:16px; margin-top:0;">Hola <strong>${escapeHtml(input.firstName)}</strong>,</p>
     <p style="font-size:14px; color:#444; line-height:1.6;">
@@ -130,18 +54,12 @@ function renderWelcomeEmail(input: { firstName: string; phoneDigits: string; con
       if you can't, we'll finish it together at the clinic.
     </p>
   `;
-  return emailShell("Bienvenido(a) a Piel Spa &nbsp;·&nbsp; Welcome to Piel Spa", "#FBF0F3", "#B76E88", body, input.contactEmail);
+  return emailShell("Bienvenido(a) a Piel Spa &nbsp;·&nbsp; Welcome to Piel Spa", "#FBF0F3", "#B76E88", body);
 }
 
 function renderConfirmationEmail(input: {
-  firstName: string; date: string; time: string; treatmentsEs: string[]; treatmentsEn: string[];
-  intakeComplete: boolean; contactEmail: string;
+  firstName: string; date: string; time: string; treatmentsEs: string[]; intakeComplete: boolean;
 }) {
-  const rows = [
-    `<tr><td style="padding:6px 12px 6px 0; color:#888; font-size:13px;">Fecha / Date</td><td style="padding:6px 0; font-size:13px; font-weight:bold;">${escapeHtml(formatDateLong(input.date, "es"))}<br><span style="font-weight:normal; color:#666;">${escapeHtml(formatDateLong(input.date, "en"))}</span></td></tr>`,
-    `<tr><td style="padding:6px 12px 6px 0; color:#888; font-size:13px;">Hora / Time</td><td style="padding:6px 0; font-size:13px; font-weight:bold;">${escapeHtml(formatTime12h(input.time))}</td></tr>`,
-    `<tr><td style="padding:6px 12px 6px 0; color:#888; font-size:13px; vertical-align:top;">Servicios / Services</td><td style="padding:6px 0; font-size:13px;">${input.treatmentsEs.map(escapeHtml).join(", ")}</td></tr>`,
-  ].join("");
   const intakeNote = input.intakeComplete ? "" : `
     <div style="background:#FBF0F3; border-left:4px solid #B76E88; padding:12px 16px; margin:16px 0; border-radius:4px;">
       <p style="margin:0; font-size:13px; color:#2A2330;">
@@ -159,7 +77,7 @@ function renderConfirmationEmail(input: {
       Your appointment is confirmed. Please arrive 15 minutes early, with a clean face and as little makeup as possible.
       If you can't make it, please let us know in advance.
     </p>
-    <table style="width:100%; border-collapse:collapse; margin:20px 0;">${rows}</table>
+    ${appointmentDetailsTable(input.date, input.time, input.treatmentsEs)}
     ${intakeNote}
     <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px 16px; margin-top:20px;">
       <p style="margin:0; font-size:12px; color:#92400E;">
@@ -168,7 +86,7 @@ function renderConfirmationEmail(input: {
       </p>
     </div>
   `;
-  return emailShell("Cita confirmada &nbsp;·&nbsp; Appointment confirmed", "#D1FAE5", "#065F46", body, input.contactEmail);
+  return emailShell("Cita confirmada &nbsp;·&nbsp; Appointment confirmed", "#D1FAE5", "#065F46", body);
 }
 
 function renderStaffAlertEmail(input: {
@@ -198,28 +116,13 @@ function renderStaffAlertEmail(input: {
   `;
 }
 
-async function sendEmail(resendApiKey: string, from: string, to: string[], subject: string, html: string, replyTo?: string) {
-  const payload: Record<string, unknown> = { from, to, subject, html };
-  if (replyTo) payload.reply_to = replyTo;
-  const resp = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!resp.ok) throw new Error(`Resend error: ${await resp.text()}`);
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const resendApiKey = Deno.env.get("RESEND_API_KEY");
-  const fromRaw = Deno.env.get("FROM_EMAIL") ?? "noreply@piel-spa.com";
-  const staffEmail = Deno.env.get("BOOKING_ALERT_EMAIL") ?? "";
-  const contactEmail = "info@piel-spa.com";
-  const fromEmail = `Piel Spa <${fromRaw}>`;
+  const { resendApiKey, from: fromEmail, staffEmail } = emailConfig();
 
   if (!supabaseUrl || !serviceRole) return jsonResponse({ error: "Missing required env vars" }, 500);
   const adminClient = createClient(supabaseUrl, serviceRole);
@@ -238,7 +141,7 @@ Deno.serve(async (req) => {
 
     const treatmentIds: string[] = (Array.isArray(body?.treatments) ? body.treatments : [])
       .map((id: unknown) => String(id))
-      .filter((id: string, i: number, all: string[]) => BOOKABLE_TREATMENTS[id] && all.indexOf(id) === i);
+      .filter((id: string, i: number, all: string[]) => isBookableTreatment(id) && all.indexOf(id) === i);
     if (!treatmentIds.length) return jsonResponse({ error: "no_treatments" }, 400);
 
     // ---------- Who is booking ----------
@@ -334,8 +237,8 @@ Deno.serve(async (req) => {
     }
 
     // ---------- Take the slot ----------
-    const labelsEn = treatmentIds.map((id) => BOOKABLE_TREATMENTS[id].en);
-    const labelsEs = treatmentIds.map((id) => BOOKABLE_TREATMENTS[id].es);
+    const labelsEn = treatmentIds.map((id) => TREATMENTS[id].en);
+    const labelsEs = treatmentIds.map((id) => TREATMENTS[id].es);
     const { data: appointmentId, error: bookError } = await adminClient.rpc("book_appointment_slot", {
       p_patient_id: patientId,
       p_date: date,
@@ -365,10 +268,10 @@ Deno.serve(async (req) => {
       if (patientEmail) {
         if (isNew) {
           jobs.push(sendEmail(resendApiKey, fromEmail, [patientEmail], "Tu cuenta en Piel Spa | Your Piel Spa account",
-            renderWelcomeEmail({ firstName, phoneDigits, contactEmail }), staffEmail || undefined));
+            renderWelcomeEmail({ firstName, phoneDigits }), staffEmail || undefined));
         }
         jobs.push(sendEmail(resendApiKey, fromEmail, [patientEmail], "Cita confirmada | Piel Spa",
-          renderConfirmationEmail({ firstName, date, time, treatmentsEs: labelsEs, treatmentsEn: labelsEn, intakeComplete, contactEmail }),
+          renderConfirmationEmail({ firstName, date, time, treatmentsEs: labelsEs, intakeComplete }),
           staffEmail || undefined));
       }
       if (staffEmail) {
