@@ -170,16 +170,23 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("method not allowed", { status: 405 });
 
   const raw = await req.text();
-  if (!(await validWebhookSignature(raw, req.headers.get("x-hub-signature-256")))) {
+  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const signatureOk = await validWebhookSignature(raw, req.headers.get("x-hub-signature-256"));
+  if (!signatureOk) {
+    await saveDiagnostic(db, { signature_ok: false, has_signature_header: !!req.headers.get("x-hub-signature-256"), bytes: raw.length });
     return new Response("invalid signature", { status: 401 });
   }
 
-  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const diag: Record<string, unknown> = { signature_ok: true, fields: [], messages: 0, statuses: 0 };
   try {
     const payload = JSON.parse(raw);
     for (const entry of payload.entry ?? []) {
       for (const change of entry.changes ?? []) {
         const value = change.value ?? {};
+        (diag.fields as string[]).push(String(change.field));
+        diag.phone_number_id = value.metadata?.phone_number_id ?? diag.phone_number_id;
+        diag.messages = Number(diag.messages) + (value.messages ?? []).length;
+        diag.statuses = Number(diag.statuses) + (value.statuses ?? []).length;
         for (const m of value.messages ?? []) await handleMessage(db, m, value.contacts ?? []);
         for (const s of value.statuses ?? []) await handleStatus(db, s);
       }
@@ -187,6 +194,18 @@ Deno.serve(async (req) => {
   } catch (e) {
     // Still answer 200: a non-2xx makes Meta retry the same payload for days.
     console.error("whatsapp-webhook:", (e as Error).message);
+    diag.error = (e as Error).message;
   }
+  await saveDiagnostic(db, diag);
   return new Response("ok", { status: 200 });
 });
+
+// Technical trace of each call (never message content), read by
+// whatsapp-diagnose while the connection is being set up.
+async function saveDiagnostic(db: SupabaseClient, info: Record<string, unknown>) {
+  try {
+    const at = new Date().toISOString();
+    await db.storage.from("wa-media").upload(`diag/webhook-${at}.json`,
+      new Blob([JSON.stringify({ at, ...info })], { type: "application/json" }), { upsert: true });
+  } catch (_) { /* diagnostics must never break the webhook */ }
+}

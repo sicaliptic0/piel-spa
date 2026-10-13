@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <title>Clinical Admin | Piel Spa</title>
     <!-- Installable as an app ("Agregar a pantalla de inicio") so phone notifications work with it closed -->
     <link rel="manifest" href="admin-manifest.webmanifest">
@@ -15,6 +15,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;500&family=Outfit:wght@300;400;500&family=Montserrat:wght@600&display=swap" rel="stylesheet">
     <style>
+        /* Phones: 100vh includes the area under the browser bars, which hid the
+           chat reply box behind Chrome's bottom toolbar. dvh is the visible height. */
+        body.h-screen { height: 100vh; height: 100dvh; }
+        .safe-bottom { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
         :root {
             --iris-gradient-text: linear-gradient(120deg, #D97CA0 0%, #B87CD1 50%, #7CA3D9 100%);
         }
@@ -258,7 +262,7 @@
                     <div id="wa-window-note" class="hidden bg-amber-50 border-t border-amber-200 text-amber-800 text-[11px] px-4 py-2">
                         Pasaron más de 24 horas desde el último mensaje del paciente. WhatsApp solo permite escribirle de nuevo con una plantilla aprobada por Meta (se agregará con los recordatorios automáticos).
                     </div>
-                    <div class="bg-white border-t border-[#EDE1E7] p-2 md:p-3">
+                    <div class="bg-white border-t border-[#EDE1E7] p-2 md:p-3 safe-bottom">
                         <div id="wa-attachment" class="hidden mb-2 flex items-center gap-2 text-[11px] bg-[#FBF0F3] rounded-lg px-3 py-2">
                             <span id="wa-attachment-name" class="truncate flex-1"></span>
                             <button onclick="clearWhatsAppAttachment()" class="text-lg leading-none opacity-50 hover:opacity-100">&times;</button>
