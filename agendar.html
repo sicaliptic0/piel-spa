@@ -145,8 +145,13 @@
 
                 <!-- New patient: Step 1 basics only -->
                 <div id="who-new" class="hidden space-y-4">
+                    <!-- Historic patient: seen before the system, no portal login yet -->
+                    <div id="who-historic" class="hidden bg-[#FBF0F3] border border-[#EDE1E7] rounded-xl p-4 text-sm">
+                        <p class="font-semibold" data-en="Welcome back! 👋" data-es="¡Hola de nuevo! 👋">¡Hola de nuevo! 👋</p>
+                        <p class="opacity-70 mt-1" data-en="We already have your information from a previous visit. Complete these details to create your Patient Portal access — your history will stay linked to it." data-es="Ya tenemos tus datos de una visita anterior. Completa estos datos para crear tu acceso al Portal del Paciente — tu historial quedará unido a tu cuenta.">Ya tenemos tus datos de una visita anterior. Completa estos datos para crear tu acceso al Portal del Paciente — tu historial quedará unido a tu cuenta.</p>
+                    </div>
                     <div class="flex justify-between items-center">
-                        <p class="text-sm opacity-70" data-en="First visit — just a few details." data-es="Primera visita — solo unos datos.">Primera visita — solo unos datos.</p>
+                        <p id="who-new-title" class="text-sm opacity-70" data-en="First visit — just a few details." data-es="Primera visita — solo unos datos.">Primera visita — solo unos datos.</p>
                         <button onclick="changePhone()" class="text-[10px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100" data-en="Change phone" data-es="Cambiar teléfono">Cambiar teléfono</button>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -398,8 +403,12 @@
             selectedSex = value;
             document.querySelectorAll('[data-sex]').forEach(b => b.classList.toggle('selected', b.dataset.sex === value));
         }
-        function showWho(mode) {
+        // historic: the phone belongs to a patient seen before the system (no
+        // portal login yet) — same form as a new patient, with a welcome-back note.
+        function showWho(mode, historic = false) {
             patientMode = mode;
+            document.getElementById('who-historic').classList.toggle('hidden', !historic);
+            document.getElementById('who-new-title').classList.toggle('hidden', historic);
             document.getElementById('who-session').classList.toggle('hidden', mode !== 'session');
             // The phone stays on screen (locked) once checked, so it can be double-checked.
             document.getElementById('who-phone').classList.toggle('hidden', mode === 'session');
@@ -426,7 +435,8 @@
             try {
                 const { data, error } = await _supabase.functions.invoke('check-phone-available', { body: { phone: digits } });
                 // Fail open to the new-patient form; the server re-checks before creating anything.
-                showWho(!error && data && data.available === false ? 'returning' : 'new');
+                if (!error && data?.needs_account) showWho('new', true);
+                else showWho(!error && data && data.available === false ? 'returning' : 'new');
             } finally {
                 btn.disabled = false;
             }
@@ -474,6 +484,7 @@
         const ERROR_MESSAGES = {
             slot_not_available: ['That time was just taken. Please pick another one.', 'Ese horario se acaba de ocupar. Elige otro, por favor.'],
             phone_already_registered: ['This phone is already registered. Enter your password to continue.', 'Este teléfono ya está registrado. Ingresa tu contraseña para continuar.'],
+            identity_mismatch: ['The name does not match the one we have on file for this phone. Please check how you wrote it, or message us on WhatsApp and we will help you.', 'El nombre no coincide con el que tenemos registrado para este teléfono. Revisa cómo lo escribiste, o escríbenos por WhatsApp y te ayudamos.'],
             email_already_registered: ['This email belongs to another patient. Please use a different one, or contact us.', 'Este correo ya pertenece a otro paciente. Usa uno diferente o contáctanos.'],
             too_many_upcoming: ['You already have 3 upcoming appointments. Please contact us to book more.', 'Ya tienes 3 citas próximas. Contáctanos para agendar más.'],
             not_signed_in: ['Your session expired. Please sign in again.', 'Tu sesión expiró. Inicia sesión de nuevo.'],

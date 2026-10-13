@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { findHistoricPatient, nameMatchesRecord } from "../_shared/historicPatient.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -118,10 +119,18 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Missing required account fields" }, 400);
     }
 
+    // A historic patient (loaded by staff, no login yet): if the name matches the
+    // record, the login reuses their profile id so their past visits stay attached.
+    const historic = await findHistoricPatient(adminClient, phoneDigits);
+    if (historic && !nameMatchesRecord(historic, firstName, lastName)) {
+      return jsonResponse({ error: "identity_mismatch" }, 409);
+    }
+
     // The phone digits double as the initial password (product decision — patients can
     // change it later from the portal). The auth identifier is a synthetic email (see
     // syntheticEmail()) rather than the phone field itself or the patient's real email.
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({
+      ...(historic ? { id: historic.id } : {}),
       email: syntheticEmail(phoneDigits),
       password: phoneDigits,
       email_confirm: true,
@@ -140,6 +149,11 @@ Deno.serve(async (req) => {
       const msg = (createError?.message || "").toLowerCase();
       const alreadyExists = msg.includes("already") || msg.includes("registered") || msg.includes("exists");
       return jsonResponse({ error: alreadyExists ? "phone_already_registered" : (createError?.message || "Could not create account") }, alreadyExists ? 409 : 500);
+    }
+
+    if (historic && created.user.id !== historic.id) {
+      await adminClient.auth.admin.deleteUser(created.user.id);
+      return jsonResponse({ error: "Could not link the account to the existing patient" }, 500);
     }
 
     const userId = created.user.id;

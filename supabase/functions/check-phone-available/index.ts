@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { findHistoricPatient } from "../_shared/historicPatient.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +21,8 @@ function onlyDigits(value: unknown): string {
 // form — that their phone number is already registered, instead of only finding out
 // at the very last step. Returns only a boolean, never any patient details, to keep
 // this from being useful for enumerating who has an account beyond a yes/no per number.
+// needs_account: the number belongs to a historic patient (loaded by staff, no portal
+// login yet) — the page then asks for their details to create the login.
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
@@ -44,7 +47,9 @@ Deno.serve(async (req) => {
       .limit(1);
 
     if (error) return jsonResponse({ available: true }); // fail open — never block signup over a lookup error
-    return jsonResponse({ available: !profiles?.length });
+    if (!profiles?.length) return jsonResponse({ available: true });
+    const historic = await findHistoricPatient(adminClient, phoneDigits);
+    return jsonResponse({ available: false, needs_account: !!historic });
   } catch (_error) {
     return jsonResponse({ available: true });
   }

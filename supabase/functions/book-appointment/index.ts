@@ -3,12 +3,16 @@ import {
   CORS_HEADERS, TREATMENTS, appointmentDetailsTable, emailConfig, emailShell, escapeHtml, formatDateLong,
   formatTime12h, isBookableTreatment, jsonResponse, sendEmail,
 } from "../_shared/clinic.ts";
+import { type HistoricPatient, findHistoricPatient, nameMatchesRecord } from "../_shared/historicPatient.ts";
 
 // Public online booking (agendar.html). Two ways in:
 //  - New patient: only the Step 1 basics (name, phone, email, DOB, sex). Creates
 //    the portal account exactly like create-patient-account (synthetic email as
 //    the auth identifier, phone digits as the password) but with no intake yet —
 //    the patient finishes it later from the portal, or the admin does in clinic.
+//    A historic patient (loaded by staff, no login yet) comes in this way too:
+//    if the name matches the record, the login is created with their existing
+//    profile id so their past visits stay attached.
 //  - Existing patient: signed in on the page (their phone + password), so the
 //    request carries their session token and `use_session: true`.
 // Either way the slot is taken through book_appointment_slot(), which re-checks
@@ -91,7 +95,7 @@ function renderConfirmationEmail(input: {
 
 function renderStaffAlertEmail(input: {
   patientName: string; phone: string; email: string; date: string; time: string; treatments: string[];
-  isNew: boolean; intakeComplete: boolean;
+  isNew: boolean; intakeComplete: boolean; historic: boolean;
 }) {
   const row = (label: string, value: string) =>
     `<tr><td style="padding:6px 12px 6px 0; color:#888; font-size:13px; vertical-align:top;">${label}</td><td style="padding:6px 0; font-size:13px;">${value}</td></tr>`;
@@ -103,7 +107,7 @@ function renderStaffAlertEmail(input: {
       <div style="background:#fff; padding: 28px 32px;">
         <p style="margin-top:0; font-size:15px;"><strong>Cita agendada y confirmada desde la web.</strong></p>
         <table style="width:100%; border-collapse:collapse; margin:16px 0;">
-          ${row("Paciente", `<strong>${escapeHtml(input.patientName)}</strong> ${input.isNew ? "(nuevo)" : ""}`)}
+          ${row("Paciente", `<strong>${escapeHtml(input.patientName)}</strong> ${input.historic ? "(paciente anterior — acaba de crear su cuenta)" : input.isNew ? "(nuevo)" : ""}`)}
           ${row("Teléfono", escapeHtml(input.phone))}
           ${row("Email", escapeHtml(input.email))}
           ${row("Fecha", `<strong>${escapeHtml(formatDateLong(input.date, "es"))}</strong>`)}
@@ -152,6 +156,7 @@ Deno.serve(async (req) => {
     let patientEmail = "";
     let patientPhone = "";
     let phoneDigits = "";
+    let historic: HistoricPatient | null = null;
 
     if (body?.use_session) {
       const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
@@ -185,11 +190,17 @@ Deno.serve(async (req) => {
 
       const { data: phoneMatch } = await adminClient
         .from("profiles").select("id").ilike("phone", `%${phoneDigits}`).limit(1);
-      if (phoneMatch?.length) return jsonResponse({ error: "phone_already_registered" }, 409);
+      if (phoneMatch?.length) {
+        historic = await findHistoricPatient(adminClient, phoneDigits);
+        if (!historic) return jsonResponse({ error: "phone_already_registered" }, 409);
+        if (!nameMatchesRecord(historic, firstName, lastName)) return jsonResponse({ error: "identity_mismatch" }, 409);
+      }
 
       const { data: emailMatch } = await adminClient
-        .from("profiles").select("id").ilike("email", patientEmail.replace(/[%_\\]/g, (c) => `\\${c}`)).limit(1);
-      if (emailMatch?.length) return jsonResponse({ error: "email_already_registered" }, 409);
+        .from("profiles").select("id").ilike("email", patientEmail.replace(/[%_\\]/g, (c) => `\\${c}`)).limit(2);
+      if (emailMatch?.some((p: { id: string }) => p.id !== historic?.id)) {
+        return jsonResponse({ error: "email_already_registered" }, 409);
+      }
 
       // Check the slot before creating anything, so a taken hour doesn't leave
       // an account behind. book_appointment_slot() checks again under a lock.
@@ -199,6 +210,7 @@ Deno.serve(async (req) => {
       }
 
       const { data: created, error: createError } = await adminClient.auth.admin.createUser({
+        ...(historic ? { id: historic.id } : {}),
         email: syntheticEmail(phoneDigits),
         password: phoneDigits,
         email_confirm: true,
@@ -211,6 +223,11 @@ Deno.serve(async (req) => {
         const msg = (createError?.message || "").toLowerCase();
         const alreadyExists = msg.includes("already") || msg.includes("registered") || msg.includes("exists");
         return jsonResponse({ error: alreadyExists ? "phone_already_registered" : (createError?.message || "account_failed") }, alreadyExists ? 409 : 500);
+      }
+      // The login must reuse the historic profile's id, or the history wouldn't follow.
+      if (historic && created.user.id !== historic.id) {
+        await adminClient.auth.admin.deleteUser(created.user.id);
+        return jsonResponse({ error: "account_failed" }, 500);
       }
 
       patientId = created.user.id;
@@ -251,7 +268,9 @@ Deno.serve(async (req) => {
     if (bookError) {
       if (isNew) {
         // Taken in the last second: don't leave a half-made new account behind.
-        await adminClient.from("profiles").delete().eq("id", patientId);
+        // A historic patient keeps their profile and history; only the new login goes.
+        if (historic) await adminClient.from("profiles").update({ is_manual_patient: true }).eq("id", patientId);
+        else await adminClient.from("profiles").delete().eq("id", patientId);
         await adminClient.auth.admin.deleteUser(patientId);
       }
       const taken = (bookError.message || "").includes("slot_not_available");
@@ -276,13 +295,13 @@ Deno.serve(async (req) => {
       }
       if (staffEmail) {
         jobs.push(sendEmail(resendApiKey, fromEmail, [staffEmail], `🗓 Nueva cita en línea: ${firstName} ${lastName} · ${date} ${time}`,
-          renderStaffAlertEmail({ patientName: `${firstName} ${lastName}`, phone: patientPhone, email: patientEmail, date, time, treatments: labelsEs, isNew, intakeComplete })));
+          renderStaffAlertEmail({ patientName: `${firstName} ${lastName}`, phone: patientPhone, email: patientEmail, date, time, treatments: labelsEs, isNew, intakeComplete, historic: !!historic })));
       }
       const results = await Promise.allSettled(jobs);
       results.forEach((r) => { if (r.status === "rejected") console.error("book-appointment email:", r.reason); });
     }
 
-    return jsonResponse({ ok: true, appointment_id: appointmentId, is_new: isNew, intake_complete: intakeComplete, date, time });
+    return jsonResponse({ ok: true, appointment_id: appointmentId, is_new: isNew, historic: !!historic, intake_complete: intakeComplete, date, time });
   } catch (error) {
     return jsonResponse({ error: (error as Error).message }, 500);
   }

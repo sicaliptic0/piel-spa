@@ -140,6 +140,7 @@
                     </div>
                     <p class="text-[10px] opacity-50 mt-1" data-en="To log in, you'll only use the number (no country code) as both your username and your initial password." data-es="Para iniciar sesión usarás solo el número (sin el código de país) como tu usuario y tu contraseña inicial.">This will be your username and your initial password.</p>
                     <p id="m1-account-phone-taken-msg" class="hidden text-[10px] font-semibold mt-1" style="color:#D14343;" data-en="This phone number is already registered. Please log in instead." data-es="Este número de teléfono ya está registrado. Por favor inicia sesión en vez de crear una cuenta nueva.">This phone number is already registered.</p>
+                    <p id="m1-account-phone-historic-msg" class="hidden text-[10px] font-semibold mt-1" style="color:#B76E88;" data-en="Welcome back! We have your information from a previous visit. Enter your name as we have it on file and your history will be linked to your new account." data-es="¡Hola de nuevo! Ya tenemos tus datos de una visita anterior. Escribe tu nombre como lo tenemos registrado y tu historial quedará unido a tu nueva cuenta.">Welcome back! We have your information from a previous visit.</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
@@ -818,9 +819,11 @@
     function schedulePhoneAvailabilityCheck() {
         const el = document.getElementById('m1-account-phone');
         const msg = document.getElementById('m1-account-phone-taken-msg');
+        const historicMsg = document.getElementById('m1-account-phone-historic-msg');
         const raw = el.value.trim();
         phoneTakenWarning = false;
         msg.classList.add('hidden');
+        historicMsg.classList.add('hidden');
         clearTimeout(phoneCheckTimer);
         if (!validateBasePhone(raw)) { updateNextButtonState(); return; }
         const myToken = ++phoneCheckToken;
@@ -829,8 +832,11 @@
             try {
                 const { data } = await _supabase.functions.invoke('check-phone-available', { body: { phone: digits } });
                 if (myToken !== phoneCheckToken) return; // a newer check has since superseded this one
-                phoneTakenWarning = data?.available === false;
+                // A historic patient (loaded by staff, no login yet) may go on: the
+                // account is created on their existing record.
+                phoneTakenWarning = data?.available === false && !data?.needs_account;
                 msg.classList.toggle('hidden', !phoneTakenWarning);
+                historicMsg.classList.toggle('hidden', !data?.needs_account);
             } catch (_err) {
                 // Network hiccup — fail open, don't block signup over an unreachable check.
             } finally {
@@ -2020,6 +2026,12 @@
                 applyLanguage();
                 const alreadyRegistered = data?.error === 'phone_already_registered';
                 const detail = data?.error || error?.message || '';
+                if (data?.error === 'identity_mismatch') {
+                    alert(currentLang === 'en'
+                        ? 'The name does not match the one we have on file for this phone. Please check how you wrote it, or ask our staff for help.'
+                        : 'El nombre no coincide con el que tenemos registrado para este teléfono. Revisa cómo lo escribiste o pide ayuda a nuestro personal.');
+                    return;
+                }
                 alert(alreadyRegistered
                     ? (currentLang === 'en' ? 'This phone number is already registered. Please log in instead.' : 'Este número de teléfono ya está registrado. Por favor inicia sesión.')
                     : (currentLang === 'en' ? 'Could not create your account. Please try again.' : 'No se pudo crear tu cuenta. Intenta de nuevo.')
