@@ -27,6 +27,15 @@ Deno.serve(async (req) => {
     return r.ok ? j : { error: j?.error?.message ?? `HTTP ${r.status}`, code: j?.error?.code };
   };
 
+  // What kind of token is stored (a token may inspect itself): SYSTEM_USER + expires 0 = permanent.
+  const dbg = await graph(`debug_token?input_token=${encodeURIComponent(c.token)}`);
+  out.token = dbg?.data
+    ? {
+      type: dbg.data.type, app: dbg.data.application, valid: dbg.data.is_valid,
+      expires: dbg.data.expires_at ? new Date(dbg.data.expires_at * 1000).toISOString() : "never",
+      scopes: dbg.data.scopes,
+    }
+    : dbg;
   out.phone_number = await graph(`${c.phoneNumberId}?fields=display_phone_number,verified_name,quality_rating,code_verification_status,platform_type`);
   const url = new URL(req.url);
   const waba = url.searchParams.get("waba");
