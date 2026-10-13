@@ -4,6 +4,7 @@ import {
   formatTime12h, isBookableTreatment, jsonResponse, sendEmail,
 } from "../_shared/clinic.ts";
 import { type HistoricPatient, findHistoricPatient, nameMatchesRecord } from "../_shared/historicPatient.ts";
+import { consentFields } from "../_shared/marketing.ts";
 
 // Public online booking (agendar.html). Two ways in:
 //  - New patient: only the Step 1 basics (name, phone, email, DOB, sex). Creates
@@ -182,6 +183,8 @@ Deno.serve(async (req) => {
       patientEmail = String(account.email || "").trim();
       const dob = String(account.dob || "").trim();
       const sex = String(account.sex || "").trim();
+      // The "promotions by WhatsApp" checkbox; absent from older pages.
+      const marketingConsent = typeof account.marketing_consent === "boolean" ? account.marketing_consent : null;
 
       if (phoneDigits.length < 7 || phoneDigits.length > 15) return jsonResponse({ error: "invalid_phone" }, 400);
       if (!firstName || !lastName || !dob || !sex || !/^\S+@\S+\.\S+$/.test(patientEmail)) {
@@ -237,6 +240,7 @@ Deno.serve(async (req) => {
       const { error: profileError } = await adminClient.from("profiles").upsert({
         id: patientId, first_name: firstName, last_name: lastName, dob, sex,
         phone: patientPhone, email: patientEmail, is_manual_patient: false,
+        ...(marketingConsent === null ? {} : consentFields(marketingConsent, "web")),
       });
       if (profileError) {
         await adminClient.auth.admin.deleteUser(patientId);

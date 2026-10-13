@@ -174,6 +174,10 @@
                             <button type="button" class="chip text-center" data-sex="male" onclick="pickSex('male')" data-en="Male" data-es="Masculino">Masculino</button>
                         </div>
                     </div>
+                    <label class="flex items-start gap-3 text-sm cursor-pointer">
+                        <input id="marketing-consent" type="checkbox" class="mt-1 w-4 h-4 flex-shrink-0 accent-[#B76E88]">
+                        <span data-en="I'd like to receive promotions and news from Piel Spa by WhatsApp. I can unsubscribe anytime by replying STOP." data-es="Quiero recibir promociones y novedades de Piel Spa por WhatsApp. Puedo darme de baja cuando quiera respondiendo BAJA.">Quiero recibir promociones y novedades de Piel Spa por WhatsApp. Puedo darme de baja cuando quiera respondiendo BAJA.</span>
+                    </label>
                     <div class="hp" aria-hidden="true"><label>Website <input id="website" tabindex="-1" autocomplete="off"></label></div>
                     <p class="text-[11px] opacity-50" data-en="We'll create your Patient Portal account so you can see your appointments. Your phone number will be your username and password." data-es="Crearemos tu cuenta del Portal del Paciente para que veas tus citas. Tu teléfono será tu usuario y contraseña.">Crearemos tu cuenta del Portal del Paciente para que veas tus citas. Tu teléfono será tu usuario y contraseña.</p>
                 </div>
@@ -473,6 +477,7 @@
                 phone_country_code: document.getElementById('phone-country').value || '+1',
                 dob,
                 sex: selectedSex,
+                marketing_consent: document.getElementById('marketing-consent').checked,
             };
             if (!data.first_name || !data.last_name) return { error: t('Please enter your first and last name.', 'Ingresa tu nombre y apellido.') };
             if (!/^\S+@\S+\.\S+$/.test(data.email)) return { error: t('Please enter a valid email.', 'Ingresa un correo válido.') };

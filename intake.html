@@ -163,6 +163,10 @@
                     <input type="email" id="m1-account-email" class="field-input" data-en-ph="Email" data-es-ph="Correo">
                     <p id="m1-account-email-taken-msg" class="hidden text-[10px] font-semibold mt-1" style="color:#D14343;" data-en="This email is already registered to another patient." data-es="Este correo ya está registrado en otro paciente.">This email is already registered to another patient.</p>
                 </div>
+                <label class="md:col-span-2 flex items-start gap-3 text-sm cursor-pointer">
+                    <input type="checkbox" id="m1-marketing-consent" class="mt-1 w-4 h-4 flex-shrink-0 accent-[#B76E88]">
+                    <span data-en="I'd like to receive promotions and news from Piel Spa by WhatsApp. I can unsubscribe anytime by replying STOP." data-es="Quiero recibir promociones y novedades de Piel Spa por WhatsApp. Puedo darme de baja cuando quiera respondiendo BAJA.">I'd like to receive promotions and news from Piel Spa by WhatsApp.</span>
+                </label>
             </div>
 
             <div>
@@ -1984,6 +1988,7 @@
             dob: document.getElementById('m1-account-dob').value,
             sex: document.getElementById('m1-account-sex').value,
             email: document.getElementById('m1-account-email').value.trim(),
+            marketing_consent: document.getElementById('m1-marketing-consent').checked,
         };
     }
 

@@ -145,7 +145,10 @@
         <div id="patients-view" class="flex-1 flex flex-col overflow-hidden p-4 md:p-8 gap-4 hidden">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div id="patient-filters" class="flex items-center gap-2 flex-wrap"></div>
-                <input type="search" id="patient-search" oninput="renderSortedPatients()" placeholder="Buscar por nombre o teléfono" class="max-w-xs" style="padding:8px 12px;">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button id="promo-btn" onclick="openPromoModal()" class="hidden px-4 py-2 rounded-full text-[10px] uppercase tracking-widest font-bold border border-[#25D366] text-[#128C7E] hover:bg-[#25D366] hover:text-white transition">📣 Promociones WhatsApp</button>
+                    <input type="search" id="patient-search" oninput="renderSortedPatients()" placeholder="Buscar por nombre o teléfono" class="max-w-xs" style="padding:8px 12px;">
+                </div>
             </div>
             <div class="bg-white rounded-xl shadow-sm border border-[#EDE1E7] overflow-auto flex-1 min-h-0">
                 <table class="w-full text-left min-w-[900px]">
@@ -392,6 +395,15 @@
                 <label class="flex items-center gap-2 cursor-pointer text-sm">
                     <input type="checkbox" id="clinic-divine" onchange="saveClinicAffiliation()" class="accent-[#7C3AED]">
                     Divine Bliss
+                </label>
+                <label class="flex items-center gap-2 text-sm md:ml-auto">
+                    <span class="text-[9px] uppercase tracking-widest text-[#128C7E] font-bold">Promociones WhatsApp:</span>
+                    <select id="marketing-consent-select" onchange="saveMarketingConsent()" class="text-sm border border-[#EDE1E7] rounded-md px-2 py-1 bg-white">
+                        <option value="">Sin preguntar</option>
+                        <option value="yes">✅ Acepta</option>
+                        <option value="no">🚫 No acepta</option>
+                    </select>
+                    <span id="marketing-consent-meta" class="text-[10px] opacity-50"></span>
                 </label>
             </div>
 
@@ -925,6 +937,27 @@
                 </div>
                 <button type="submit" class="w-full bg-[#2A2330] text-white py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition rounded-lg">Send & Update Appointment</button>
             </form>
+        </div>
+    </div>
+
+    <!-- ===== PROMOCIONES WHATSAPP (consent) MODAL ===== -->
+    <div id="promo-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-[200] p-6 backdrop-blur-sm">
+        <div class="bg-white p-8 max-w-md w-full rounded-2xl shadow-2xl relative">
+            <button onclick="closePromoModal()" class="absolute top-4 right-5 text-2xl opacity-40 hover:opacity-100">&times;</button>
+            <h3 class="text-xl italic mb-1">Promociones por WhatsApp</h3>
+            <p class="text-xs opacity-60 mb-5">Solo los pacientes que aceptan pueden recibir promociones.</p>
+            <div class="grid grid-cols-3 gap-2 text-center mb-5">
+                <div class="border border-[#EDE1E7] rounded-lg py-3"><div id="promo-yes" class="text-2xl font-semibold">–</div><div class="text-[9px] uppercase tracking-widest opacity-60">Aceptan</div></div>
+                <div class="border border-[#EDE1E7] rounded-lg py-3"><div id="promo-no" class="text-2xl font-semibold">–</div><div class="text-[9px] uppercase tracking-widest opacity-60">No aceptan</div></div>
+                <div class="border border-[#EDE1E7] rounded-lg py-3"><div id="promo-unknown" class="text-2xl font-semibold">–</div><div class="text-[9px] uppercase tracking-widest opacity-60">Sin preguntar</div></div>
+            </div>
+            <div class="bg-[#F0FBF4] border border-[#BFEBD0] rounded-lg p-4 text-sm mb-4">
+                <p class="font-semibold mb-1">Invitación para aceptar promociones</p>
+                <p class="text-xs opacity-70 mb-3">Envía la plantilla aprobada por Meta con los botones <em>“Sí, quiero”</em> / <em>“No, gracias”</em> a quienes nunca se les ha preguntado. La respuesta se guarda sola en su ficha.</p>
+                <p id="promo-pending" class="text-xs mb-3 opacity-70">Calculando…</p>
+                <button id="promo-send-btn" onclick="sendPromoInvites()" disabled class="w-full bg-[#128C7E] text-white py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#0E6F63] transition rounded-lg disabled:opacity-40">Enviar invitación</button>
+            </div>
+            <p id="promo-result" class="text-xs whitespace-pre-line"></p>
         </div>
     </div>
 
@@ -1603,7 +1636,57 @@
             renderSortedPatients();
         }
 
+        // ---------- Promociones WhatsApp (admins only) ----------
+        let promoPending = 0;
+        async function invokeConsentInvite(body) {
+            const { data, error } = await _supabase.functions.invoke('whatsapp-consent-invite', { body });
+            let code = data?.error;
+            if (error && !code) { try { code = (await error.context.json()).error; } catch (_) { code = error.message; } }
+            return { data, code };
+        }
+        async function openPromoModal() {
+            document.getElementById('promo-modal').classList.remove('hidden');
+            document.getElementById('promo-result').innerText = '';
+            document.getElementById('promo-send-btn').disabled = true;
+            document.getElementById('promo-pending').innerText = 'Calculando…';
+            const { data: rows } = await _supabase.from('profiles').select('id, marketing_consent');
+            const { data: staff } = await _supabase.from('staff_roles').select('user_id');
+            const staffIds = new Set((staff || []).map(s => s.user_id));
+            const patients = (rows || []).filter(r => !staffIds.has(r.id));
+            document.getElementById('promo-yes').innerText = patients.filter(r => r.marketing_consent === 'yes').length;
+            document.getElementById('promo-no').innerText = patients.filter(r => r.marketing_consent === 'no').length;
+            document.getElementById('promo-unknown').innerText = patients.filter(r => !r.marketing_consent).length;
+            const { data, code } = await invokeConsentInvite({ dry_run: true });
+            promoPending = code ? 0 : (data?.pending || 0);
+            document.getElementById('promo-pending').innerText = code
+                ? 'No se pudo calcular: ' + code
+                : (promoPending ? `${promoPending} paciente(s) con teléfono aún no han recibido la invitación.` : 'Todos los pacientes con teléfono ya recibieron la invitación o ya respondieron.');
+            document.getElementById('promo-send-btn').disabled = !promoPending;
+        }
+        function closePromoModal() { document.getElementById('promo-modal').classList.add('hidden'); }
+        async function sendPromoInvites() {
+            if (!confirm(`¿Enviar la invitación por WhatsApp a ${promoPending} paciente(s)? Cada mensaje tiene un pequeño costo de Meta.`)) return;
+            const btn = document.getElementById('promo-send-btn');
+            btn.disabled = true;
+            btn.innerText = 'Enviando…';
+            const { data, code } = await invokeConsentInvite({});
+            btn.innerText = 'Enviar invitación';
+            const result = document.getElementById('promo-result');
+            if (code) {
+                result.innerText = code === 'whatsapp_not_connected'
+                    ? 'WhatsApp todavía no está conectado (falta terminar la conexión con Meta).'
+                    : 'No se pudo enviar: ' + code;
+                btn.disabled = false;
+                return;
+            }
+            const failed = data.failed || [];
+            result.innerText = `✅ Enviadas: ${data.sent}` + (failed.length
+                ? `\n⚠️ Fallaron: ${failed.length} — ${failed[0].error}${/template|132001/i.test(failed[0].error) ? '\n(¿La plantilla "invitacion_promociones" ya está aprobada en Meta?)' : ''}`
+                : '') + (data.remaining ? `\nQuedan ${data.remaining}: vuelve a abrir este panel para continuar.` : '');
+        }
+
         function renderPatientFilters() {
+            document.getElementById('promo-btn').classList.toggle('hidden', staffRole !== 'admin');
             const attended = allPatients.filter(p => p.last_visit_date).length;
             const options = [
                 ['all', 'Todos', allPatients.length],
@@ -3233,6 +3316,7 @@
             if (cbFs) cbFs.checked = currentPatientClinic.includes('fs');
             if (cbViva) cbViva.checked = currentPatientClinic.includes('viva');
             if (cbDivine) cbDivine.checked = currentPatientClinic.includes('divine');
+            loadMarketingConsent(patientId);
 
             // Collapse admission section on open (collapsed by default)
             const admSection = document.getElementById('admission-section');
@@ -3243,6 +3327,38 @@
             document.getElementById('history-modal').classList.add('modal-open');
             loadAdmissionHistory(patientId);
             loadNotes();
+        }
+
+        // Consent to receive promotions by WhatsApp: null = never asked, 'yes', 'no'.
+        // Changed here when the patient says so in person (source 'staff').
+        const CONSENT_SOURCES = { web: 'agenda web', intake: 'formulario de ingreso', whatsapp: 'WhatsApp', staff: 'personal' };
+        function renderMarketingConsentMeta(p) {
+            document.getElementById('marketing-consent-meta').innerText = p?.marketing_consent && p.marketing_consent_at
+                ? `${CONSENT_SOURCES[p.marketing_consent_source] || ''} · ${new Date(p.marketing_consent_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                : (p?.marketing_invite_sent_at ? 'Invitación enviada, sin respuesta' : '');
+        }
+        async function loadMarketingConsent(patientId) {
+            const select = document.getElementById('marketing-consent-select');
+            select.value = '';
+            document.getElementById('marketing-consent-meta').innerText = '';
+            const { data, error } = await _supabase.from('profiles')
+                .select('marketing_consent, marketing_consent_at, marketing_consent_source, marketing_invite_sent_at')
+                .eq('id', patientId).maybeSingle();
+            if (error || patientId !== currentPatientId) return;
+            select.value = data?.marketing_consent || '';
+            renderMarketingConsentMeta(data);
+        }
+        async function saveMarketingConsent() {
+            if (!currentPatientId) return;
+            const value = document.getElementById('marketing-consent-select').value || null;
+            const updates = {
+                marketing_consent: value,
+                marketing_consent_at: value ? new Date().toISOString() : null,
+                marketing_consent_source: value ? 'staff' : null,
+            };
+            const { error } = await _supabase.from('profiles').update(updates).eq('id', currentPatientId);
+            if (error) { alert('No se pudo guardar: ' + error.message); return; }
+            renderMarketingConsentMeta(updates);
         }
 
         async function saveClinicAffiliation() {

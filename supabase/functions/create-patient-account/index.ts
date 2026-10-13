@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { findHistoricPatient, nameMatchesRecord } from "../_shared/historicPatient.ts";
+import { consentFields } from "../_shared/marketing.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -111,6 +112,8 @@ Deno.serve(async (req) => {
     const dob = String(account.dob || "").trim();
     const sex = String(account.sex || "").trim();
     const preferredContactMethods = Array.isArray(account.preferred_contact_methods) ? account.preferred_contact_methods : [];
+    // The "promotions by WhatsApp" checkbox; absent from older pages.
+    const marketingConsent = typeof account.marketing_consent === "boolean" ? account.marketing_consent : null;
 
     if (phoneDigits.length < 7 || phoneDigits.length > 15) {
       return jsonResponse({ error: "Invalid phone number" }, 400);
@@ -169,6 +172,7 @@ Deno.serve(async (req) => {
       phone: `${phoneCountryCode}${phoneDigits}`,
       email,
       is_manual_patient: false,
+      ...(marketingConsent === null ? {} : consentFields(marketingConsent, "intake")),
     });
     if (profileError) {
       return jsonResponse({ error: `Account created but profile save failed: ${profileError.message}` }, 500);

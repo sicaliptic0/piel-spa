@@ -1,7 +1,10 @@
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emailConfig, escapeHtml, sendEmail } from "../_shared/clinic.ts";
 import { sendPushToStaff } from "../_shared/push.ts";
-import { downloadWhatsAppMedia, extensionFor, validWebhookSignature, whatsappConfig } from "../_shared/whatsapp.ts";
+import { consentFields, consentReply } from "../_shared/marketing.ts";
+import {
+  downloadWhatsAppMedia, extensionFor, sendWhatsAppMessage, validWebhookSignature, whatsappConfig,
+} from "../_shared/whatsapp.ts";
 
 // Meta calls this for every incoming WhatsApp message and every delivery
 // status. Deployed with --no-verify-jwt (Meta doesn't send a Supabase key);
@@ -101,6 +104,14 @@ async function handleMessage(db: SupabaseClient, m: Json, contacts: Json[]) {
   if (error && !String(error.message).includes("duplicate")) console.error("save message:", error.message);
   if (error) return;
 
+  // Answer to the promotions invitation, or an opt-out word ("BAJA", "STOP"):
+  // saved on the patient's profile and acknowledged — no staff needed.
+  const consent = consentReply(String(row.body || ""));
+  if (consent) {
+    await handleConsentReply(db, conv.id, waId, consent);
+    return;
+  }
+
   const { data: after } = await db.from("wa_conversations").select("needs_attention, profile_name, patient_id").eq("id", conv.id).single();
   const name = await displayName(db, waId, after ?? conv);
   const preview = String(row.body || ({ image: "📷 Foto", document: "📄 Documento", audio: "🎤 Audio", video: "🎥 Video" } as Record<string, string>)[String(row.media_type)] || "📎 Archivo");
@@ -117,6 +128,29 @@ async function handleMessage(db: SupabaseClient, m: Json, contacts: Json[]) {
   }
   // First message of a new waiting period → email the clinic.
   if (after?.needs_attention && !conv.needs_attention) await alertStaff(waId, name, preview);
+}
+
+async function handleConsentReply(db: SupabaseClient, conversationId: string, waId: string, consent: "yes" | "no") {
+  const last10 = waId.slice(-10);
+  const { error } = await db.from("profiles")
+    .update(consentFields(consent === "yes", "whatsapp")).ilike("phone", `%${last10}`);
+  if (error) console.error("save consent:", error.message);
+
+  const text = consent === "yes"
+    ? "¡Listo! 💕 Te enviaremos nuestras promociones y novedades. Si en algún momento no quieres recibirlas, responde BAJA."
+    : "Entendido, no te enviaremos promociones. Si cambias de opinión, escríbenos. Seguimos a tu orden para tus citas. 💕";
+  let waMessageId = "";
+  let sendError = "";
+  try {
+    waMessageId = await sendWhatsAppMessage(waId, { type: "text", text: { body: text } });
+  } catch (e) {
+    sendError = (e as Error).message;
+  }
+  await db.from("wa_messages").insert({
+    conversation_id: conversationId, direction: "out", sender: "system", body: text,
+    wa_message_id: waMessageId || null, status: sendError ? "failed" : "sent", error: sendError || null,
+  });
+  await db.from("wa_conversations").update({ needs_attention: false }).eq("id", conversationId);
 }
 
 async function displayName(db: SupabaseClient, waId: string, conv: Json): Promise<string> {
