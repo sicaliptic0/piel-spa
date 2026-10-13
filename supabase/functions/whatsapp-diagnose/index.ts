@@ -36,8 +36,26 @@ Deno.serve(async (req) => {
       scopes: dbg.data.scopes,
     }
     : dbg;
-  out.phone_number = await graph(`${c.phoneNumberId}?fields=display_phone_number,verified_name,quality_rating,code_verification_status,platform_type`);
   const url = new URL(req.url);
+  // ?phone=<id> checks (and registers) a number other than the configured one —
+  // used while moving the clinic's real number to the Cloud API.
+  const phoneId = url.searchParams.get("phone") || c.phoneNumberId;
+  if (url.searchParams.get("register") === "1") {
+    // Registering sets the number's two-step PIN, kept as the WHATSAPP_PIN secret.
+    const pin = Deno.env.get("WHATSAPP_PIN") ?? "";
+    if (!/^\d{6}$/.test(pin)) {
+      out.register_result = { error: "WHATSAPP_PIN secret missing or not 6 digits" };
+    } else {
+      const r = await fetch(`${c.graph}/${phoneId}/register`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${c.token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ messaging_product: "whatsapp", pin }),
+      });
+      const j = await r.json().catch(() => ({}));
+      out.register_result = r.ok ? j : { error: j?.error?.message ?? `HTTP ${r.status}`, code: j?.error?.code, details: j?.error?.error_data?.details };
+    }
+  }
+  out.phone_number = await graph(`${phoneId}?fields=display_phone_number,verified_name,name_status,quality_rating,code_verification_status,platform_type,status`);
   const waba = url.searchParams.get("waba");
   if (waba) {
     if (url.searchParams.get("subscribe") === "1") out.subscribe_result = await graph(`${waba}/subscribed_apps`, "POST");
