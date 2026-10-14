@@ -5,7 +5,12 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 // push_subscriptions — the admin turns them on from "Mensajes" → Activar avisos.
 // Secrets: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (mailto:…).
 
-export type PushPayload = { title: string; body: string; tag?: string; url?: string; conversationId?: string };
+// badge: unread messages, shown on the home-screen icon. unreadConversationIds:
+// chats still unread — the service worker closes notifications of the others.
+export type PushPayload = {
+  title: string; body: string; tag?: string; url?: string; conversationId?: string;
+  badge?: number; unreadConversationIds?: string[];
+};
 
 let configured = false;
 function configure(): boolean {

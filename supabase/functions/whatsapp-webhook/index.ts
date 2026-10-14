@@ -14,8 +14,10 @@ import {
 //          phone), save the message, download any photo/file into wa-media;
 //          statuses: sent → delivered → read / failed on our own messages.
 // Every incoming message pushes a notification to the staff phones that turned
-// alerts on (one per chat, updated in place). When a chat starts waiting for
-// staff, the clinic also gets an email (once per waiting period, not per message).
+// alerts on (one per chat, updated in place), carrying the unread total for the
+// home-screen icon badge and which chats are still unread, so each phone drops
+// notifications for chats someone already read. The email alert to the clinic
+// is off unless the WHATSAPP_EMAIL_ALERTS secret is "on".
 
 const MEDIA_TYPES = ["image", "document", "audio", "video", "sticker"];
 
@@ -118,16 +120,21 @@ async function handleMessage(db: SupabaseClient, m: Json, contacts: Json[]) {
 
   // While the AI handles the chat (Phase 4) staff phones stay quiet.
   if (after?.needs_attention) {
+    const { data: unreadChats } = await db.from("wa_conversations").select("id, unread_count").gt("unread_count", 0);
     await sendPushToStaff(db, {
       title: `WhatsApp · ${name}`,
       body: preview.slice(0, 180),
       tag: conv.id,
       conversationId: conv.id,
       url: `/admin.html#mensajes&chat=${conv.id}`,
+      badge: (unreadChats ?? []).reduce((sum, c) => sum + (c.unread_count || 0), 0),
+      unreadConversationIds: (unreadChats ?? []).map((c) => c.id),
     });
   }
-  // First message of a new waiting period → email the clinic.
-  if (after?.needs_attention && !conv.needs_attention) await alertStaff(waId, name, preview);
+  // First message of a new waiting period → email the clinic (only if enabled).
+  if (Deno.env.get("WHATSAPP_EMAIL_ALERTS") === "on" && after?.needs_attention && !conv.needs_attention) {
+    await alertStaff(waId, name, preview);
+  }
 }
 
 async function handleConsentReply(db: SupabaseClient, conversationId: string, waId: string, consent: "yes" | "no") {

@@ -2788,10 +2788,17 @@
             checkPushState();
             // Opened from a notification or the email link: #mensajes or #mensajes&chat=<id>
             if (window.location.hash.startsWith('#mensajes')) {
+                const params = new URLSearchParams(window.location.hash.slice(1));
+                if (params.get('filter') === 'unread') waFilter = 'unread';
                 switchAdminView('messages-view', document.getElementById('nav-messages'));
-                const chat = new URLSearchParams(window.location.hash.slice(1)).get('chat');
-                if (chat) openConversation(chat);
+                if (params.get('chat')) openConversation(params.get('chat'));
             }
+            // Coming back to the app (phones pause it in the background): reload the
+            // chats, so the icon number and notifications match what the other
+            // phone already read.
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') loadConversations();
+            });
         }
 
         async function loadConversations() {
@@ -2832,9 +2839,9 @@
         function setWaFilter(filter) { waFilter = filter; renderConversationList(); }
 
         function renderConversationList() {
-            const filters = [['attention', 'Por responder'], ['all', 'Todos'], ['human', 'Atención humana']];
+            const filters = [['unread', 'No leídos'], ['attention', 'Por responder'], ['all', 'Todos'], ['human', 'Atención humana']];
             if (waSettings.bot_enabled) filters.push(['bot', 'IA']);
-            const counts = { attention: waConversations.filter(c => c.needs_attention).length };
+            const counts = { attention: waConversations.filter(c => c.needs_attention).length, unread: waConversations.filter(c => c.unread_count > 0).length };
             document.getElementById('wa-filters').innerHTML = filters.map(([id, label]) => `
                 <button onclick="setWaFilter('${id}')" class="text-[9px] uppercase tracking-widest font-bold px-2.5 py-1 rounded-full border transition ${waFilter === id ? 'bg-[#2A2330] text-white border-[#2A2330]' : 'border-[#EDE1E7] opacity-70 hover:opacity-100'}">
                     ${label}${counts[id] ? ` (${counts[id]})` : ''}
@@ -2844,6 +2851,8 @@
             const digits = query.replace(/\D/g, '');
             const list = waConversations.filter(c => {
                 if (waFilter === 'attention' && !c.needs_attention) return false;
+                // Stays listed while open, so reading it doesn't make it vanish.
+                if (waFilter === 'unread' && !(c.unread_count > 0) && c.id !== waActiveId) return false;
                 if (waFilter === 'human' && (c.bot_active && waSettings.bot_enabled)) return false;
                 if (waFilter === 'bot' && !(c.bot_active && waSettings.bot_enabled)) return false;
                 if (!query) return true;
@@ -2876,7 +2885,25 @@
                 </button>`).join('');
         }
 
+        // Number on the home-screen icon = unread messages in all chats (the same
+        // count for both admins, since unread_count is shared), and notifications
+        // of chats already read are removed from this phone.
+        async function syncAppBadge() {
+            const unread = waConversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+            try {
+                if ("setAppBadge" in navigator) unread > 0 ? await navigator.setAppBadge(unread) : await navigator.clearAppBadge();
+            } catch (_) {}
+            try {
+                if (!("serviceWorker" in navigator)) return;
+                const reg = await navigator.serviceWorker.getRegistration("/");
+                if (!reg) return;
+                const stillUnread = new Set(waConversations.filter(c => c.unread_count > 0).map(c => c.id));
+                (await reg.getNotifications()).forEach(n => { if (!stillUnread.has(n.tag)) n.close(); });
+            } catch (_) {}
+        }
+
         function updateWaBadge() {
+            syncAppBadge();
             const n = waConversations.filter(c => c.needs_attention).length;
             const badge = document.getElementById('wa-badge');
             badge.textContent = n;
@@ -2929,6 +2956,7 @@
             if (!c || !c.unread_count) return;
             c.unread_count = 0;
             renderConversationList();
+            updateWaBadge();
             await _supabase.from('wa_conversations').update({ unread_count: 0 }).eq('id', id);
         }
 
