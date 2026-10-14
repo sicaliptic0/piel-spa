@@ -2769,7 +2769,12 @@
         let waSettings = { bot_enabled: false };
         let waActiveId = null;
         let waMessages = [];
-        let waFilter = 'attention';
+        // "Por responder" (wa_conversations.needs_attention) is switched off for now:
+        // it needed every finished chat to be marked "Resuelto". It comes back with
+        // the AI assistant, as the list of chats the bot hands to a person.
+        // Set to true to show it again (filter, chips, "Resuelto" button, badge).
+        const WA_SHOW_ATTENTION = false;
+        let waFilter = WA_SHOW_ATTENTION ? 'attention' : 'unread';
         let waLiveStatus = '';
         let waPendingFile = null;
         const waPatientNames = {};
@@ -2839,7 +2844,9 @@
         function setWaFilter(filter) { waFilter = filter; renderConversationList(); }
 
         function renderConversationList() {
-            const filters = [['unread', 'No leídos'], ['attention', 'Por responder'], ['all', 'Todos'], ['human', 'Atención humana']];
+            const filters = WA_SHOW_ATTENTION
+                ? [['unread', 'No leídos'], ['attention', 'Por responder'], ['all', 'Todos'], ['human', 'Atención humana']]
+                : [['unread', 'No leídos'], ['all', 'Todos']];
             if (waSettings.bot_enabled) filters.push(['bot', 'IA']);
             const counts = { attention: waConversations.filter(c => c.needs_attention).length, unread: waConversations.filter(c => c.unread_count > 0).length };
             document.getElementById('wa-filters').innerHTML = filters.map(([id, label]) => `
@@ -2861,7 +2868,7 @@
 
             const el = document.getElementById('wa-conv-list');
             if (!list.length) {
-                el.innerHTML = `<p class="p-6 text-sm opacity-40 text-center">${waFilter === 'attention' && !query ? '✨ No hay mensajes por responder.' : 'No hay conversaciones.'}</p>`;
+                el.innerHTML = `<p class="p-6 text-sm opacity-40 text-center">${!query && waFilter === 'attention' ? '✨ No hay mensajes por responder.' : !query && waFilter === 'unread' ? '✨ No hay mensajes sin leer.' : 'No hay conversaciones.'}</p>`;
                 return;
             }
             el.innerHTML = list.map(c => `
@@ -2877,7 +2884,7 @@
                             ${c.unread_count ? `<span class="bg-[#25D366] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">${c.unread_count}</span>` : ''}
                         </div>
                         <div class="flex gap-2 mt-1 text-[8px] uppercase tracking-widest font-bold">
-                            ${c.needs_attention ? '<span class="text-amber-700">● Por responder</span>' : ''}
+                            ${WA_SHOW_ATTENTION && c.needs_attention ? '<span class="text-amber-700">● Por responder</span>' : ''}
                             ${!c.patient_id ? '<span class="opacity-40">Nuevo contacto</span>' : ''}
                             ${waSettings.bot_enabled ? (c.bot_active ? '<span class="text-purple-600">🤖 IA</span>' : '<span class="text-[#B76E88]">👤 Humano</span>') : ''}
                         </div>
@@ -2904,7 +2911,7 @@
 
         function updateWaBadge() {
             syncAppBadge();
-            const n = waConversations.filter(c => c.needs_attention).length;
+            const n = waConversations.filter(c => WA_SHOW_ATTENTION ? c.needs_attention : c.unread_count > 0).length;
             const badge = document.getElementById('wa-badge');
             badge.textContent = n;
             badge.classList.toggle('hidden', !n);
@@ -2976,6 +2983,7 @@
                 action.innerText = 'Tomar conversación';
                 action.className = 'flex-shrink-0 text-[9px] uppercase tracking-widest font-bold px-3 py-2 rounded-full transition bg-[#2A2330] text-white hover:bg-[#B76E88]';
                 action.disabled = false;
+                action.classList.remove('hidden');
                 action.onclick = () => takeWaConversation(c.id);
             } else {
                 mode.innerHTML = waSettings.bot_enabled ? '<span class="text-[#B76E88]">👤 Atención humana</span>' : '';
@@ -2983,6 +2991,7 @@
                 action.className = 'flex-shrink-0 text-[9px] uppercase tracking-widest font-bold px-3 py-2 rounded-full transition border border-[#25D366] text-[#128C7E] hover:bg-[#25D366] hover:text-white';
                 action.disabled = !waSettings.bot_enabled && !c.needs_attention;
                 action.onclick = () => resolveWaConversation(c.id);
+                action.classList.toggle('hidden', !waSettings.bot_enabled && !WA_SHOW_ATTENTION);
             }
 
             const windowOpen = waWindowOpen(c);
