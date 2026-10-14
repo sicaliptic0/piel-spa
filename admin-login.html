@@ -86,8 +86,9 @@
             if (error) {
                 alert("Unauthorized: " + error.message);
             } else {
-                // The critical part: Redirect to ADMIN.HTML instead of DASHBOARD.HTML
-                window.location.href = 'admin.html';
+                // Staff go to the admin (not the patient dashboard), keeping where
+                // they were headed, e.g. #mensajes from the home-screen app.
+                window.location.href = 'admin.html' + window.location.hash;
             }
         });
     </script>

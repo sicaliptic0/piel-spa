@@ -100,6 +100,11 @@
                     </svg>
                 </button>
                 <h2 id="view-title" class="text-2xl italic">Hoy</h2>
+                <!-- WhatsApp shortcut with the unread-chats count; opens Mensajes → No leídos -->
+                <button id="wa-header-btn" onclick="openUnreadMessages()" class="admin-only relative p-2 rounded-full hover:bg-[#FBF0F3] transition" aria-label="Mensajes de WhatsApp sin leer" title="Mensajes sin leer">
+                    <svg class="w-6 h-6 text-[#128C7E]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m-9 6l2.3-3.4A8 8 0 1112 20a7.9 7.9 0 01-3.9-1"/></svg>
+                    <span id="wa-header-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-[#25D366] text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">0</span>
+                </button>
             </div>
             <div class="admin-only flex items-center gap-2 flex-wrap">
                 <button onclick="openNewPatientModal()" class="bg-[#2A2330] text-white px-5 py-2 text-[10px] uppercase tracking-widest font-bold shadow-md hover:bg-[#1D1822] transition rounded-full">+ Nuevo paciente</button>
@@ -1844,7 +1849,7 @@
 
         async function checkAdmin() {
             const { data: { user } } = await _supabase.auth.getUser();
-            if (!user) { window.location.href = 'index.html'; return; }
+            if (!user) { window.location.href = 'admin-login.html' + window.location.hash; return; }
             const admins = ['samuel.galviz@gmail.com', 'freddyjosevp@gmail.com', 'pielspanyc@gmail.com'];
             const { data: roleRow } = await _supabase.from('staff_roles').select('role').eq('user_id', user.id).maybeSingle();
             staffRole = roleRow?.role || (admins.includes(user.email) ? 'admin' : null);
@@ -2797,6 +2802,8 @@
                 if (params.get('filter') === 'unread') waFilter = 'unread';
                 switchAdminView('messages-view', document.getElementById('nav-messages'));
                 if (params.get('chat')) openConversation(params.get('chat'));
+            } else if (isInstalledApp()) {
+                openUnreadMessages();
             }
             // Coming back to the app (phones pause it in the background): reload the
             // chats, so the icon number and notifications match what the other
@@ -2842,6 +2849,13 @@
         }
 
         function setWaFilter(filter) { waFilter = filter; renderConversationList(); }
+
+        // Header button and the installed app's start screen.
+        function openUnreadMessages() {
+            waFilter = 'unread';
+            if (waActiveId) closeConversation();
+            switchAdminView('messages-view', document.getElementById('nav-messages'));
+        }
 
         function renderConversationList() {
             const filters = WA_SHOW_ATTENTION
@@ -2915,6 +2929,9 @@
             const badge = document.getElementById('wa-badge');
             badge.textContent = n;
             badge.classList.toggle('hidden', !n);
+            const headerBadge = document.getElementById('wa-header-badge');
+            headerBadge.textContent = n > 99 ? '99+' : n;
+            headerBadge.classList.toggle('hidden', !n);
             document.title = (n ? `(${n}) ` : '') + document.title.replace(/^\(\d+\)\s*/, '');
         }
 
