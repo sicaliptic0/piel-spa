@@ -19,6 +19,7 @@ Deno.serve(async (req) => {
     secrets: {
       WHATSAPP_TOKEN: !!c.token, WHATSAPP_PHONE_NUMBER_ID: !!c.phoneNumberId,
       WHATSAPP_APP_SECRET: !!c.appSecret, WHATSAPP_VERIFY_TOKEN: !!c.verifyToken,
+      WHATSAPP_PIN_is_6_digits: /^\d{6}$/.test(Deno.env.get("WHATSAPP_PIN") ?? ""),
     },
   };
   const graph = async (path: string, method = "GET") => {
