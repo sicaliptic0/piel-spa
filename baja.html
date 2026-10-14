@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Darse de baja | Piel Spa</title>
+    <meta name="robots" content="noindex">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Outfit:wght@300;400;500&family=Montserrat:wght@600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Outfit', sans-serif; background: #FDFBFC; color: #2A2330; }
+        h1 { font-family: 'Cormorant Garamond', serif; }
+        .brand-piel { font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
+            background-image: linear-gradient(120deg, #D97CA0 0%, #B87CD1 50%, #7CA3D9 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .brand-spa { font-family: 'Cormorant Garamond', serif; font-style: italic; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <header class="py-4 px-4 md:px-12 bg-white border-b border-[#EDE1E7]">
+        <a href="index.html" class="text-xl"><span class="brand-piel">Piel</span> <span class="brand-spa">spa</span></a>
+    </header>
+    <main class="max-w-md mx-auto px-4 py-12 text-center space-y-5">
+        <h1 class="text-4xl">Avisos y promociones</h1>
+        <p id="msg" class="opacity-70">Revisando el enlace…</p>
+        <button id="btn" onclick="confirmUnsubscribe()" class="hidden w-full bg-[#2A2330] text-white py-4 rounded-xl uppercase text-xs tracking-widest font-bold hover:bg-[#B76E88] transition">Sí, darme de baja</button>
+        <p class="text-xs opacity-50">Seguirás recibiendo las confirmaciones y recordatorios de las citas que agendes.</p>
+    </main>
+    <script>
+        const _supabase = supabase.createClient('https://qkjmrnqkoipdltauweub.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFram1ybnFrb2lwZGx0YXV3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTkyMjgsImV4cCI6MjA4OTA5NTIyOH0.EGqgJ9RNY9vYfuVeeEcGoMu_cIaygRq0hnyT-iE7zTw', { auth: { persistSession: false } });
+        const token = new URLSearchParams(location.hash.slice(1)).get('t') || '';
+        const msg = document.getElementById('msg'), btn = document.getElementById('btn');
+        async function call(confirm) {
+            const { data, error } = await _supabase.functions.invoke('unsubscribe-promos', { body: { t: token, confirm } });
+            return error ? { error: true } : data;
+        }
+        (async () => {
+            const r = await call(false);
+            if (!r?.valid) { msg.innerText = 'Este enlace no es válido o está incompleto. Escríbenos a info@piel-spa.com si quieres darte de baja.'; return; }
+            msg.innerText = '¿Quieres dejar de recibir avisos y promociones de Piel Spa?';
+            btn.classList.remove('hidden');
+        })();
+        async function confirmUnsubscribe() {
+            btn.disabled = true;
+            const r = await call(true);
+            btn.classList.add('hidden');
+            msg.innerText = r?.unsubscribed ? '✓ Listo. Ya no te enviaremos avisos ni promociones.' : 'No se pudo completar. Escríbenos a info@piel-spa.com.';
+        }
+    </script>
+</body>
+</html>

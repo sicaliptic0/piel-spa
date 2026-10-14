@@ -151,6 +151,7 @@
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div id="patient-filters" class="flex items-center gap-2 flex-wrap"></div>
                 <div class="flex items-center gap-2 flex-wrap">
+                    <button onclick="openAnnouncementModal()" class="admin-only px-4 py-2 rounded-full text-[10px] uppercase tracking-widest font-bold bg-[#25D366] text-white hover:opacity-90 transition">📣 Anuncio</button>
                     <button id="promo-btn" onclick="openPromoModal()" class="hidden px-4 py-2 rounded-full text-[10px] uppercase tracking-widest font-bold border border-[#25D366] text-[#128C7E] hover:bg-[#25D366] hover:text-white transition">📣 Promociones WhatsApp</button>
                     <input type="search" id="patient-search" oninput="renderSortedPatients()" placeholder="Buscar por nombre o teléfono" class="max-w-xs" style="padding:8px 12px;">
                 </div>
@@ -340,6 +341,34 @@
         </div>
     </div>
 
+    <!-- ===== ANNOUNCEMENT ("📣 Anuncio"): one message to many patients ===== -->
+    <div id="ann-modal" class="fixed inset-0 z-[70] hidden bg-black/40 backdrop-blur-sm items-stretch md:items-center justify-center md:p-4">
+        <div class="bg-white w-full max-w-3xl md:rounded-2xl shadow-2xl flex flex-col h-full md:h-[92vh] overflow-hidden">
+            <div class="flex items-start justify-between gap-3 px-5 py-4 border-b border-[#EDE1E7]">
+                <div>
+                    <h3 class="text-2xl italic">📣 Anuncio a pacientes</h3>
+                    <p id="ann-meta" class="text-[10px] uppercase tracking-widest opacity-40"></p>
+                </div>
+                <button type="button" onclick="closeAnnouncementModal()" class="text-2xl opacity-40 hover:opacity-100">&times;</button>
+            </div>
+            <div class="p-5 space-y-3 border-b border-[#EDE1E7]">
+                <textarea id="ann-text" rows="6" oninput="annTextChanged()" style="padding:10px;font-size:13px;width:100%;border:1px solid #EDE1E7;border-radius:8px;outline-color:#B76E88;resize:vertical;"></textarea>
+                <p class="text-[11px] opacity-60">Escribe <strong>{nombre}</strong> donde va el nombre de cada paciente. Los WhatsApp se envían uno por uno desde el WhatsApp de este teléfono; incluye el enlace al WhatsApp de la clínica para que las respuestas lleguen a Mensajes.</p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <input id="ann-search" oninput="renderAnnouncementList()" placeholder="Buscar paciente" style="padding:6px 12px;font-size:13px;border:1px solid #EDE1E7;border-radius:9999px;outline-color:#B76E88;">
+                    <label class="text-xs flex items-center gap-1"><input type="checkbox" id="ann-pending-only" onchange="renderAnnouncementList()" checked class="accent-[#25D366]"> Solo pendientes de WhatsApp</label>
+                    <button onclick="newAnnouncement()" class="ml-auto text-[10px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100">+ Nuevo anuncio</button>
+                </div>
+                <p id="ann-excluded" class="text-[10px] opacity-50"></p>
+            </div>
+            <div id="ann-list" class="flex-1 overflow-y-auto divide-y divide-[#F3EAEE]"></div>
+            <div class="px-5 py-3 border-t border-[#EDE1E7] bg-[#FDFBFC] flex flex-wrap items-center justify-between gap-2">
+                <p id="ann-progress" class="text-xs opacity-70"></p>
+                <button id="ann-email-btn" onclick="sendAnnouncementEmails()" class="border border-[#B76E88] text-[#B76E88] px-4 py-2 rounded-full text-[10px] uppercase tracking-widest font-bold hover:bg-[#B76E88] hover:text-white transition disabled:opacity-40">✉️ Enviar también por correo</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ===== WHATSAPP MODAL ===== -->
     <!-- Stays open until closed: the admin picks app or web (an iPad without
          the app used to fail on the automatic app redirect and lose the message). -->
@@ -354,11 +383,11 @@
             </div>
             <textarea id="wa-modal-text" rows="9" oninput="updateWhatsAppLinks()" placeholder="Escribe el mensaje…" style="padding:10px;font-size:13px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;resize:vertical;"></textarea>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <a id="wa-modal-web" target="_blank" rel="noopener" class="text-center bg-[#25D366] text-white py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg hover:opacity-90 transition">💻 WhatsApp Web</a>
-                <a id="wa-modal-app" class="text-center border border-[#25D366] text-[#128C7E] py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg hover:bg-[#25D366] hover:text-white transition">📱 Abrir la app</a>
+                <a id="wa-modal-web" target="_blank" rel="noopener" onclick="waModalOnSent && waModalOnSent()" class="text-center bg-[#25D366] text-white py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg hover:opacity-90 transition">💻 WhatsApp Web</a>
+                <a id="wa-modal-app" onclick="waModalOnSent && waModalOnSent()" class="text-center border border-[#25D366] text-[#128C7E] py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg hover:bg-[#25D366] hover:text-white transition">📱 Abrir la app</a>
             </div>
             <button type="button" id="wa-modal-copy" onclick="copyWhatsAppText()" class="w-full text-[10px] uppercase tracking-widest font-bold text-[#2A2330] opacity-60 hover:opacity-100">📋 Copiar mensaje</button>
-            <p class="text-[10px] opacity-50">Si no tienes la app instalada (por ejemplo en el iPad), usa WhatsApp Web. Esta ventana sigue abierta hasta que la cierres.</p>
+            <p class="text-[10px] opacity-50">Se envía desde el WhatsApp de este teléfono o computadora (no desde el número de la clínica). Si no tienes la app instalada (por ejemplo en el iPad), usa WhatsApp Web. Esta ventana sigue abierta hasta que la cierres.</p>
             <div id="wa-modal-undo" class="hidden border-t border-[#EDE1E7] pt-3 space-y-2">
                 <p class="text-[10px] opacity-60">La recomendación ya quedó registrada en la historia y en el portal del paciente. Si al final no se envió y no quieres ese registro:</p>
                 <button type="button" onclick="undoWhatsAppSentMessages()" class="text-[10px] uppercase tracking-widest font-bold text-red-500 hover:text-red-700">No se envió — borrar el registro</button>
@@ -413,6 +442,15 @@
                     </select>
                     <span id="marketing-consent-meta" class="text-[10px] opacity-50"></span>
                 </label>
+                <!-- The clinic's own decision (patient_staff_flags, admins only) -->
+                <label class="flex items-center gap-2 text-sm">
+                    <span class="text-[9px] uppercase tracking-widest text-red-700 font-bold">Contacto:</span>
+                    <select id="dnc-select" onchange="saveContactFlag()" class="text-sm border border-[#EDE1E7] rounded-md px-2 py-1 bg-white">
+                        <option value="ok">✅ Se le puede escribir</option>
+                        <option value="block">⛔ No contactar</option>
+                    </select>
+                </label>
+                <input id="dnc-note" onchange="saveContactFlag()" placeholder="Motivo (solo lo ve el equipo)" class="hidden text-sm border border-red-200 rounded-md px-2 py-1 bg-white w-full md:w-72">
             </div>
 
             <!-- ===== HISTORIA DE INGRESO ===== -->
@@ -1927,6 +1965,144 @@
             if (error && !code) { try { code = (await error.context.json()).error; } catch (_) { code = error.message; } }
             return { data, code };
         }
+        // ---------- 📣 Anuncio: one message to many patients ----------
+        // WhatsApp: one by one from this phone's WhatsApp (Meta doesn't deliver
+        // promotional messages from the clinic number to US numbers), or from the
+        // clinic number when the patient wrote in the last 24 h. Email: all at
+        // once (send-announcement). Leaves out "⛔ No contactar" and patients who
+        // said no to promotions. Recipients are logged per announcement.
+        const ANN_DEFAULT_TEXT = 'Hola {nombre} 👋\n\nTe escribimos de Piel Spa ✨ Este viernes estaremos atendiendo. Si quieres reservar tu cita, escríbenos a nuestro WhatsApp oficial 👉 https://wa.me/19295613388 o agenda aquí: https://piel-spa.com/agendar.html\n\n¡Te esperamos!';
+        let annCurrent = null;   // { id, body } once saved
+        let annSent = {};        // patientId → { whatsapp: true, email: true }
+        let annTextDirty = false;
+
+        const annName = (p) => `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Paciente';
+        const annEligible = () => allPatients.filter(p => !p.do_not_contact && p.marketing_consent !== 'no' && (whatsappNumber(p.phone) || p.email));
+        const annPersonal = (p) => document.getElementById('ann-text').value.replace(/\{nombre\}/gi, String(p.first_name || '').trim()).replace(/ ,/g, ',');
+
+        async function openAnnouncementModal() {
+            if (!allPatients.length) await fetchPatients();
+            const modal = document.getElementById('ann-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            // Continue this week's announcement, if there is one.
+            const { data } = await _supabase.from('announcements').select('id, body, created_at').order('created_at', { ascending: false }).limit(1).maybeSingle();
+            annCurrent = data && Date.now() - new Date(data.created_at).getTime() < 7 * 86400000 ? data : null;
+            document.getElementById('ann-text').value = annCurrent?.body || ANN_DEFAULT_TEXT;
+            annTextDirty = false;
+            await loadAnnouncementRecipients();
+        }
+        function closeAnnouncementModal() {
+            const modal = document.getElementById('ann-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        function newAnnouncement() {
+            if (annCurrent && !confirm('¿Empezar un anuncio nuevo? El actual queda guardado con su registro de envíos.')) return;
+            annCurrent = null; annSent = {};
+            document.getElementById('ann-text').value = ANN_DEFAULT_TEXT;
+            renderAnnouncementList();
+        }
+        function annTextChanged() { annTextDirty = true; }
+
+        async function loadAnnouncementRecipients() {
+            annSent = {};
+            if (annCurrent) {
+                const { data } = await _supabase.from('announcement_recipients').select('patient_id, channel').eq('announcement_id', annCurrent.id);
+                (data || []).forEach(r => { (annSent[r.patient_id] ||= {})[r.channel] = true; });
+            }
+            renderAnnouncementList();
+        }
+
+        // Saves the text (first send creates the announcement; later edits update it).
+        async function ensureAnnouncement() {
+            const body = document.getElementById('ann-text').value.trim();
+            if (!body) { alert('Escribe el mensaje primero.'); return null; }
+            if (!annCurrent) {
+                const { data, error } = await _supabase.from('announcements').insert({ body }).select('id, body, created_at').single();
+                if (error) { alert('No se pudo guardar el anuncio: ' + error.message); return null; }
+                annCurrent = data;
+            } else if (annTextDirty && body !== annCurrent.body) {
+                await _supabase.from('announcements').update({ body }).eq('id', annCurrent.id);
+                annCurrent.body = body;
+            }
+            annTextDirty = false;
+            return annCurrent.id;
+        }
+
+        async function annRecord(patientId, channel) {
+            if (!annCurrent) return;
+            await _supabase.from('announcement_recipients').upsert({ announcement_id: annCurrent.id, patient_id: patientId, channel }, { onConflict: 'announcement_id,patient_id,channel', ignoreDuplicates: true });
+            (annSent[patientId] ||= {})[channel] = true;
+            renderAnnouncementList();
+        }
+
+        function renderAnnouncementList() {
+            const eligible = annEligible();
+            const blocked = allPatients.filter(p => p.do_not_contact).length;
+            const declined = allPatients.filter(p => !p.do_not_contact && p.marketing_consent === 'no').length;
+            document.getElementById('ann-excluded').innerText = `Excluidos: ${blocked} "No contactar" · ${declined} no aceptan promociones`;
+            const sentWa = eligible.filter(p => annSent[p.id]?.whatsapp).length;
+            const withEmail = eligible.filter(p => p.email);
+            const pendingEmail = withEmail.filter(p => !annSent[p.id]?.email).length;
+            document.getElementById('ann-progress').innerText = `WhatsApp: ${sentWa} de ${eligible.filter(p => whatsappNumber(p.phone)).length} · Correo: ${withEmail.length - pendingEmail} de ${withEmail.length}`;
+            document.getElementById('ann-email-btn').disabled = !pendingEmail;
+            document.getElementById('ann-email-btn').innerText = pendingEmail ? `✉️ Enviar también por correo (${pendingEmail})` : '✉️ Correos enviados';
+            document.getElementById('ann-meta').innerText = annCurrent ? `Anuncio del ${new Date(annCurrent.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}` : 'Nuevo anuncio';
+
+            const q = document.getElementById('ann-search').value.trim().toLowerCase();
+            const pendingOnly = document.getElementById('ann-pending-only').checked;
+            const rows = eligible
+                .filter(p => whatsappNumber(p.phone) || !pendingOnly)
+                .filter(p => !pendingOnly || !annSent[p.id]?.whatsapp)
+                .filter(p => !q || annName(p).toLowerCase().includes(q) || String(p.phone || '').includes(q.replace(/\D/g, '') || '~'))
+                .sort((a, b) => annName(a).localeCompare(annName(b), 'es'));
+            document.getElementById('ann-list').innerHTML = rows.map(p => {
+                const conv = waConversations.find(c => c.phone === whatsappNumber(p.phone));
+                const viaClinic = conv && waWindowOpen(conv);
+                const chips = [
+                    annSent[p.id]?.whatsapp ? '<span class="text-green-700">✓ WhatsApp</span>' : '',
+                    annSent[p.id]?.email ? '<span class="text-[#B76E88]">✓ Correo</span>' : '',
+                ].filter(Boolean).join(' · ');
+                return `
+                <div class="px-5 py-3 flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="font-medium text-sm truncate">${escapeHtml(annName(p))}</div>
+                        <div class="text-[10px] opacity-50">${escapeHtml(formatPhone(p.phone) || 'sin teléfono')}${p.email ? ' · ✉️' : ''}${chips ? ' · ' + chips : ''}</div>
+                    </div>
+                    ${whatsappNumber(p.phone) ? `<button onclick="sendAnnouncementWhatsApp('${p.id}')" class="flex-shrink-0 text-[9px] uppercase tracking-widest font-bold px-3 py-2 rounded-full transition ${viaClinic ? 'bg-[#25D366] text-white' : 'border border-[#25D366] text-[#128C7E] hover:bg-[#25D366] hover:text-white'}">${viaClinic ? '💬 Enviar desde la clínica' : '📱 WhatsApp'}</button>` : ''}
+                </div>`;
+            }).join('') || `<p class="p-8 text-center text-sm opacity-40">${pendingOnly ? '✨ Ya se envió a todos por WhatsApp.' : 'No hay pacientes.'}</p>`;
+        }
+
+        async function sendAnnouncementWhatsApp(patientId) {
+            const p = allPatients.find(x => x.id === patientId);
+            if (!p || !(await ensureAnnouncement())) return;
+            const text = annPersonal(p);
+            const conv = waConversations.find(c => c.phone === whatsappNumber(p.phone));
+            if (conv && waWindowOpen(conv)) {
+                // Patient wrote in the last 24 h: free, from the clinic number.
+                const { data, error } = await _supabase.functions.invoke('whatsapp-send', { body: { conversation_id: conv.id, text } });
+                if (error || data?.error) { alert('No se pudo enviar desde la clínica. Se abrirá tu WhatsApp.'); }
+                else { await annRecord(p.id, 'whatsapp'); return; }
+            }
+            openWhatsAppModal({ name: annName(p), phone: p.phone, text, onSent: () => annRecord(p.id, 'whatsapp') });
+        }
+
+        async function sendAnnouncementEmails() {
+            const ids = annEligible().filter(p => p.email && !annSent[p.id]?.email).map(p => p.id);
+            if (!ids.length) return;
+            if (!confirm(`¿Enviar este anuncio por correo a ${ids.length} paciente(s)?`)) return;
+            const id = await ensureAnnouncement();
+            if (!id) return;
+            const btn = document.getElementById('ann-email-btn');
+            btn.disabled = true; btn.innerText = 'Enviando…';
+            const { data, error } = await _supabase.functions.invoke('send-announcement', { body: { announcement_id: id, patient_ids: ids } });
+            if (error || data?.error) alert('No se pudieron enviar los correos: ' + (data?.error || error.message));
+            else alert(`Correos enviados: ${data.sent}${data.failed?.length ? '\nCon error: ' + data.failed.join('; ') : ''}`);
+            await loadAnnouncementRecipients();
+        }
+
         async function openPromoModal() {
             document.getElementById('promo-modal').classList.remove('hidden');
             document.getElementById('promo-result').innerText = '';
@@ -1997,7 +2173,7 @@
         }
 
         async function fetchPatients() {
-            const { data, error } = await _supabase.from('profiles').select('id, first_name, last_name, dob, sex, phone, email, clinic_affiliation, created_at');
+            const { data, error } = await _supabase.from('profiles').select('id, first_name, last_name, dob, sex, phone, email, clinic_affiliation, created_at, marketing_consent');
             if (error) { console.error("Fetch Patients Error:", error); return; }
 
             const { data: encounters, error: encError } = await _supabase
@@ -2010,7 +2186,9 @@
                 if (e.patient_id && !lastVisitByPatient[e.patient_id]) lastVisitByPatient[e.patient_id] = e.visit_date;
             });
 
-            allPatients = (data || []).map(p => ({ ...p, last_visit_date: lastVisitByPatient[p.id] || null }));
+            const { data: flags } = await _supabase.from('patient_staff_flags').select('patient_id').eq('do_not_contact', true);
+            const blocked = new Set((flags || []).map(f => f.patient_id));
+            allPatients = (data || []).map(p => ({ ...p, last_visit_date: lastVisitByPatient[p.id] || null, do_not_contact: blocked.has(p.id) }));
             renderSortedPatients();
 
             const select = document.getElementById('admin-book-patient');
@@ -2131,7 +2309,7 @@
 
                 return `
                 <tr class="border-t border-gray-50 hover:bg-gray-50 transition">
-                    <td class="px-5 py-4 font-medium">${escapeHtml([p.last_name, p.first_name].filter(v => String(v || '').trim()).join(', ') || p.email || 'Paciente')}</td>
+                    <td class="px-5 py-4 font-medium">${escapeHtml([p.last_name, p.first_name].filter(v => String(v || '').trim()).join(', ') || p.email || 'Paciente')}${p.do_not_contact ? ' <span title="No contactar" class="text-[9px] font-bold text-red-700 bg-red-50 px-1.5 py-0.5 rounded-full">⛔ No contactar</span>' : ''}</td>
                     <td class="px-5 py-4 text-xs">${calcAge(p.dob)}</td>
                     <td class="px-5 py-4 text-xs whitespace-nowrap">${escapeHtml(formatPhone(p.phone) || '-')}</td>
                     <td class="px-5 py-4 text-xs">${escapeHtml(p.email || '-')}</td>
@@ -2141,7 +2319,7 @@
                     <td class="px-5 py-4">
                         <div class="flex items-center gap-3 flex-wrap">
                             <button onclick="openHistoryById('${p.id}')" class="text-[#B76E88] font-bold text-[10px] uppercase hover:underline">Historia</button>
-                            ${whatsappNumber(p.phone) ? `<button onclick="openWhatsAppForPatient('${p.id}')" class="text-[#128C7E] font-bold text-[10px] uppercase hover:underline">WhatsApp</button>` : ''}
+                            ${whatsappNumber(p.phone) ? `<button onclick="openWhatsAppForPatient('${p.id}')" class="text-[#128C7E] font-bold text-[10px] uppercase hover:underline">💬 WhatsApp</button>` : ''}
                             <button onclick="openEditPatient('${p.id}')" class="text-blue-500 font-bold text-[10px] uppercase hover:underline">Editar</button>
                             <button onclick="deletePatient('${p.id}')" class="text-red-400 font-bold text-[10px] uppercase hover:underline">Eliminar</button>
                         </div>
@@ -2599,8 +2777,10 @@
         // message, so "No se envió" can remove them from the history.
         let waModalNumber = null;
         let waModalSentIds = [];
+        let waModalOnSent = null;
 
-        function openWhatsAppModal({ name, phone, text = '', sentMessageIds = [] }) {
+        function openWhatsAppModal({ name, phone, text = '', sentMessageIds = [], onSent = null }) {
+            waModalOnSent = onSent;
             const number = whatsappNumber(phone);
             if (!number) { alert('Este paciente no tiene un teléfono válido para WhatsApp.'); return; }
             waModalNumber = number;
@@ -2644,9 +2824,20 @@
             }
         }
 
+        // If the patient wrote to the clinic in the last 24 h, the clinic's own
+        // chat opens (free, from the clinic number). Otherwise WhatsApp can't be
+        // started from the clinic number without a template, so the message goes
+        // from this phone's WhatsApp (the modal).
         function openWhatsAppForPatient(patientId) {
             const p = allPatients.find(x => x.id === patientId);
             if (!p) return;
+            if (p.do_not_contact && !confirm('Este paciente está marcado "⛔ No contactar". ¿Escribirle de todas formas?')) return;
+            const conv = waConversations.find(c => c.phone === whatsappNumber(p.phone));
+            if (conv && waWindowOpen(conv)) {
+                switchAdminView('messages-view', document.getElementById('nav-messages'));
+                openConversation(conv.id);
+                return;
+            }
             openWhatsAppModal({ name: `${p.first_name || ''} ${p.last_name || ''}`, phone: p.phone });
         }
 
@@ -3650,6 +3841,7 @@
             if (cbViva) cbViva.checked = currentPatientClinic.includes('viva');
             if (cbDivine) cbDivine.checked = currentPatientClinic.includes('divine');
             loadMarketingConsent(patientId);
+            loadContactFlag(patientId);
 
             // Collapse admission section on open (collapsed by default)
             const admSection = document.getElementById('admission-section');
@@ -3664,7 +3856,7 @@
 
         // Consent to receive promotions by WhatsApp: null = never asked, 'yes', 'no'.
         // Changed here when the patient says so in person (source 'staff').
-        const CONSENT_SOURCES = { web: 'agenda web', intake: 'formulario de ingreso', whatsapp: 'WhatsApp', staff: 'personal' };
+        const CONSENT_SOURCES = { web: 'agenda web', intake: 'formulario de ingreso', whatsapp: 'WhatsApp', staff: 'personal', email: 'baja por correo' };
         function renderMarketingConsentMeta(p) {
             document.getElementById('marketing-consent-meta').innerText = p?.marketing_consent && p.marketing_consent_at
                 ? `${CONSENT_SOURCES[p.marketing_consent_source] || ''} · ${new Date(p.marketing_consent_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`
@@ -3692,6 +3884,33 @@
             const { error } = await _supabase.from('profiles').update(updates).eq('id', currentPatientId);
             if (error) { alert('No se pudo guardar: ' + error.message); return; }
             renderMarketingConsentMeta(updates);
+        }
+
+        // "No contactar": the clinic's decision not to write to this patient
+        // (left out of announcements; asks before opening WhatsApp). Appointment
+        // reminders still go if the patient books on their own.
+        async function loadContactFlag(patientId) {
+            const select = document.getElementById('dnc-select');
+            const note = document.getElementById('dnc-note');
+            select.value = 'ok'; note.value = ''; note.classList.add('hidden');
+            const { data } = await _supabase.from('patient_staff_flags').select('do_not_contact, note').eq('patient_id', patientId).maybeSingle();
+            if (patientId !== currentPatientId) return;
+            select.value = data?.do_not_contact ? 'block' : 'ok';
+            note.value = data?.note || '';
+            note.classList.toggle('hidden', !data?.do_not_contact);
+        }
+        async function saveContactFlag() {
+            if (!currentPatientId) return;
+            const blocked = document.getElementById('dnc-select').value === 'block';
+            const note = document.getElementById('dnc-note');
+            note.classList.toggle('hidden', !blocked);
+            const { error } = await _supabase.from('patient_staff_flags').upsert({
+                patient_id: currentPatientId, do_not_contact: blocked,
+                note: blocked ? (note.value.trim() || null) : null, updated_at: new Date().toISOString(),
+            }, { onConflict: 'patient_id' });
+            if (error) { alert('No se pudo guardar: ' + error.message); return; }
+            const p = allPatients.find(x => x.id === currentPatientId);
+            if (p) { p.do_not_contact = blocked; renderSortedPatients(); }
         }
 
         async function saveClinicAffiliation() {
