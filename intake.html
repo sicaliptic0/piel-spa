@@ -85,7 +85,7 @@
         <!-- ============ MODULE 1: DEMOGRAPHICS ============ -->
         <div id="module-1" class="module-screen space-y-6">
             <div>
-                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 1" data-es="Módulo 1">Module 1</span>
+                <span class="module-step-label text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 1" data-es="Módulo 1">Module 1</span>
                 <h2 class="text-3xl text-[#2A2330]" data-en="Patient Information" data-es="Información del Paciente">Patient Information</h2>
                 <p class="text-sm font-light opacity-70 mt-1" data-en="Please confirm your details and complete a few additional items." data-es="Confirma tus datos y completa algunos campos adicionales.">Please confirm your details and complete a few additional items.</p>
                 <p id="m1-time-estimate" class="text-[11px] uppercase tracking-widest font-semibold text-[#B76E88] mt-2" data-en="⏱ Takes about 5 minutes" data-es="⏱ Toma aproximadamente 5 minutos">Takes about 5 minutes</p>
@@ -205,7 +205,7 @@
         <!-- ============ MODULE 2: REASON, MEDICAL, MEDICATIONS & SURGICAL HISTORY (merged) ============ -->
         <div id="module-2" class="module-screen hidden space-y-4">
             <div>
-                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 2" data-es="Módulo 2">Module 2</span>
+                <span class="module-step-label text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 2" data-es="Módulo 2">Module 2</span>
                 <h2 class="text-3xl text-[#2A2330]" data-en="Reason for Visit & Health History" data-es="Motivo de Consulta e Historial de Salud">Reason for Visit & Health History</h2>
                 <p class="instruction-hint mt-3" data-en="✅ Tap each section below to open it. A number shows how many items you've selected." data-es="✅ Toca cada sección abajo para abrirla. Un número indica cuántos elementos has seleccionado.">Tap each section below to open it.</p>
             </div>
@@ -327,24 +327,38 @@
             </details>
         </div>
 
-        <!-- ============ MODULE 6: AESTHETIC TREATMENT HISTORY ============ -->
-        <div id="module-3" class="module-screen hidden space-y-4">
-            <div>
-                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 3" data-es="Módulo 3">Module 3</span>
-                <h2 class="text-3xl text-[#2A2330]" data-en="Previous Aesthetic Treatments" data-es="Antecedentes Estéticos Previos">Previous Aesthetic Treatments</h2>
-                <p class="instruction-hint mt-3" data-en="💉 For each treatment below, answer Yes or No. If you answer Yes, a few quick follow-up questions will appear." data-es="💉 Para cada tratamiento a continuación, responde Sí o No. Si respondes Sí, aparecerán algunas preguntas rápidas adicionales.">For each treatment below, answer Yes or No.</p>
+        <!-- ============ MODULE 3: TREATMENT HISTORY (weight loss and/or aesthetic, per the reasons in Module 2) ============ -->
+        <div id="module-3" class="module-screen hidden space-y-8">
+            <div id="m3-weight-section" class="hidden space-y-4">
+                <div>
+                    <span class="module-step-label text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 3" data-es="Módulo 3">Module 3</span>
+                    <h2 class="text-3xl text-[#2A2330]" data-en="Previous Weight Loss Treatments" data-es="Antecedentes de Pérdida de Peso">Previous Weight Loss Treatments</h2>
+                    <p class="instruction-hint mt-3" data-en="⚖️ Have you used any of these to lose weight? Answer Yes or No for each one. If you answer Yes, a few quick follow-up questions will appear." data-es="⚖️ ¿Has usado alguno de estos para bajar de peso? Responde Sí o No en cada uno. Si respondes Sí, aparecerán algunas preguntas rápidas adicionales.">Have you used any of these to lose weight?</p>
+                </div>
+                <div id="wl-categories" class="space-y-3"></div>
+                <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="Other Weight Loss Treatment" data-es="Otro Tratamiento para Bajar de Peso">Other Weight Loss Treatment</label>
+                    <input type="text" id="wl-other-input" class="field-input" data-en-ph="Describe" data-es-ph="Describe">
+                </div>
             </div>
-            <div id="m6-categories" class="space-y-3"></div>
-            <div>
-                <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="Other Aesthetic Treatment" data-es="Otro Tratamiento Estético">Other Aesthetic Treatment</label>
-                <input type="text" id="m6-other-input" class="field-input" data-en-ph="Describe" data-es-ph="Describe">
+            <div id="m3-aesthetic-section" class="space-y-4">
+                <div>
+                    <span class="module-step-label text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 3" data-es="Módulo 3">Module 3</span>
+                    <h2 class="text-3xl text-[#2A2330]" data-en="Previous Aesthetic Treatments" data-es="Antecedentes Estéticos Previos">Previous Aesthetic Treatments</h2>
+                    <p class="instruction-hint mt-3" data-en="💉 For each treatment below, answer Yes or No. If you answer Yes, a few quick follow-up questions will appear." data-es="💉 Para cada tratamiento a continuación, responde Sí o No. Si respondes Sí, aparecerán algunas preguntas rápidas adicionales.">For each treatment below, answer Yes or No.</p>
+                </div>
+                <div id="m6-categories" class="space-y-3"></div>
+                <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-[#B76E88] font-bold mb-2" data-en="Other Aesthetic Treatment" data-es="Otro Tratamiento Estético">Other Aesthetic Treatment</label>
+                    <input type="text" id="m6-other-input" class="field-input" data-en-ph="Describe" data-es-ph="Describe">
+                </div>
             </div>
         </div>
 
         <!-- ============ MODULE 7: SKIN CLASSIFICATION & SCALES ============ -->
         <div id="module-4" class="module-screen hidden space-y-8">
             <div>
-                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 4" data-es="Módulo 4">Module 4</span>
+                <span class="module-step-label text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 4" data-es="Módulo 4">Module 4</span>
                 <h2 class="text-3xl text-[#2A2330]" data-en="Skin Classification" data-es="Clasificación Cutánea">Skin Classification</h2>
                 <p class="instruction-hint mt-3" data-en="🔬 This section is completed by clinical assessment. For each scale below, select the single option that best matches your skin." data-es="🔬 Esta sección se completa mediante valoración clínica. Para cada escala a continuación, selecciona la única opción que mejor describa tu piel.">This section is completed by clinical assessment. Select the single option that best matches your skin for each scale.</p>
             </div>
@@ -364,10 +378,35 @@
             </div>
         </div>
 
+        <!-- ============ MODULE 6: GLP-1 SAFETY SCREENING & HABITS (weight-loss track only; every answer optional) ============ -->
+        <div id="module-6" class="module-screen hidden space-y-6">
+            <div>
+                <span class="module-step-label text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 6" data-es="Módulo 6">Module 6</span>
+                <h2 class="text-3xl text-[#2A2330]" data-en="Health Screening for Weight Loss" data-es="Tamizaje de Salud para Pérdida de Peso">Health Screening for Weight Loss</h2>
+                <p class="instruction-hint mt-3" data-en="🩺 These questions help us choose a safe treatment for you. Answer Yes or No — if you're not sure, you can leave it blank and continue." data-es="🩺 Estas preguntas nos ayudan a elegir un tratamiento seguro para ti. Responde Sí o No — si no estás seguro(a), puedes dejarla en blanco y continuar.">These questions help us choose a safe treatment for you.</p>
+            </div>
+            <div id="g1-questions" class="space-y-3"></div>
+            <div class="space-y-4">
+                <h4 class="text-sm font-semibold text-[#2A2330]" data-en="Habits & Goals (optional)" data-es="Hábitos y Metas (opcional)">Habits &amp; Goals (optional)</h4>
+                <div>
+                    <label class="block text-[9px] uppercase tracking-widest opacity-50 mb-1" data-en="What weight would you like to reach?" data-es="¿A qué peso te gustaría llegar?">What weight would you like to reach?</label>
+                    <input type="text" id="g1-goal-weight" class="field-input" data-en-ph="E.g. 150 lb or 68 kg" data-es-ph="Ej: 150 lb o 68 kg">
+                </div>
+                <div>
+                    <label class="block text-[9px] uppercase tracking-widest opacity-50 mb-1" data-en="How often do you exercise?" data-es="¿Con qué frecuencia haces ejercicio?">How often do you exercise?</label>
+                    <select id="g1-activity" class="field-input"></select>
+                </div>
+                <div>
+                    <label class="block text-[9px] uppercase tracking-widest opacity-50 mb-1" data-en="How often do you drink alcohol?" data-es="¿Con qué frecuencia tomas alcohol?">How often do you drink alcohol?</label>
+                    <select id="g1-alcohol" class="field-input"></select>
+                </div>
+            </div>
+        </div>
+
         <!-- ============ MODULE 5: CONSENT & SIGNATURE ============ -->
         <div id="module-5" class="module-screen hidden space-y-6">
             <div>
-                <span class="text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 5" data-es="Módulo 5">Module 5</span>
+                <span class="module-step-label text-[10px] uppercase tracking-[0.3em] text-[#B76E88] font-semibold" data-en="Module 5" data-es="Módulo 5">Module 5</span>
                 <h2 class="text-3xl text-[#2A2330]" data-en="Consent & Signature" data-es="Consentimiento y Firma">Consent & Signature</h2>
             </div>
 
@@ -452,6 +491,14 @@
         const m = window.location.hash.match(/patient=([0-9a-fA-F-]{36})/);
         return m ? m[1] : null;
     })();
+    // "Completar antecedentes" from an encounter (…&add=weight_loss | aesthetic):
+    // only the missing history section is shown and saved — the rest of the
+    // intake (and its signature) stays exactly as it was.
+    const ADD_SECTION = (() => {
+        if (!COMPLETE_FOR_PATIENT_ID) return null;
+        const m = window.location.hash.match(/add=(weight_loss|aesthetic)/);
+        return m ? m[1] : null;
+    })();
     // New-patient mode runs on a shared clinic device, so it must never read or
     // write the browser's stored session: reading it sent the next patient into
     // the previous patient's dashboard, and writing it would log the admin out.
@@ -479,6 +526,8 @@
     // completing it for (COMPLETE_FOR_PATIENT_ID). Null in new-account mode.
     let patientId = null;
     let currentAdmissionId = null;
+    // History sections already answered in a saved intake (admission_history.intake_tracks).
+    let savedTracks = [];
     // In new-account mode (no session yet, opened as ?mode=new from the Patient Portal
     // modal's iframe) there is no auth user or admission_history row until Module 5 is
     // submitted — currentUser being null throughout doubles as that mode flag.
@@ -509,13 +558,17 @@
     const MODULE_TITLES = {
         1: { en: 'Patient Information', es: 'Información del Paciente' },
         2: { en: 'Reason & Health History', es: 'Motivo e Historial de Salud' },
-        3: { en: 'Aesthetic History', es: 'Antecedentes Estéticos' },
+        3: { en: 'Aesthetic History', es: 'Antecedentes Estéticos' }, // see moduleTitle(): depends on the tracks
         4: { en: 'Skin Classification', es: 'Clasificación Cutánea' },
         5: { en: 'Consent & Signature', es: 'Consentimiento y Firma' },
+        6: { en: 'Weight Loss Screening', es: 'Tamizaje para Pérdida de Peso' },
     };
 
     // ---------- OPTION DATA ----------
     const CONCERN_OPTIONS = [
+        // Keeps its old id (saved intakes use it). Choosing it turns on the
+        // weight-loss track: weight-loss history in Module 3 (see activeTracks).
+        { id: 'overweight_obesity', en: '⚖️ Weight Loss Consultation', es: '⚖️ Consulta de Pérdida de Peso' },
         { id: 'facial_assessment', en: 'General Facial Assessment', es: 'Valoración General de la Cara' },
         { id: 'dark_circles', en: 'Under-Eye Dark Circles', es: 'Ojeras' },
         { id: 'fine_lines_wrinkles', en: 'Fine Lines & Wrinkles (Dynamic / Static)', es: 'Líneas Finas y Arrugas (Dinámicas / Estáticas)' },
@@ -533,7 +586,6 @@
         { id: 'asymmetry', en: 'Asymmetry / Facial Balance', es: 'Asimetría / Balance Facial' },
         { id: 'hair_removal', en: 'Hair Removal', es: 'Depilación' },
         { id: 'body_laxity', en: 'Body Laxity (Abdomen, Arms, Legs, Back)', es: 'Flacidez Corporal (Abdomen, Brazos, Piernas, Espalda)' },
-        { id: 'overweight_obesity', en: 'Overweight or Obesity', es: 'Sobrepeso u Obesidad' },
         { id: 'alopecia', en: 'Hair Loss / Thinning', es: 'Caída o Pérdida de Cabello' },
         { id: 'yellow_teeth', en: 'Yellow / Discolored Teeth', es: 'Dientes Amarillos' },
         { id: 'keloid_scarring', en: 'Keloid Scarring', es: 'Cicatriz Queloidea' },
@@ -686,6 +738,79 @@
           hasTimesPerformed: true, areaOptions: AREA_FACE_NECK_HANDS_OTHER, areaFreeText: false, timeSinceOptions: TIME_SINCE_STANDARD, hasComplicationQuestion: false, hasLaserTypeQuestion: false },
         { id: 'microneedling', header: { en: 'Microneedling (/PRP/PRF)', es: 'Microneedling (/PRP/PRF)' },
           hasTimesPerformed: true, areaOptions: AREA_FACE_NECK_BODY_OTHER, areaFreeText: false, timeSinceOptions: TIME_SINCE_STANDARD, hasComplicationQuestion: false, hasLaserTypeQuestion: false },
+    ];
+
+    // ---------- MODULE 3: WEIGHT-LOSS HISTORY ----------
+    // Same Yes/No-per-category idea as the aesthetic history. Each category
+    // lists which follow-up questions it asks:
+    //   type     → which drug / surgery (typeOptions select, or free text if typeFreeText)
+    //   start    → how long ago it started (or "when was it" for surgeries)
+    //   duration → for how long it was used
+    //   still    → still using it?
+    //   maxDose  → highest dose reached (free text)
+    //   results  → did it work? (+ approx. weight lost)
+    //   reaction → reaction / side effects (complication, for procedures)
+    const WL_START_OPTIONS = [
+        { v: 'less_3_months', en: 'Less than 3 months ago', es: 'Hace menos de 3 meses' },
+        { v: '3_6_months', en: '3–6 months ago', es: 'Hace 3–6 meses' },
+        { v: '6_12_months', en: '6–12 months ago', es: 'Hace 6–12 meses' },
+        { v: '1_2_years', en: '1–2 years ago', es: 'Hace 1–2 años' },
+        { v: 'more_than_2_years', en: 'More than 2 years ago', es: 'Hace más de 2 años' },
+    ];
+    const WL_DURATION_OPTIONS = [
+        { v: 'less_1_month', en: 'Less than 1 month', es: 'Menos de 1 mes' },
+        { v: '1_3_months', en: '1–3 months', es: '1–3 meses' },
+        { v: '3_6_months', en: '3–6 months', es: '3–6 meses' },
+        { v: '6_12_months', en: '6–12 months', es: '6–12 meses' },
+        { v: 'more_than_1_year', en: 'More than 1 year', es: 'Más de 1 año' },
+    ];
+    const WL_OTHER_OPTION = { v: 'other', en: 'Other', es: 'Otro' };
+    const WL_DONT_REMEMBER_OPTION = { v: 'dont_remember', en: "I don't remember", es: 'No recuerdo' };
+    const WEIGHT_LOSS_CATEGORIES = [
+        { id: 'glp1', header: { en: 'GLP-1 / GIP injections (Ozempic, Wegovy, Mounjaro, Zepbound, Saxenda)', es: 'Inyecciones GLP-1 / GIP (Ozempic, Wegovy, Mounjaro, Zepbound, Saxenda)' },
+          typeLabel: { en: 'Which medication (molecule)?', es: '¿Qué medicamento (molécula) usó?' },
+          typeOptions: [
+              { v: 'semaglutide', en: 'Semaglutide (Ozempic, Wegovy, Rybelsus)', es: 'Semaglutida (Ozempic, Wegovy, Rybelsus)' },
+              { v: 'tirzepatide', en: 'Tirzepatide (Mounjaro, Zepbound)', es: 'Tirzepatida (Mounjaro, Zepbound)' },
+              { v: 'liraglutide', en: 'Liraglutide (Saxenda, Victoza)', es: 'Liraglutida (Saxenda, Victoza)' },
+              { v: 'dulaglutide', en: 'Dulaglutide (Trulicity)', es: 'Dulaglutida (Trulicity)' },
+              { v: 'compounded_unknown', en: 'Compounded — not sure which one', es: 'Compuesto de farmacia — no sé cuál' },
+              WL_OTHER_OPTION, WL_DONT_REMEMBER_OPTION,
+          ],
+          start: true, duration: true, still: true, maxDose: true, results: true, reaction: 'reaction' },
+        { id: 'oral_meds', header: { en: 'Weight loss pills (Phentermine, Contrave, Qsymia, Orlistat)', es: 'Pastillas para bajar de peso (Fentermina, Contrave, Qsymia, Orlistat)' },
+          typeLabel: { en: 'Which medication?', es: '¿Qué medicamento?' },
+          typeOptions: [
+              { v: 'phentermine', en: 'Phentermine (Adipex)', es: 'Fentermina (Adipex)' },
+              { v: 'phentermine_topiramate', en: 'Phentermine + Topiramate (Qsymia)', es: 'Fentermina + Topiramato (Qsymia)' },
+              { v: 'naltrexone_bupropion', en: 'Naltrexone + Bupropion (Contrave)', es: 'Naltrexona + Bupropión (Contrave)' },
+              { v: 'orlistat', en: 'Orlistat (Xenical, Alli)', es: 'Orlistat (Xenical, Alli)' },
+              { v: 'metformin', en: 'Metformin', es: 'Metformina' },
+              WL_OTHER_OPTION, WL_DONT_REMEMBER_OPTION,
+          ],
+          start: true, duration: true, still: true, maxDose: false, results: true, reaction: 'reaction' },
+        { id: 'bariatric_surgery', header: { en: 'Bariatric surgery (gastric sleeve, bypass, band)', es: 'Cirugía bariátrica (manga gástrica, bypass, banda)' },
+          typeLabel: { en: 'Which surgery?', es: '¿Qué cirugía?' },
+          typeOptions: [
+              { v: 'gastric_sleeve', en: 'Gastric sleeve', es: 'Manga gástrica' },
+              { v: 'gastric_bypass', en: 'Gastric bypass', es: 'Bypass gástrico' },
+              { v: 'gastric_band', en: 'Gastric band', es: 'Banda gástrica' },
+              WL_OTHER_OPTION,
+          ],
+          start: true, startLabel: { en: 'When was it?', es: '¿Cuándo fue?' }, duration: false, still: false, maxDose: false, results: true, reaction: 'complication' },
+        { id: 'endoscopic', header: { en: 'Gastric balloon or endoscopic sleeve', es: 'Balón intragástrico o manga endoscópica' },
+          typeLabel: { en: 'Which procedure?', es: '¿Qué procedimiento?' },
+          typeOptions: [
+              { v: 'gastric_balloon', en: 'Gastric balloon', es: 'Balón intragástrico' },
+              { v: 'endoscopic_sleeve', en: 'Endoscopic sleeve (ESG)', es: 'Manga endoscópica (ESG)' },
+              WL_OTHER_OPTION,
+          ],
+          start: true, startLabel: { en: 'When was it?', es: '¿Cuándo fue?' }, duration: true, still: false, maxDose: false, results: true, reaction: 'complication' },
+        { id: 'lipotropic', header: { en: 'Lipotropic / "fat burner" injections (MIC, B12, L-carnitine)', es: 'Inyecciones lipotrópicas o "quema grasa" (MIC, B12, L-carnitina)' },
+          start: true, duration: true, still: true, maxDose: false, results: true, reaction: 'reaction' },
+        { id: 'diet_program', header: { en: 'Nutritionist plan or diet program (Weight Watchers, keto, etc.)', es: 'Plan con nutricionista o programa de dieta (Weight Watchers, keto, etc.)' },
+          typeLabel: { en: 'Which plan or program?', es: '¿Qué plan o programa?' }, typeFreeText: true,
+          start: true, duration: true, still: true, maxDose: false, results: true, reaction: false },
     ];
 
     const FITZPATRICK_TYPES = [
@@ -1108,6 +1233,15 @@
             const catId = group.slice('m6-complication-'.length);
             const desc = document.querySelector(`.m6-complication-desc[data-for="${catId}"]`);
             if (desc) desc.classList.toggle('hidden', card.dataset.value !== 'yes');
+        } else if (group.startsWith('wl-cat-')) {
+            const subform = document.querySelector(`.wl-subform[data-for="${group.slice('wl-cat-'.length)}"]`);
+            if (subform) subform.classList.toggle('hidden', card.dataset.value !== 'yes');
+        } else if (group.startsWith('wl-results-') || group.startsWith('wl-reaction-')) {
+            const desc = card.closest('div').parentElement.querySelector(group.startsWith('wl-results-') ? '.wl-results-desc' : '.wl-reaction-desc');
+            if (desc) {
+                desc.classList.toggle('hidden', card.dataset.value !== 'yes');
+                if (card.dataset.value === 'yes') desc.focus(); else desc.value = '';
+            }
         }
     });
 
@@ -1259,7 +1393,8 @@
         setBadge('m2-badge-surgical-facial', getCheckedValues('surgical-facial-checkbox').length);
         setBadge('m2-badge-surgical-general', getCheckedValues('surgical-general-checkbox').length + getOtherSurgicalValues().length);
     }
-    document.addEventListener('change', (e) => { if (e.target.closest && e.target.closest('#module-2')) updateModule2Badges(); });
+    // The reasons also decide which modules follow (weight loss / aesthetic), so the stepper is redrawn too.
+    document.addEventListener('change', (e) => { if (e.target.closest && e.target.closest('#module-2')) { updateModule2Badges(); updateProgressUI(); } });
     document.addEventListener('input', (e) => { if (e.target.closest && e.target.closest('#module-2')) updateModule2Badges(); });
 
     function applyPlaceholders() {
@@ -1375,7 +1510,7 @@
     }
     document.addEventListener('change', (e) => {
         const el = e.target;
-        if (!el.matches || !el.matches('select.m6-area, select.m6-laser-type')) return;
+        if (!el.matches || !el.matches('select.m6-area, select.m6-laser-type, select.wl-type')) return;
         const otherInput = getSelectOtherInput(el);
         if (!otherInput) return;
         const isOther = el.value === 'other';
@@ -1452,6 +1587,213 @@
                 }
             }
         });
+    }
+
+    // ---------- MODULE 3: WEIGHT-LOSS HISTORY (render / read / restore) ----------
+    // weight_loss_history is a jsonb array, one row per category answered "Sí":
+    //   { item_id, item_label, type, start_period, duration, still_using, max_dose,
+    //     had_results, weight_lost, had_reaction, reaction_description }
+    // plus { item_id: 'other', item_label } for the free-text "Other".
+    function yesNoCards(group, compact) {
+        const cls = compact ? 'radio-card flex-1 text-center py-1.5 text-xs' : 'radio-card px-4 py-1.5 text-xs';
+        return `
+            <label class="${cls}" data-group="${group}" data-value="yes"><input type="radio" name="${group}" value="yes" class="hidden"><span data-en="Yes" data-es="Sí">Yes</span></label>
+            <label class="${cls}" data-group="${group}" data-value="no"><input type="radio" name="${group}" value="no" class="hidden"><span data-en="No" data-es="No">No</span></label>`;
+    }
+    function getYesNo(group) {
+        const v = getRadioValue(group);
+        return v === 'yes' ? true : v === 'no' ? false : null;
+    }
+    function setYesNo(group, value) {
+        if (value !== true && value !== false) return;
+        const card = document.querySelector(`.radio-card[data-group="${group}"][data-value="${value ? 'yes' : 'no'}"]`);
+        if (!card) return;
+        document.querySelectorAll(`.radio-card[data-group="${group}"]`).forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        card.querySelector('input').checked = true;
+    }
+
+    function renderWeightLossCategories() {
+        const container = document.getElementById('wl-categories');
+        const fieldLabel = (en, es) => `<label class="block text-[9px] uppercase tracking-widest opacity-50 mb-1" data-en="${escapeAttr(en)}" data-es="${escapeAttr(es)}">${en}</label>`;
+        container.innerHTML = WEIGHT_LOSS_CATEGORIES.map(cat => {
+            const blocks = [];
+            if (cat.typeFreeText) {
+                blocks.push(`<div>${fieldLabel(cat.typeLabel.en, cat.typeLabel.es)}<input type="text" class="wl-type-text field-input" data-en-ph="Describe" data-es-ph="Describe"></div>`);
+            } else if (cat.typeOptions) {
+                blocks.push(`<div>${fieldLabel(cat.typeLabel.en, cat.typeLabel.es)}
+                    <select class="wl-type field-input"></select>
+                    <input type="text" class="wl-type-other hidden field-input mt-2" data-en-ph="Which one?" data-es-ph="¿Cuál?"></div>`);
+            }
+            if (cat.start) {
+                const label = cat.startLabel || { en: 'When did you start?', es: '¿Cuándo lo comenzó?' };
+                blocks.push(`<div>${fieldLabel(label.en, label.es)}<select class="wl-start field-input"></select></div>`);
+            }
+            if (cat.duration) blocks.push(`<div>${fieldLabel('For how long?', '¿Por cuánto tiempo?')}<select class="wl-duration field-input"></select></div>`);
+            if (cat.still) blocks.push(`<div>${fieldLabel('Are you still using it?', '¿Lo sigue usando actualmente?')}<div class="flex gap-2 max-w-xs">${yesNoCards(`wl-still-${cat.id}`, true)}</div></div>`);
+            if (cat.maxDose) blocks.push(`<div>${fieldLabel('Highest dose you reached (if you know it)', 'Dosis más alta que alcanzó (si la sabe)')}<input type="text" class="wl-max-dose field-input" data-en-ph="E.g. 1 mg / week" data-es-ph="Ej: 1 mg por semana"></div>`);
+            if (cat.results) blocks.push(`<div>${fieldLabel('Did you see results?', '¿Vio resultados?')}<div class="flex gap-2 max-w-xs">${yesNoCards(`wl-results-${cat.id}`, true)}</div>
+                    <input type="text" class="wl-results-desc hidden field-input mt-2" data-en-ph="About how much weight did you lose?" data-es-ph="¿Aproximadamente cuánto peso bajó?"></div>`);
+            if (cat.reaction) {
+                const q = cat.reaction === 'complication'
+                    ? { en: 'Did you have any complication?', es: '¿Tuvo alguna complicación?', phEn: 'Describe the complication', phEs: 'Describe la complicación' }
+                    : { en: 'Did you have any reaction or side effect?', es: '¿Tuvo alguna reacción o efecto secundario?', phEn: 'E.g. nausea, vomiting, constipation...', phEs: 'Ej: náuseas, vómito, estreñimiento...' };
+                blocks.push(`<div>${fieldLabel(q.en, q.es)}<div class="flex gap-2 max-w-xs">${yesNoCards(`wl-reaction-${cat.id}`, true)}</div>
+                    <input type="text" class="wl-reaction-desc hidden field-input mt-2" data-en-ph="${escapeAttr(q.phEn)}" data-es-ph="${escapeAttr(q.phEs)}"></div>`);
+            }
+            return `
+            <div class="border border-[#EDE1E7] rounded-xl bg-white overflow-hidden">
+                <div class="p-4">
+                    <div id="wl-yesno-${cat.id}" class="flex items-start justify-between gap-3">
+                        <span class="text-sm font-medium flex-1 min-w-0" data-en="${escapeAttr(cat.header.en)}" data-es="${escapeAttr(cat.header.es)}">${cat.header.en}</span>
+                        <div class="flex gap-2 flex-shrink-0">${yesNoCards(`wl-cat-${cat.id}`, false)}</div>
+                    </div>
+                    <div class="wl-subform hidden mt-4 space-y-3 border-t border-[#EDE1E7] pt-4" data-for="${cat.id}">${blocks.join('')}</div>
+                </div>
+            </div>`;
+        }).join('');
+
+        WEIGHT_LOSS_CATEGORIES.forEach(cat => {
+            const sub = container.querySelector(`.wl-subform[data-for="${cat.id}"]`);
+            const placeholder = { en: 'Select...', es: 'Selecciona...' };
+            if (cat.typeOptions && !cat.typeFreeText) populateSelect(sub.querySelector('.wl-type'), cat.typeOptions, { valueKey: 'v', placeholder });
+            if (cat.start) populateSelect(sub.querySelector('.wl-start'), WL_START_OPTIONS, { valueKey: 'v', placeholder });
+            if (cat.duration) populateSelect(sub.querySelector('.wl-duration'), WL_DURATION_OPTIONS, { valueKey: 'v', placeholder });
+        });
+        applyPlaceholders();
+        applyLanguage();
+    }
+
+    function getWeightLossHistoryData() {
+        const rows = [];
+        WEIGHT_LOSS_CATEGORIES.forEach(cat => {
+            if (getRadioValue(`wl-cat-${cat.id}`) !== 'yes') return;
+            const sub = document.querySelector(`.wl-subform[data-for="${cat.id}"]`);
+            const value = sel => sub.querySelector(sel)?.value.trim() || null;
+            const hadResults = cat.results ? getYesNo(`wl-results-${cat.id}`) : null;
+            const hadReaction = cat.reaction ? getYesNo(`wl-reaction-${cat.id}`) : null;
+            rows.push({
+                item_id: cat.id,
+                item_label: t(cat.header),
+                type: cat.typeFreeText ? value('.wl-type-text') : (cat.typeOptions ? readSelectWithOther(sub.querySelector('.wl-type')) : null),
+                start_period: cat.start ? value('.wl-start') : null,
+                duration: cat.duration ? value('.wl-duration') : null,
+                still_using: cat.still ? getYesNo(`wl-still-${cat.id}`) : null,
+                max_dose: cat.maxDose ? value('.wl-max-dose') : null,
+                had_results: hadResults,
+                weight_lost: hadResults ? value('.wl-results-desc') : null,
+                had_reaction: hadReaction,
+                reaction_description: hadReaction ? value('.wl-reaction-desc') : null,
+            });
+        });
+        const otherVal = document.getElementById('wl-other-input').value.trim();
+        if (otherVal) rows.push({ item_id: 'other', item_label: otherVal });
+        return rows;
+    }
+
+    function setWeightLossHistoryData(rows) {
+        (Array.isArray(rows) ? rows : []).forEach(row => {
+            if (row.item_id === 'other') { document.getElementById('wl-other-input').value = row.item_label || ''; return; }
+            const cat = WEIGHT_LOSS_CATEGORIES.find(c => c.id === row.item_id);
+            if (!cat) return;
+            setYesNo(`wl-cat-${cat.id}`, true);
+            const sub = document.querySelector(`.wl-subform[data-for="${cat.id}"]`);
+            sub.classList.remove('hidden');
+            if (row.type) {
+                if (cat.typeFreeText) sub.querySelector('.wl-type-text').value = row.type;
+                else if (cat.typeOptions) writeSelectWithOther(sub.querySelector('.wl-type'), row.type);
+            }
+            if (cat.start && row.start_period) sub.querySelector('.wl-start').value = row.start_period;
+            if (cat.duration && row.duration) sub.querySelector('.wl-duration').value = row.duration;
+            if (cat.still) setYesNo(`wl-still-${cat.id}`, row.still_using);
+            if (cat.maxDose && row.max_dose) sub.querySelector('.wl-max-dose').value = row.max_dose;
+            if (cat.results) {
+                setYesNo(`wl-results-${cat.id}`, row.had_results);
+                const desc = sub.querySelector('.wl-results-desc');
+                desc.classList.toggle('hidden', row.had_results !== true);
+                desc.value = row.weight_lost || '';
+            }
+            if (cat.reaction) {
+                setYesNo(`wl-reaction-${cat.id}`, row.had_reaction);
+                const desc = sub.querySelector('.wl-reaction-desc');
+                desc.classList.toggle('hidden', row.had_reaction !== true);
+                desc.value = row.reaction_description || '';
+            }
+        });
+    }
+
+    // ---------- MODULE 6: GLP-1 SAFETY SCREENING (weight-loss track) ----------
+    // Every question is optional Sí/No — nothing here blocks "Next". Saved as
+    // glp1_screening: { answers: { [id]: true|false }, goal_weight, activity, alcohol },
+    // only answered questions are stored. femaleOnly questions are hidden (and
+    // never saved) unless the patient's sex is female.
+    const GLP1_SCREENING = [
+        { id: 'mtc_men2', en: 'Have you or a family member had medullary thyroid cancer or MEN2 syndrome?', es: '¿Usted o algún familiar ha tenido cáncer medular de tiroides o síndrome MEN2?' },
+        { id: 'pancreatitis', en: 'Have you ever had pancreatitis (inflammation of the pancreas)?', es: '¿Ha tenido alguna vez pancreatitis (inflamación del páncreas)?' },
+        { id: 'gallbladder', en: 'Have you had gallstones or gallbladder problems?', es: '¿Ha tenido cálculos o problemas de la vesícula?' },
+        { id: 'gastroparesis', en: 'Do you have gastroparesis or a severe digestive condition?', es: '¿Tiene gastroparesia o alguna enfermedad digestiva severa?' },
+        { id: 'kidney_disease', en: 'Do you have kidney disease?', es: '¿Tiene alguna enfermedad de los riñones?' },
+        { id: 'eating_disorder', en: 'Have you had an eating disorder (anorexia, bulimia, binge eating)?', es: '¿Ha tenido algún trastorno de la alimentación (anorexia, bulimia, atracones)?' },
+        { id: 'diabetic_retinopathy', en: 'Do you have diabetic retinopathy (eye damage from diabetes)?', es: '¿Tiene retinopatía diabética (daño en los ojos por diabetes)?' },
+        { id: 'insulin_sulfonylurea', en: 'Do you use insulin or diabetes pills like glipizide or glyburide?', es: '¿Usa insulina o pastillas para la diabetes como glipizida o glibenclamida?' },
+        { id: 'pregnancy_plans', femaleOnly: true, en: 'Are you planning to get pregnant in the next 6 months?', es: '¿Planea quedar embarazada en los próximos 6 meses?' },
+        { id: 'oral_contraceptives', femaleOnly: true, en: 'Do you take birth control pills?', es: '¿Toma pastillas anticonceptivas?' },
+    ];
+    const GLP1_ACTIVITY_OPTIONS = [
+        { v: 'none', en: "I don't exercise", es: 'No hago ejercicio' },
+        { v: '1_2_week', en: '1–2 days a week', es: '1–2 días por semana' },
+        { v: '3_4_week', en: '3–4 days a week', es: '3–4 días por semana' },
+        { v: '5_plus_week', en: '5 or more days a week', es: '5 o más días por semana' },
+    ];
+    const GLP1_ALCOHOL_OPTIONS = [
+        { v: 'never', en: 'Never', es: 'Nunca' },
+        { v: 'occasionally', en: 'Occasionally', es: 'Ocasionalmente' },
+        { v: 'weekly', en: 'Every week', es: 'Cada semana' },
+        { v: 'daily', en: 'Every day', es: 'Todos los días' },
+    ];
+
+    function isFemalePatient() {
+        return String(getPatientSex() || '').toLowerCase().startsWith('f');
+    }
+
+    function renderGlp1Screening() {
+        document.getElementById('g1-questions').innerHTML = GLP1_SCREENING.map(q => `
+            <div class="g1-question border border-[#EDE1E7] rounded-xl bg-white p-4 flex items-start justify-between gap-3" data-id="${q.id}" ${q.femaleOnly ? 'data-female-only="1"' : ''}>
+                <span class="text-sm flex-1 min-w-0" data-en="${escapeAttr(q.en)}" data-es="${escapeAttr(q.es)}">${q.en}</span>
+                <div class="flex gap-2 flex-shrink-0">${yesNoCards(`g1-${q.id}`, false)}</div>
+            </div>`).join('');
+        const placeholder = { en: 'Select...', es: 'Selecciona...' };
+        populateSelect(document.getElementById('g1-activity'), GLP1_ACTIVITY_OPTIONS, { valueKey: 'v', placeholder });
+        populateSelect(document.getElementById('g1-alcohol'), GLP1_ALCOHOL_OPTIONS, { valueKey: 'v', placeholder });
+    }
+
+    function updateGlp1FemaleQuestions() {
+        const female = isFemalePatient();
+        document.querySelectorAll('.g1-question[data-female-only]').forEach(el => el.classList.toggle('hidden', !female));
+    }
+
+    function getGlp1ScreeningData() {
+        const female = isFemalePatient();
+        const answers = {};
+        GLP1_SCREENING.forEach(q => {
+            if (q.femaleOnly && !female) return;
+            const v = getYesNo(`g1-${q.id}`);
+            if (v !== null) answers[q.id] = v;
+        });
+        return {
+            answers,
+            goal_weight: document.getElementById('g1-goal-weight').value.trim() || null,
+            activity: document.getElementById('g1-activity').value || null,
+            alcohol: document.getElementById('g1-alcohol').value || null,
+        };
+    }
+
+    function setGlp1ScreeningData(data) {
+        if (!data || typeof data !== 'object') return;
+        Object.entries(data.answers || {}).forEach(([id, v]) => setYesNo(`g1-${id}`, v));
+        document.getElementById('g1-goal-weight').value = data.goal_weight || '';
+        document.getElementById('g1-activity').value = data.activity || '';
+        document.getElementById('g1-alcohol').value = data.alcohol || '';
     }
 
     // ---------- SIGNATURE PAD ----------
@@ -1532,21 +1874,63 @@
         }
     });
 
+    // ---------- TRACKS: AESTHETIC / WEIGHT LOSS ----------
+    // The reasons chosen in Module 2 decide which history the patient answers:
+    // "Consulta de Pérdida de Peso" → weight-loss history (and no skin
+    // classification); any other reason → aesthetic history + Module 4; both
+    // → both. With no reason at all yet, it defaults to aesthetic.
+    const WEIGHT_LOSS_REASON = 'overweight_obesity';
+    function activeTracks() {
+        if (ADD_SECTION) return [ADD_SECTION];
+        const reasons = getCheckedValues('concern-checkbox');
+        const weightLoss = reasons.includes(WEIGHT_LOSS_REASON);
+        const aesthetic = !weightLoss || reasons.some(r => r !== WEIGHT_LOSS_REASON) || getOtherValues('m2-other-container').length > 0;
+        return [aesthetic && 'aesthetic', weightLoss && 'weight_loss'].filter(Boolean);
+    }
+
+    // The modules this patient actually goes through, in order.
+    function moduleSequence() {
+        // Module 6 (GLP-1 screening) sits between 4 and 5 for the weight-loss track.
+        if (ADD_SECTION === 'weight_loss') return [3, 6];
+        if (ADD_SECTION === 'aesthetic') return [3, 4];
+        const tracks = activeTracks();
+        return [1, 2, 3, ...(tracks.includes('aesthetic') ? [4] : []), ...(tracks.includes('weight_loss') ? [6] : []), 5];
+    }
+    function isLastModule() {
+        const seq = moduleSequence();
+        return currentModule === seq[seq.length - 1];
+    }
+
+    function moduleTitle(n) {
+        if (n !== 3) return MODULE_TITLES[n];
+        const tracks = activeTracks();
+        if (tracks.length === 2) return { en: 'Weight Loss & Aesthetic History', es: 'Antecedentes de Peso y Estéticos' };
+        return tracks[0] === 'weight_loss' ? { en: 'Weight Loss History', es: 'Antecedentes de Pérdida de Peso' } : MODULE_TITLES[3];
+    }
+
+    function updateModule3Sections() {
+        const tracks = activeTracks();
+        document.getElementById('m3-weight-section').classList.toggle('hidden', !tracks.includes('weight_loss'));
+        document.getElementById('m3-aesthetic-section').classList.toggle('hidden', !tracks.includes('aesthetic'));
+    }
+
     // ---------- NAVIGATION ----------
     // Renders the 8-circle step tracker (done = filled with a check, current =
     // outlined + ring, upcoming = greyed out) so the patient can see overall
     // progress at a glance instead of just reading "Step 3 / 8" as plain text.
     function renderStepper() {
         const container = document.getElementById('stepper');
+        const seq = moduleSequence();
+        const currentIndex = seq.indexOf(currentModule);
         let html = '';
-        for (let i = 1; i <= TOTAL_MODULES; i++) {
-            const done = i < currentModule;
-            const active = i === currentModule;
+        for (let i = 1; i <= seq.length; i++) {
+            const done = i - 1 < currentIndex;
+            const active = i - 1 === currentIndex;
             const circleClasses = done ? 'step-circle bg-[#B76E88] border-[#B76E88] text-white'
                 : active ? 'step-circle bg-white border-[#B76E88] text-[#B76E88] ring-2 ring-[#B76E88] ring-offset-1'
                 : 'step-circle bg-white border-[#EDE1E7] text-[#C9BAC2]';
             html += `<div class="${circleClasses}">${done ? '✓' : i}</div>`;
-            if (i < TOTAL_MODULES) {
+            if (i < seq.length) {
                 html += `<div class="flex-1 h-0.5 ${done ? 'bg-[#B76E88]' : 'bg-[#EDE1E7]'} mx-0.5 md:mx-1"></div>`;
             }
         }
@@ -1555,11 +1939,23 @@
 
     function updateProgressUI() {
         renderStepper();
-        const stepLabel = currentLang === 'en' ? `Step ${currentModule} of ${TOTAL_MODULES} · ` : `Paso ${currentModule} de ${TOTAL_MODULES} · `;
-        document.getElementById('progress-title').innerText = stepLabel + t(MODULE_TITLES[currentModule]);
-        document.getElementById('btn-prev').style.visibility = currentModule === 1 ? 'hidden' : 'visible';
-        document.getElementById('btn-next').classList.toggle('hidden', currentModule === TOTAL_MODULES);
-        document.getElementById('btn-submit').classList.toggle('hidden', currentModule !== TOTAL_MODULES);
+        const seq = moduleSequence();
+        const step = seq.indexOf(currentModule) + 1;
+        const stepLabel = currentLang === 'en' ? `Step ${step} of ${seq.length} · ` : `Paso ${step} de ${seq.length} · `;
+        document.getElementById('progress-title').innerText = stepLabel + t(moduleTitle(currentModule));
+        // Each module's small "Module N" label follows the step number, since
+        // skipped modules (e.g. no Module 4 for weight loss) shift the count.
+        document.querySelectorAll(`#module-${currentModule} .module-step-label`).forEach(el => {
+            el.innerText = currentLang === 'en' ? `Step ${step}` : `Paso ${step}`;
+        });
+        document.getElementById('btn-prev').style.visibility = step <= 1 ? 'hidden' : 'visible';
+        document.getElementById('btn-next').classList.toggle('hidden', isLastModule());
+        document.getElementById('btn-submit').classList.toggle('hidden', !isLastModule());
+        if (ADD_SECTION) {
+            document.getElementById('btn-submit').setAttribute('data-en', 'Save');
+            document.getElementById('btn-submit').setAttribute('data-es', 'Guardar');
+            document.getElementById('btn-submit').innerText = currentLang === 'en' ? 'Save' : 'Guardar';
+        }
         updatePatientBanner();
     }
 
@@ -1591,10 +1987,10 @@
     }
 
     function showModule(n) {
-        for (let i = 1; i <= TOTAL_MODULES; i++) {
-            document.getElementById('module-' + i).classList.toggle('hidden', i !== n);
-        }
+        document.querySelectorAll('.module-screen').forEach(el => el.classList.toggle('hidden', el.id !== 'module-' + n));
         currentModule = n;
+        if (n === 3) updateModule3Sections();
+        if (n === 6) updateGlp1FemaleQuestions();
         if (n === TOTAL_MODULES) prefillSignatureName();
         updateProgressUI();
         updateNextButtonState();
@@ -1773,10 +2169,19 @@
                 { en: 'Please answer this question, or select "🚫 None".', es: 'Por favor responde esta pregunta, o selecciona "🚫 Ninguna".' }));
         }
         if (currentModule === 3) {
-            AESTHETIC_CATEGORIES_V2.forEach(cat => {
-                flag(setGroupError(document.getElementById('m6-yesno-' + cat.id), !getRadioValue('m6-cat-' + cat.id),
-                    { en: 'Please answer Yes or No.', es: 'Por favor responde Sí o No.' }));
-            });
+            const tracks = activeTracks();
+            if (tracks.includes('weight_loss')) {
+                WEIGHT_LOSS_CATEGORIES.forEach(cat => {
+                    flag(setGroupError(document.getElementById('wl-yesno-' + cat.id), !getRadioValue('wl-cat-' + cat.id),
+                        { en: 'Please answer Yes or No.', es: 'Por favor responde Sí o No.' }));
+                });
+            }
+            if (tracks.includes('aesthetic')) {
+                AESTHETIC_CATEGORIES_V2.forEach(cat => {
+                    flag(setGroupError(document.getElementById('m6-yesno-' + cat.id), !getRadioValue('m6-cat-' + cat.id),
+                        { en: 'Please answer Yes or No.', es: 'Por favor responde Sí o No.' }));
+                });
+            }
         }
         if (currentModule === 4) {
             flag(setGroupError(document.getElementById('m7-fitzpatrick'), !getRadioValue('m7-fitzpatrick'),
@@ -1835,7 +2240,7 @@
         // In new-account mode there's no auth user / admission_history row to save
         // against yet — everything is held in the DOM and only submitted for real
         // when Module 5 creates the account (see submitIntake()).
-        if (currentUser) {
+        if (currentUser && !ADD_SECTION) {
             if (currentModule === 1) await updateProfileDemographics();
             const result = await saveProgress(false);
             if (!result.ok) {
@@ -1847,13 +2252,40 @@
             }
             flashSavedIndicator();
         }
-        if (currentModule < TOTAL_MODULES) showModule(currentModule + 1);
+        const seq = moduleSequence();
+        const next = seq[seq.indexOf(currentModule) + 1];
+        if (next) showModule(next);
     }
     function goPrev() {
-        if (currentModule > 1) showModule(currentModule - 1);
+        const seq = moduleSequence();
+        const prev = seq[seq.indexOf(currentModule) - 1];
+        if (prev) showModule(prev);
     }
 
     // ---------- COLLECT / FILL FORM STATE ----------
+    // A history section (and the aesthetic-only skin classification) is only
+    // written while its track is active, so a weight-loss-only patient never
+    // saves an empty aesthetic history over nothing — that blank is what lets
+    // the admin offer "complete the aesthetic part" later. A track counts as
+    // answered (intake_tracks) once Module 3 has been passed with it on.
+    function collectSectionData() {
+        const tracks = activeTracks();
+        const data = {};
+        if (tracks.includes('weight_loss')) {
+            data.weight_loss_history = getWeightLossHistoryData();
+            data.glp1_screening = getGlp1ScreeningData();
+        }
+        if (tracks.includes('aesthetic')) {
+            data.aesthetic_history = getAestheticHistoryDataV2();
+            data.fitzpatrick = getRadioValue('m7-fitzpatrick');
+            data.skin_type = getRadioValue('m7-skintype');
+            data.glogau = getRadioValue('m7-glogau');
+        }
+        const answered = currentModule >= 3 ? tracks : [];
+        data.intake_tracks = Array.from(new Set([...savedTracks, ...answered]));
+        return data;
+    }
+
     function collectFormData() {
         return {
             ...(patientId ? { patient_id: patientId } : {}),
@@ -1881,11 +2313,7 @@
             surgical_history_general: getCheckedValues('surgical-general-checkbox'),
             surgical_history_other: getOtherSurgicalValues(),
 
-            aesthetic_history: getAestheticHistoryDataV2(),
-
-            fitzpatrick: getRadioValue('m7-fitzpatrick'),
-            skin_type: getRadioValue('m7-skintype'),
-            glogau: getRadioValue('m7-glogau'),
+            ...collectSectionData(),
 
             hipaa_acknowledged: document.getElementById('m8-hipaa').checked,
             photo_consent_required: document.getElementById('m8-photo-required').checked,
@@ -1946,6 +2374,18 @@
         let aesthetic = data.aesthetic_history;
         if (typeof aesthetic === 'string') { try { aesthetic = JSON.parse(aesthetic); } catch(_) { aesthetic = []; } }
         setAestheticHistoryDataV2(aesthetic);
+        let weightLoss = data.weight_loss_history;
+        if (typeof weightLoss === 'string') { try { weightLoss = JSON.parse(weightLoss); } catch(_) { weightLoss = []; } }
+        setWeightLossHistoryData(weightLoss);
+        let screening = data.glp1_screening;
+        if (typeof screening === 'string') { try { screening = JSON.parse(screening); } catch(_) { screening = null; } }
+        setGlp1ScreeningData(screening);
+        // "No" answers leave no row, so a section that was already answered
+        // gets its unanswered categories back as "No" instead of asking again.
+        // Intakes finished before tracks existed always answered the aesthetic history.
+        savedTracks = Array.isArray(data.intake_tracks) ? data.intake_tracks : (data.intake_completed_at ? ['aesthetic'] : []);
+        if (savedTracks.includes('weight_loss')) WEIGHT_LOSS_CATEGORIES.forEach(cat => { if (!getRadioValue(`wl-cat-${cat.id}`)) setYesNo(`wl-cat-${cat.id}`, false); });
+        if (savedTracks.includes('aesthetic')) AESTHETIC_CATEGORIES_V2.forEach(cat => { if (!getRadioValue(`m6-cat-${cat.id}`)) setYesNo(`m6-cat-${cat.id}`, false); });
 
         if (data.fitzpatrick) setRadioValue('m7-fitzpatrick', 'm7-fitzpatrick', data.fitzpatrick);
         if (data.skin_type) setRadioValue('m7-skintype', 'm7-skintype', data.skin_type);
@@ -1959,8 +2399,21 @@
     }
 
     // ---------- SAVE / LOAD ----------
+    // ADD_SECTION mode saves only the added section, so the signed intake
+    // (consents, signature) is never touched.
+    function collectAddSectionData() {
+        return {
+            patient_id: patientId,
+            ...collectSectionData(),
+            ...(ADD_SECTION === 'weight_loss'
+                ? { consultation_reasons: Array.from(new Set([...getCheckedValues('concern-checkbox'), WEIGHT_LOSS_REASON])) }
+                : {}),
+            updated_at: new Date().toISOString(),
+        };
+    }
+
     async function saveProgress(markComplete) {
-        const payload = collectFormData();
+        const payload = ADD_SECTION ? collectAddSectionData() : collectFormData();
         if (markComplete) payload.intake_completed_at = new Date().toISOString();
 
         let error;
@@ -2056,7 +2509,7 @@
             return;
         }
 
-        const result = await saveProgress(true);
+        const result = await saveProgress(!ADD_SECTION);
         if (result.ok) {
             exitAfterSubmit();
         } else {
@@ -2126,6 +2579,8 @@
         enforceNoneExclusivity('surgical-facial-checkbox', 'none_facial_surgery');
         enforceNoneExclusivity('surgical-general-checkbox', 'none_general_surgery');
         renderAestheticCategoriesV2();
+        renderWeightLossCategories();
+        renderGlp1Screening();
         renderRadioGroup('m7-fitzpatrick', FITZPATRICK_TYPES, 'm7-fitzpatrick', true);
         renderRadioGroup('m7-skintype', SKIN_TYPES, 'm7-skintype', false);
         initSignaturePad();
@@ -2196,7 +2651,7 @@
         renderGlogauGroup();
         updateModule2Badges();
         applyLanguage();
-        showModule(1);
+        showModule(ADD_SECTION ? 3 : 1);
     }
 
     document.addEventListener('DOMContentLoaded', init);

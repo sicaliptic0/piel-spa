@@ -428,6 +428,8 @@
                             <p class="text-[9px] uppercase tracking-widest opacity-40" id="adm-source-note">Cuestionario completado por el paciente.</p>
                             <div class="flex gap-2 flex-shrink-0 flex-wrap">
                                 <button type="button" id="adm-complete-btn" onclick="openCompleteIntakeModal(currentPatientId, currentPatientName)" class="hidden text-[9px] uppercase tracking-widest font-bold text-white bg-[#2A2330] px-3 py-1.5 rounded-full hover:bg-[#B76E88] transition">📝 Completar con el paciente</button>
+                                <button type="button" id="adm-add-wl-btn" onclick="openAddIntakeSection('weight_loss')" class="hidden text-[9px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition">⚖️ Antecedentes de peso</button>
+                                <button type="button" id="adm-add-aesthetic-btn" onclick="openAddIntakeSection('aesthetic')" class="hidden text-[9px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition">💉 Agregar antecedentes estéticos</button>
                                 <button type="button" onclick="copyAdmissionSummary(this)" class="text-[9px] uppercase tracking-widest font-bold text-[#2A2330] border border-[#EDE1E7] px-3 py-1.5 rounded-full hover:border-[#B76E88] transition">📋 Copiar</button>
                                 <button type="button" onclick="setAdmissionMode('edit')" class="text-[9px] uppercase tracking-widest font-bold text-white bg-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#9C5570] transition">✏️ Editar</button>
                             </div>
@@ -1001,6 +1003,9 @@
         let currentPatientEmail = null;
         let currentPatientPhone = null;
         let currentAdmissionId = null;
+        // The open patient's admission_history row (null if none) — the encounter
+        // form reads it to offer completing a missing history section.
+        let currentAdmissionData = null;
         let notesById = {};
         let admissionDirty = false;
         let soapDirty = false;
@@ -1020,6 +1025,8 @@
         // `es` matches dashboard.html's Spanish labels; the encounter form uses it.
         const TREATMENT_OPTIONS = [
             { id: 'general_consultation', category: 'consultation', label: 'General Consultation', es: 'Consulta General' },
+            // Encounter-only (not in TREATMENT_CATEGORIES, so not offered for booking).
+            { id: 'weight_loss_consultation', category: 'weight_loss', label: 'Weight Loss Consultation', es: 'Consulta de Pérdida de Peso' },
 
             { id: 'upper_face_rejuvenation', category: 'neuromodulators', label: 'Upper Face Rejuvenation', es: 'Rejuvenecimiento de la Parte Superior' },
             { id: 'masseter_reduction_bruxism', category: 'neuromodulators', label: 'Masseter Reduction (Bruxism)', es: 'Reducción del Masetero (Bruxismo)' },
@@ -1116,8 +1123,14 @@
         // Saved as clinical_history.procedures_detail, keyed by category:
         //   { neuromodulators: { qty: 40, items: [{ id }], other: { label } },
         //     biostimulators: { items: [{ id, qty }], other: { label, qty } } }
+        //   weight_loss  → medication, dose and the anthropometric measurements:
+        //     { weight_loss: { medication, dose_mg, dilution, bmi, bmi_class,
+        //                      measurements: { weight_kg, height_cm, waist_high_cm, … } } }
+        // intakeTrack: the intake history section this consultation needs; if the
+        // patient's intake lacks it, the encounter offers to complete it.
         const ENCOUNTER_CATEGORIES = [
-            { id: 'consultation', title: 'Consulta', mode: 'check', itemId: 'general_consultation' },
+            { id: 'consultation', title: 'Consulta estética', mode: 'check', itemId: 'general_consultation', intakeTrack: 'aesthetic' },
+            { id: 'weight_loss', title: 'Consulta de pérdida de peso', mode: 'weight_loss', itemId: 'weight_loss_consultation', intakeTrack: 'weight_loss' },
             { id: 'neuromodulators', title: 'Neuromoduladores (Botox)', short: 'Botox', mode: 'category_qty', qtyLabel: 'Unidades', unit: ['unidad', 'unidades'] },
             { id: 'fillers', title: 'Rellenos dérmicos (ácido hialurónico)', short: 'Relleno', mode: 'category_qty', qtyLabel: 'Jeringas', unit: ['jeringa', 'jeringas'] },
             { id: 'filler_dissolution', title: 'Disolución de rellenos (filler removal)', mode: 'check', itemId: 'filler_dissolution' },
@@ -1134,9 +1147,236 @@
             return TREATMENT_OPTIONS.filter(o => o.category === catId);
         }
 
+        // ---------- ENCOUNTER: WEIGHT-LOSS CONSULTATION ----------
+        // Every measurement is optional. Values are typed in metric (unit shown to
+        // the right of the box) and the US equivalent is shown next to it.
+        //   conv: 'kg' → lb · 'cm' → in · 'height' → ft/in · none → no conversion
+        const WL_BODY_MEASUREMENTS = [
+            { key: 'weight_kg', label: 'Peso', unit: 'kg', conv: 'kg' },
+            { key: 'height_cm', label: 'Talla', unit: 'cm', conv: 'height' },
+            { key: 'body_fat_pct', label: '% de grasa corporal', unit: '%' },
+            { key: 'fat_mass_kg', label: 'Masa grasa corporal', unit: 'kg', conv: 'kg' },
+            { key: 'muscle_index', label: 'Índice muscular', unit: '' },
+            { key: 'subcutaneous_fat_pct', label: '% de grasa subcutánea', unit: '%' },
+            { key: 'smi', label: 'Índice de masa muscular esquelética', unit: 'kg/m²' },
+            { key: 'muscle_mass_kg', label: 'Masa muscular', unit: 'kg', conv: 'kg' },
+        ];
+        const WL_CIRCUMFERENCES = [
+            { key: 'waist_high_cm', label: 'Cintura alta' },
+            { key: 'waist_low_cm', label: 'Cintura baja' },
+            { key: 'hip_cm', label: 'Cadera' },
+            { key: 'arm_right_cm', label: 'Brazo derecho' },
+            { key: 'arm_left_cm', label: 'Brazo izquierdo' },
+            { key: 'thigh_right_cm', label: 'Muslo derecho' },
+            { key: 'thigh_left_cm', label: 'Muslo izquierdo' },
+            { key: 'neck_cm', label: 'Cuello' },
+        ].map(m => ({ ...m, unit: 'cm', conv: 'cm' }));
+        const WL_ALL_MEASUREMENTS = [...WL_BODY_MEASUREMENTS, ...WL_CIRCUMFERENCES];
+        const WL_MEDICATIONS = ['Semaglutida', 'Tirzepatida', 'Liraglutida'];
+
+        function roundTo(n, decimals) {
+            const f = Math.pow(10, decimals);
+            return Math.round(n * f) / f;
+        }
+        function usConversion(value, conv) {
+            if (!value) return '';
+            if (conv === 'kg') return `${roundTo(value * 2.20462, 1)} lb`;
+            if (conv === 'cm') return `${roundTo(value / 2.54, 1)} in`;
+            if (conv === 'height') {
+                const totalIn = Math.round(value / 2.54);
+                return `${Math.floor(totalIn / 12)} ft ${totalIn % 12} in`;
+            }
+            return '';
+        }
+        function computeBmi(weightKg, heightCm) {
+            if (!weightKg || !heightCm) return null;
+            const m = heightCm / 100;
+            return roundTo(weightKg / (m * m), 1);
+        }
+        // WHO adult BMI categories.
+        function bmiClass(bmi) {
+            if (!bmi) return null;
+            if (bmi < 18.5) return 'Bajo peso';
+            if (bmi < 25) return 'Peso normal';
+            if (bmi < 30) return 'Sobrepeso';
+            if (bmi < 35) return 'Obesidad grado I';
+            if (bmi < 40) return 'Obesidad grado II';
+            return 'Obesidad grado III';
+        }
+        const BMI_CLASS_STYLE = {
+            'Bajo peso': 'bg-blue-50 text-blue-700', 'Peso normal': 'bg-green-50 text-green-700', 'Sobrepeso': 'bg-amber-50 text-amber-700',
+            'Obesidad grado I': 'bg-orange-50 text-orange-700', 'Obesidad grado II': 'bg-red-50 text-red-700', 'Obesidad grado III': 'bg-red-100 text-red-800',
+        };
+        function formatMeasure(n) {
+            return n === null || n === undefined ? '' : String(roundTo(n, 2));
+        }
+
+        // The latest earlier encounter with weight-loss measurements, to show
+        // "ant." values next to each box. Set when the form opens.
+        let wlPrevious = null;
+
+        function weightLossBodyHtml() {
+            const row = m => `
+                <div class="wl-row flex items-center gap-x-2 gap-y-1 flex-wrap" data-key="${m.key}">
+                    <span class="w-full sm:w-52 text-xs">${m.label}</span>
+                    <input type="text" inputmode="decimal" class="enc-qty wl-m" data-key="${m.key}" data-conv="${m.conv || ''}">
+                    <span class="w-12 text-xs opacity-70">${m.unit}</span>
+                    <span class="wl-conv text-xs text-[#B76E88] min-w-[5rem]"></span>
+                    <span class="wl-prev text-[10px] opacity-50"></span>
+                </div>`;
+            return `
+                <div class="wl-screening-alert hidden text-xs bg-red-50 text-red-800 border border-red-200 rounded-lg px-3 py-2 space-y-0.5"></div>
+                <div class="space-y-2">
+                    <p class="enc-label">Tratamiento</p>
+                    <div class="flex items-center gap-x-2 gap-y-1 flex-wrap">
+                        <span class="w-full sm:w-52 text-xs">Medicamento</span>
+                        <select class="wl-medication" style="width:auto;padding:6px 8px;font-size:12px;">
+                            <option value="">—</option>
+                            ${WL_MEDICATIONS.map(m => `<option value="${m}">${m}</option>`).join('')}
+                            <option value="other">Otro</option>
+                        </select>
+                        <input type="text" class="wl-medication-other hidden flex-1 min-w-[8rem]" placeholder="¿Cuál?" style="padding:6px 8px;font-size:12px;">
+                    </div>
+                    <div class="flex items-center gap-x-2 gap-y-1 flex-wrap">
+                        <span class="w-full sm:w-52 text-xs">Dosis que está recibiendo</span>
+                        <input type="text" inputmode="decimal" class="enc-qty wl-dose">
+                        <span class="w-12 text-xs opacity-70">mg</span>
+                    </div>
+                    <div class="flex items-center gap-x-2 gap-y-1 flex-wrap">
+                        <span class="w-full sm:w-52 text-xs">Dilución</span>
+                        <input type="text" class="wl-dilution flex-1 min-w-[10rem]" placeholder="Ej: 10 mg en 2 mL" style="padding:6px 8px;font-size:12px;">
+                    </div>
+                </div>
+                <div class="space-y-2 pt-3 border-t border-[#EDE1E7]">
+                    <p class="enc-label">Medidas antropométricas <span class="normal-case tracking-normal font-normal opacity-60">(todas opcionales)</span></p>
+                    ${WL_BODY_MEASUREMENTS.slice(0, 2).map(row).join('')}
+                    <div class="flex items-center gap-x-2 gap-y-1 flex-wrap">
+                        <span class="w-full sm:w-52 text-xs">IMC <span class="opacity-50">(automático)</span></span>
+                        <span class="wl-bmi text-sm font-semibold w-[7rem]">—</span>
+                        <span class="w-12 text-xs opacity-70">kg/m²</span>
+                        <span class="wl-prev-bmi text-[10px] opacity-50"></span>
+                    </div>
+                    <div class="flex items-center gap-x-2 gap-y-1 flex-wrap">
+                        <span class="w-full sm:w-52 text-xs">Diagnóstico según IMC</span>
+                        <span class="wl-bmi-class text-xs font-semibold px-2 py-1 rounded-full bg-gray-50 opacity-60">—</span>
+                    </div>
+                    ${WL_BODY_MEASUREMENTS.slice(2).map(row).join('')}
+                </div>
+                <div class="space-y-2 pt-3 border-t border-[#EDE1E7]">
+                    <p class="enc-label">Circunferencias</p>
+                    ${WL_CIRCUMFERENCES.map(row).join('')}
+                </div>`;
+        }
+
+        // Refreshes the US conversions, BMI and BMI class from what's typed.
+        function refreshWeightLossBlock() {
+            const catEl = document.querySelector('#enc-procedures .enc-cat[data-cat="weight_loss"]');
+            if (!catEl) return;
+            catEl.querySelectorAll('.wl-m').forEach(input => {
+                input.closest('.wl-row').querySelector('.wl-conv').innerText = usConversion(parseQty(input.value), input.dataset.conv);
+            });
+            const value = key => parseQty(catEl.querySelector(`.wl-m[data-key="${key}"]`).value);
+            const bmi = computeBmi(value('weight_kg'), value('height_cm'));
+            const cls = bmiClass(bmi);
+            catEl.querySelector('.wl-bmi').innerText = bmi ? String(bmi) : '—';
+            const clsEl = catEl.querySelector('.wl-bmi-class');
+            clsEl.innerText = cls || '—';
+            clsEl.className = 'wl-bmi-class text-xs font-semibold px-2 py-1 rounded-full ' + (cls ? BMI_CLASS_STYLE[cls] : 'bg-gray-50 opacity-60');
+        }
+
+        function showWeightLossPrevious() {
+            const catEl = document.querySelector('#enc-procedures .enc-cat[data-cat="weight_loss"]');
+            if (!catEl) return;
+            const prev = wlPrevious?.measurements || {};
+            const when = wlPrevious ? formatVisitDate(wlPrevious.visit_date) : '';
+            catEl.querySelectorAll('.wl-row').forEach(rowEl => {
+                const v = prev[rowEl.dataset.key];
+                rowEl.querySelector('.wl-prev').innerText = v ? `ant. ${formatMeasure(v)} (${when})` : '';
+            });
+            catEl.querySelector('.wl-prev-bmi').innerText = wlPrevious?.bmi ? `ant. ${wlPrevious.bmi} (${when})` : '';
+        }
+
+        function getWeightLossDetail(catEl) {
+            const measurements = {};
+            catEl.querySelectorAll('.wl-m').forEach(input => {
+                const n = parseQty(input.value);
+                if (n) measurements[input.dataset.key] = n;
+            });
+            const medSelect = catEl.querySelector('.wl-medication').value;
+            const medication = medSelect === 'other' ? (catEl.querySelector('.wl-medication-other').value.trim() || null) : (medSelect || null);
+            const bmi = computeBmi(measurements.weight_kg, measurements.height_cm);
+            return {
+                medication,
+                dose_mg: parseQty(catEl.querySelector('.wl-dose').value),
+                dilution: catEl.querySelector('.wl-dilution').value.trim() || null,
+                bmi,
+                bmi_class: bmiClass(bmi),
+                measurements,
+            };
+        }
+
+        function setWeightLossDetail(catEl, entry) {
+            const med = entry.medication || '';
+            const select = catEl.querySelector('.wl-medication');
+            const known = !med || WL_MEDICATIONS.includes(med);
+            select.value = known ? med : 'other';
+            const other = catEl.querySelector('.wl-medication-other');
+            other.classList.toggle('hidden', known);
+            other.value = known ? '' : med;
+            catEl.querySelector('.wl-dose').value = entry.dose_mg ? formatMeasure(entry.dose_mg) : '';
+            catEl.querySelector('.wl-dilution').value = entry.dilution || '';
+            const m = entry.measurements || {};
+            catEl.querySelectorAll('.wl-m').forEach(input => { input.value = m[input.dataset.key] ? formatMeasure(m[input.dataset.key]) : ''; });
+            refreshWeightLossBlock();
+        }
+
+        // e.g. "Peso 82 kg (180.8 lb) · IMC 30.1 (Obesidad grado I) · Cintura alta 95 cm (37.4 in)"
+        function weightLossMeasurementsText(entry) {
+            const m = entry?.measurements || {};
+            const parts = [];
+            WL_ALL_MEASUREMENTS.forEach(def => {
+                const v = m[def.key];
+                if (!v) return;
+                const us = usConversion(v, def.conv);
+                parts.push(`${def.label} ${formatMeasure(v)}${def.unit ? ' ' + def.unit : ''}${us ? ` (${us})` : ''}`);
+                if (def.key === 'height_cm' && entry.bmi) parts.push(`IMC ${entry.bmi}${entry.bmi_class ? ` (${entry.bmi_class})` : ''}`);
+            });
+            return parts.join(' · ');
+        }
+
+        // Shows, under a checked consultation, that the patient's intake lacks the
+        // history section it needs — with a button to complete just that part.
+        function refreshEncounterIntakeNotices() {
+            // The intake's GLP-1 screening "Sí" answers, on top of the weight-loss consultation.
+            const alertEl = document.querySelector('#enc-procedures .wl-screening-alert');
+            if (alertEl) {
+                const positives = glp1Positives(currentAdmissionData);
+                alertEl.classList.toggle('hidden', !positives.length);
+                alertEl.innerHTML = positives.length
+                    ? '<p class="font-bold">Tamizaje GLP-1 del intake:</p>' + positives.map(q => `<p>${q.contra ? '🚫 Contraindicación: ' : '⚠️ '}${escapeHtml(q.label)}</p>`).join('')
+                    : '';
+            }
+            document.querySelectorAll('#enc-procedures .enc-intake-notice').forEach(notice => {
+                const catEl = notice.closest('.enc-cat');
+                const checked = catEl.querySelector('.enc-cat-check').checked;
+                const track = notice.dataset.track;
+                const noIntake = !currentAdmissionData;
+                const missing = noIntake || !admissionTracks(currentAdmissionData).includes(track);
+                notice.classList.toggle('hidden', !checked || !missing);
+                if (!checked || !missing) return;
+                const what = track === 'weight_loss' ? 'antecedentes de pérdida de peso' : 'antecedentes estéticos';
+                notice.innerHTML = noIntake
+                    ? `⚠️ Este paciente todavía no tiene historia de ingreso. <button type="button" onclick="openCompleteIntakeModal(currentPatientId, currentPatientName)" class="ml-1 underline font-bold">Completar historia</button>`
+                    : `⚠️ A la historia de ingreso le faltan los ${what}. <button type="button" onclick="openAddIntakeSection('${track}')" class="ml-1 underline font-bold">Completar ahora</button>`;
+            });
+        }
+
         function renderEncounterProcedures() {
             const container = document.getElementById('enc-procedures');
             if (!container) return;
+            const intakeNotice = cat => cat.intakeTrack
+                ? `<div class="enc-intake-notice hidden mx-3 mb-2.5 text-xs bg-amber-50 text-amber-800 border border-amber-200 rounded-lg px-3 py-2" data-track="${cat.intakeTrack}"></div>`
+                : '';
             container.innerHTML = ENCOUNTER_CATEGORIES.map(cat => {
                 if (cat.mode === 'check') {
                     return `
@@ -1145,6 +1385,18 @@
                             <input type="checkbox" class="enc-cat-check accent-[#B76E88]">
                             <span class="text-sm font-semibold">${cat.title}</span>
                         </label>
+                        ${intakeNotice(cat)}
+                    </div>`;
+                }
+                if (cat.mode === 'weight_loss') {
+                    return `
+                    <div class="enc-cat border border-[#EDE1E7] rounded-lg bg-white" data-cat="${cat.id}">
+                        <label class="flex items-center gap-3 px-3 py-2.5 cursor-pointer select-none">
+                            <input type="checkbox" class="enc-cat-check accent-[#B76E88]">
+                            <span class="text-sm font-semibold">${cat.title}</span>
+                        </label>
+                        ${intakeNotice(cat)}
+                        <div class="enc-cat-body hidden border-t border-[#EDE1E7] px-3 py-3 space-y-3">${weightLossBodyHtml()}</div>
                     </div>`;
                 }
                 const qtyPlaceholder = unit => unit ? unit[1].charAt(0).toUpperCase() + unit[1].slice(1) : 'Cantidad';
@@ -1196,9 +1448,21 @@
                 if (!el.checked && body) {
                     body.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
                     body.querySelectorAll('input[type="text"]').forEach(input => { input.value = ''; });
-                    body.querySelectorAll('.enc-item-qty, .enc-other-label, .enc-other-qty').forEach(input => input.classList.add('hidden'));
+                    body.querySelectorAll('select').forEach(select => { select.value = ''; });
+                    body.querySelectorAll('.enc-item-qty, .enc-other-label, .enc-other-qty, .wl-medication-other').forEach(input => input.classList.add('hidden'));
                 }
                 if (el.checked && body) body.querySelector('.enc-cat-qty')?.focus();
+                if (catEl.dataset.cat === 'weight_loss') {
+                    // Height rarely changes: start from the last one measured.
+                    const height = body.querySelector('.wl-m[data-key="height_cm"]');
+                    if (el.checked && !height.value && wlPrevious?.measurements?.height_cm) height.value = formatMeasure(wlPrevious.measurements.height_cm);
+                    refreshWeightLossBlock();
+                }
+                refreshEncounterIntakeNotices();
+            } else if (el.classList.contains('wl-medication')) {
+                const other = catEl.querySelector('.wl-medication-other');
+                other.classList.toggle('hidden', el.value !== 'other');
+                if (el.value === 'other') other.focus(); else other.value = '';
             } else if (el.classList.contains('enc-item-check')) {
                 const qty = el.closest('.enc-item').querySelector('.enc-item-qty');
                 if (qty) {
@@ -1226,6 +1490,7 @@
             document.querySelectorAll('#enc-procedures .enc-cat').forEach(catEl => {
                 if (!catEl.querySelector('.enc-cat-check').checked) return;
                 const catId = catEl.dataset.cat;
+                if (catId === 'weight_loss') { detail[catId] = getWeightLossDetail(catEl); return; }
                 const entry = {};
                 const catQty = catEl.querySelector('.enc-cat-qty');
                 if (catQty) entry.qty = parseQty(catQty.value);
@@ -1268,6 +1533,7 @@
                 const body = catEl.querySelector('.enc-cat-body');
                 if (!body) return;
                 body.classList.remove('hidden');
+                if (catId === 'weight_loss') { setWeightLossDetail(catEl, entry); return; }
                 const catQty = catEl.querySelector('.enc-cat-qty');
                 if (catQty && entry.qty) catQty.value = entry.qty;
                 (entry.items || []).forEach(item => {
@@ -1287,6 +1553,8 @@
                     if (qty) { qty.classList.remove('hidden'); if (entry.other.qty) qty.value = entry.other.qty; }
                 }
             });
+            showWeightLossPrevious();
+            refreshEncounterIntakeNotices();
         }
 
         // procedures_realized_ids stays filled: the patient dashboard's "last
@@ -1296,7 +1564,7 @@
             ENCOUNTER_CATEGORIES.forEach(cat => {
                 const entry = detail[cat.id];
                 if (!entry) return;
-                if (cat.mode === 'check') ids.push(cat.itemId);
+                if (cat.itemId) ids.push(cat.itemId);
                 (entry.items || []).forEach(item => ids.push(item.id));
             });
             return ids;
@@ -1321,6 +1589,12 @@
                 const entry = detail[cat.id];
                 if (!entry) return;
                 if (cat.mode === 'check') { parts.push(cat.title); return; }
+                if (cat.mode === 'weight_loss') {
+                    const dose = entry.dose_mg ? `${String(entry.dose_mg).replace('.', ',')} mg` : '';
+                    const treatment = [entry.medication, dose].filter(Boolean).join(' ');
+                    parts.push(treatment ? `${cat.title} (${treatment})` : cat.title);
+                    return;
+                }
                 if (cat.mode === 'category_qty') {
                     const names = (entry.items || []).map(item => shortTreatmentLabel(item.id));
                     if (entry.other?.label) names.push(entry.other.label);
@@ -1527,7 +1801,8 @@
         // The procedure checklist is re-rendered per encounter, so listen on its container.
         document.getElementById('enc-procedures').addEventListener('change', onEncounterProceduresChange);
         document.getElementById('enc-procedures').addEventListener('input', (e) => {
-            if (e.target.matches('.enc-qty, .enc-other-label')) refreshEncounterSummary();
+            if (e.target.matches('.wl-m')) refreshWeightLossBlock();
+            if (e.target.matches('.enc-qty, .enc-other-label, .wl-medication-other')) refreshEncounterSummary();
         });
         document.getElementById('enc-summary').addEventListener('input', () => {
             document.getElementById('enc-summary-regen').classList.toggle('hidden', document.getElementById('enc-summary').value === encSummaryAuto);
@@ -3516,6 +3791,18 @@
             return [];
         }
 
+        // The weight-loss entry of the latest encounter before `note` (or before
+        // now, for a new one) that recorded measurements; null if none.
+        function previousWeightLossEntry(note) {
+            const key = n => `${n.visit_date || ''} ${String(n.visit_time || '').substring(0, 5)}`;
+            const before = note ? key(note) : '9999';
+            const candidates = Object.values(notesById)
+                .filter(n => (!note || n.id !== note.id) && key(n) < before)
+                .filter(n => Object.keys(n.procedures_detail?.weight_loss?.measurements || {}).length)
+                .sort((a, b) => key(b).localeCompare(key(a)));
+            return candidates.length ? { ...candidates[0].procedures_detail.weight_loss, visit_date: candidates[0].visit_date } : null;
+        }
+
         async function toggleSoapForm(show, note = null) {
             if (!show && soapDirty) {
                 const choice = await askUnsavedChanges();
@@ -3542,6 +3829,7 @@
             encNotesStamp = formatStamp();
             const notesEl = document.getElementById('enc-notes');
             const legacyEl = document.getElementById('enc-legacy');
+            wlPrevious = previousWeightLossEntry(note);
 
             if (note) {
                 document.getElementById('form-title').innerText = 'Modificar encuentro';
@@ -3652,6 +3940,11 @@
                 const legacy = legacySoapHtml(n);
                 const sent = messagesByEncounter[n.id] || [];
                 const followUp = followUpByEncounter[String(n.id)];
+                const weightLoss = n.procedures_detail?.weight_loss;
+                const weightLossText = weightLoss ? [
+                    weightLoss.dilution ? `Dilución: ${weightLoss.dilution}` : '',
+                    weightLossMeasurementsText(weightLoss),
+                ].filter(Boolean).join(' · ') : '';
                 return `
                 <div class="p-5 md:p-6 bg-white border border-[#EDE1E7] rounded-xl shadow-sm hover:border-[#B76E88] transition-colors">
                     <div class="flex justify-between items-start gap-3 mb-3 border-b border-gray-50 pb-3">
@@ -3665,6 +3958,7 @@
                         <div><p class="${sectionLabel}">Procedimientos</p><p class="text-gray-700">${escapeHtml(summary || '—')}</p></div>
                         <div><p class="${sectionLabel}">Monto a cobrar</p><p class="text-gray-800 font-semibold text-sm">${escapeHtml(formatAmount(n.amount) || '—')}</p></div>
                     </div>
+                    ${weightLossText ? `<div class="mt-4 text-xs leading-relaxed"><p class="${sectionLabel}">⚖️ Pérdida de peso · medidas</p><p class="text-gray-700">${escapeHtml(weightLossText)}</p></div>` : ''}
                     ${followUp ? `<div class="mt-4 text-xs bg-[#FBF0F3] border border-[#EDE1E7] rounded-lg px-3 py-2"><span class="font-semibold">📅 Contactar el ${escapeHtml(formatVisitDate(followUp.contact_date))}</span>${followUp.reason ? ` — ${escapeHtml(followUp.reason)}` : ''}<span class="opacity-60"> · ${followUp.reminder_sent_at ? '✉️ recordatorio enviado' : 'recordatorio pendiente'}</span></div>` : ''}
                     ${n.notes ? `<div class="mt-4 text-xs leading-relaxed"><p class="${sectionLabel}">Notas y seguimiento</p><p class="text-gray-700 whitespace-pre-wrap">${escapeHtml(n.notes)}</p></div>` : ''}
                     ${legacy ? `<details class="mt-4 text-xs"><summary class="cursor-pointer ${sectionLabel}">Notas anteriores (SOAP)</summary><div class="mt-2 space-y-2">${legacy}</div></details>` : ''}
@@ -3951,6 +4245,23 @@
             modal.classList.add('flex');
         }
 
+        // Adds one missing history section to an existing intake (from the
+        // encounter or the intake summary): a weight-loss patient now coming for
+        // an aesthetic consultation, or the other way round. The intake opens on
+        // just that section and saves only it; the signed consent is untouched.
+        function openAddIntakeSection(track) {
+            if (!currentPatientId) return;
+            completingIntakeFor = currentPatientId;
+            const what = track === 'weight_loss' ? 'Antecedentes de pérdida de peso' : 'Antecedentes estéticos';
+            document.getElementById('new-patient-modal-title').innerText = `${what} · ${String(currentPatientName || '').trim()}`;
+            document.getElementById('new-patient-modal-subtitle').innerText = 'Se agrega a la historia de ingreso del paciente';
+            resetNewPatientFrame(`intake.html#mode=complete&by=admin&patient=${encodeURIComponent(currentPatientId)}&add=${track}`);
+            newPatientInProgress = true;
+            const modal = document.getElementById('new-patient-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
         function closeNewPatientModal(skipConfirm) {
             if (!skipConfirm && newPatientInProgress && !confirm('¿Cerrar el registro? Lo que se haya llenado se perderá.')) return;
             newPatientInProgress = false;
@@ -4057,6 +4368,7 @@
         }
 
         const ADM_CONCERN_OPTIONS = [
+            { id: 'overweight_obesity', label: '⚖️ Consulta de Pérdida de Peso' },
             { id: 'facial_assessment', label: 'Valoración General de la Cara' },
             { id: 'dark_circles', label: 'Ojeras' },
             { id: 'fine_lines_wrinkles', label: 'Líneas Finas y Arrugas' },
@@ -4074,7 +4386,6 @@
             { id: 'asymmetry', label: 'Asimetría / Balance Facial' },
             { id: 'hair_removal', label: 'Depilación' },
             { id: 'body_laxity', label: 'Flacidez Corporal (Abdomen, Brazos, Piernas, Espalda)' },
-            { id: 'overweight_obesity', label: 'Sobrepeso u Obesidad' },
             { id: 'alopecia', label: 'Alopecia' },
             { id: 'yellow_teeth', label: 'Dientes Amarillos' },
             { id: 'keloid_scarring', label: 'Cicatriz Queloidea' },
@@ -4169,6 +4480,101 @@
             { v: 'microneedling_prp', l: 'Microneedling/PRP/PRF' },
             { v: 'vascular_occlusion', l: 'Complicación: Oclusión Vascular' }, { v: 'delayed_granulomas', l: 'Complicación: Granulomas' }, { v: 'migration_necrosis', l: 'Complicación: Migración/Necrosis' }, { v: 'biofilm_infection', l: 'Complicación: Biofilm/Infección' },
         ];
+
+        // WEIGHT_LOSS_HISTORY (intake.html Module 3, weight-loss track) — one row per
+        // treatment answered "Sí": { item_id, type, start_period, duration, still_using,
+        // max_dose, had_results, weight_lost, had_reaction, reaction_description }.
+        // Codes → Spanish labels for the summary (the intake holds the full option lists).
+        const ADM_WL_CATEGORY_LABELS = {
+            glp1: 'GLP-1 / GIP', oral_meds: 'Pastillas para bajar de peso', bariatric_surgery: 'Cirugía bariátrica',
+            endoscopic: 'Balón / manga endoscópica', lipotropic: 'Inyecciones lipotrópicas', diet_program: 'Plan / programa de dieta',
+        };
+        const ADM_WL_TYPE_LABELS = {
+            semaglutide: 'Semaglutida', tirzepatide: 'Tirzepatida', liraglutide: 'Liraglutida', dulaglutide: 'Dulaglutida',
+            compounded_unknown: 'Compuesto (molécula desconocida)', phentermine: 'Fentermina', phentermine_topiramate: 'Fentermina + Topiramato',
+            naltrexone_bupropion: 'Naltrexona + Bupropión', orlistat: 'Orlistat', metformin: 'Metformina',
+            gastric_sleeve: 'Manga gástrica', gastric_bypass: 'Bypass gástrico', gastric_band: 'Banda gástrica',
+            gastric_balloon: 'Balón intragástrico', endoscopic_sleeve: 'Manga endoscópica', other: 'Otro', dont_remember: 'No recuerda',
+        };
+        const ADM_WL_START_LABELS = {
+            less_3_months: 'hace <3 meses', '3_6_months': 'hace 3–6 meses', '6_12_months': 'hace 6–12 meses',
+            '1_2_years': 'hace 1–2 años', more_than_2_years: 'hace >2 años',
+        };
+        const ADM_WL_DURATION_LABELS = {
+            less_1_month: '<1 mes', '1_3_months': '1–3 meses', '3_6_months': '3–6 meses', '6_12_months': '6–12 meses', more_than_1_year: '>1 año',
+        };
+
+        function weightLossHistoryLines(rows) {
+            return (Array.isArray(rows) ? rows : []).map(row => {
+                if (row.item_id === 'other') return '• Otro: ' + (row.item_label || '');
+                const head = ADM_WL_CATEGORY_LABELS[row.item_id] || row.item_label || row.item_id;
+                const details = [];
+                if (row.type) details.push(ADM_WL_TYPE_LABELS[row.type] || row.type);
+                if (row.start_period) details.push((row.item_id === 'bariatric_surgery' || row.item_id === 'endoscopic' ? 'fue ' : 'comenzó ') + (ADM_WL_START_LABELS[row.start_period] || row.start_period));
+                if (row.duration) details.push('por ' + (ADM_WL_DURATION_LABELS[row.duration] || row.duration));
+                if (row.still_using === true) details.push('lo sigue usando');
+                if (row.still_using === false) details.push('ya no lo usa');
+                if (row.max_dose) details.push('dosis máx. ' + row.max_dose);
+                if (row.had_results === true) details.push('con resultados' + (row.weight_lost ? ` (${row.weight_lost})` : ''));
+                if (row.had_results === false) details.push('sin resultados');
+                let line = '• ' + head + (details.length ? ': ' + details.join(' · ') : '');
+                if (row.had_reaction) line += ' — Reacción/complicación: ' + (row.reaction_description || 'sí');
+                return line;
+            });
+        }
+
+        // GLP1_SCREENING (intake.html, weight-loss track): { answers: { id: bool },
+        // goal_weight, activity, alcohol }. `contra` marks the GLP-1 contraindications.
+        const ADM_GLP1_SCREENING = [
+            { id: 'mtc_men2', label: 'Cáncer medular de tiroides o MEN2 (personal o familiar)', contra: true },
+            { id: 'pancreatitis', label: 'Antecedente de pancreatitis', contra: true },
+            { id: 'pregnancy_plans', label: 'Planea embarazo en los próximos 6 meses', contra: true, femaleOnly: true },
+            { id: 'gallbladder', label: 'Cálculos / problemas de vesícula' },
+            { id: 'gastroparesis', label: 'Gastroparesia / enfermedad digestiva severa' },
+            { id: 'kidney_disease', label: 'Enfermedad renal' },
+            { id: 'eating_disorder', label: 'Trastorno de la conducta alimentaria' },
+            { id: 'diabetic_retinopathy', label: 'Retinopatía diabética' },
+            { id: 'insulin_sulfonylurea', label: 'Usa insulina o sulfonilureas (riesgo de hipoglucemia)' },
+            { id: 'oral_contraceptives', label: 'Usa anticonceptivos orales (tirzepatida reduce su eficacia)', femaleOnly: true },
+        ];
+        const ADM_GLP1_ACTIVITY = { none: 'no hace ejercicio', '1_2_week': '1–2 días/semana', '3_4_week': '3–4 días/semana', '5_plus_week': '5+ días/semana' };
+        const ADM_GLP1_ALCOHOL = { never: 'nunca', occasionally: 'ocasional', weekly: 'semanal', daily: 'diario' };
+
+        function parseGlp1Screening(data) {
+            let s = data?.glp1_screening;
+            if (typeof s === 'string') { try { s = JSON.parse(s); } catch (_) { s = null; } }
+            return s && typeof s === 'object' ? s : null;
+        }
+        // Positive ("Sí") screening answers, contraindications first.
+        function glp1Positives(data) {
+            const answers = parseGlp1Screening(data)?.answers || {};
+            return ADM_GLP1_SCREENING.filter(q => answers[q.id] === true).sort((a, b) => (b.contra ? 1 : 0) - (a.contra ? 1 : 0));
+        }
+        function glp1ScreeningLines(data) {
+            const s = parseGlp1Screening(data);
+            if (!s) return [];
+            const lines = glp1Positives(data).map(q => `• ${q.contra ? '🚫 CONTRAINDICACIÓN: ' : '⚠️ '}${q.label}`);
+            const answered = Object.keys(s.answers || {}).length;
+            if (answered && !lines.length) lines.push('• Sin hallazgos positivos en el tamizaje.');
+            const female = String(currentPatientSex || '').toLowerCase().startsWith('f');
+            const unanswered = ADM_GLP1_SCREENING.filter(q => (female || !q.femaleOnly) && !(q.id in (s.answers || {}))).length;
+            if (answered && unanswered) lines.push(`• ${unanswered} pregunta(s) sin responder.`);
+            const habits = [];
+            if (s.goal_weight) habits.push('peso meta ' + s.goal_weight);
+            if (s.activity) habits.push('ejercicio: ' + (ADM_GLP1_ACTIVITY[s.activity] || s.activity));
+            if (s.alcohol) habits.push('alcohol: ' + (ADM_GLP1_ALCOHOL[s.alcohol] || s.alcohol));
+            if (habits.length) lines.push('• ' + habits.join(' · '));
+            return lines;
+        }
+
+        // History sections the patient has answered ('aesthetic', 'weight_loss').
+        // Rows from before intake_tracks existed count as aesthetic once answered.
+        function admissionTracks(data) {
+            if (!data) return [];
+            if (Array.isArray(data.intake_tracks)) return data.intake_tracks;
+            const hasAesthetic = data.intake_completed_at || (Array.isArray(data.aesthetic_history) && data.aesthetic_history.length);
+            return hasAesthetic ? ['aesthetic'] : [];
+        }
 
         function renderAdmCheckboxList(containerId, options, className) {
             const container = document.getElementById(containerId);
@@ -4330,6 +4736,16 @@
             const intakeDone = !!data?.intake_completed_at;
             document.getElementById('adm-incomplete-badge')?.classList.toggle('hidden', intakeDone);
             document.getElementById('adm-complete-btn')?.classList.toggle('hidden', intakeDone);
+            // Once there's an intake, each history section can be added (or, for
+            // weight loss, edited) on its own — e.g. an aesthetic patient who now
+            // starts a weight-loss treatment.
+            {
+                const tracks = admissionTracks(data);
+                const wlBtn = document.getElementById('adm-add-wl-btn');
+                wlBtn.classList.toggle('hidden', !data);
+                wlBtn.innerText = tracks.includes('weight_loss') ? '⚖️ Editar antecedentes de peso' : '⚖️ Agregar antecedentes de peso';
+                document.getElementById('adm-add-aesthetic-btn').classList.toggle('hidden', !data || tracks.includes('aesthetic'));
+            }
 
             if (!data) {
                 contentEl.innerHTML = '<p class="opacity-40 italic">El paciente todavía no ha completado el cuestionario de ingreso. Usa "Editar" para capturarlo manualmente.</p>';
@@ -4430,6 +4846,16 @@
                 });
                 section('Antecedentes Estéticos', body);
             }
+
+            {
+                let weightLoss = data.weight_loss_history;
+                if (typeof weightLoss === 'string') { try { weightLoss = JSON.parse(weightLoss); } catch(_) { weightLoss = []; } }
+                const body = weightLossHistoryLines(weightLoss);
+                if (!body.length && admissionTracks(data).includes('weight_loss')) body.push('• Ningún tratamiento previo para bajar de peso.');
+                section('Antecedentes de Pérdida de Peso', body);
+            }
+
+            section('Tamizaje GLP-1 y Hábitos', glp1ScreeningLines(data));
 
             {
                 const body = [];
@@ -4574,6 +5000,7 @@
 
         async function loadAdmissionHistory(patientId) {
             currentAdmissionId = null;
+            currentAdmissionData = null;
             setAdmissionMode('summary');
             // Reset fields
             ['adm-fitzpatrick','adm-glogau','adm-skin-type','adm-merz','adm-merz-forehead-glabella','adm-merz-under-eye','adm-merz-nasolabial','adm-merz-hands','adm-merz-marionette','adm-merz-midface','adm-merz-brow','adm-pregnancy'].forEach(id => {
@@ -4603,8 +5030,10 @@
                 .eq('patient_id', patientId)
                 .maybeSingle();
 
-            if (!data) { renderAdmissionSummary(null); return; }
+            if (!data) { renderAdmissionSummary(null); refreshEncounterIntakeNotices(); return; }
             currentAdmissionId = data.id;
+            currentAdmissionData = data;
+            refreshEncounterIntakeNotices();
 
             // val === 0 is a real, valid Merz score ("No Alteration") — must not be
             // coerced away by `val || ''` like a truly empty value would be.
