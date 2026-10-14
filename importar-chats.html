@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importar chats de WhatsApp | Piel Spa Admin</title>
+    <meta name="robots" content="noindex">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;500&family=Outfit:wght@300;400;500&family=Montserrat:wght@600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body { font-family: 'Outfit', sans-serif; background-color: #FDFBFC; color: #2A2330; }
+        h1 { font-family: 'Cormorant Garamond', serif; }
+        .field { padding: 6px 10px; font-size: 13px; border: 1px solid #EDE1E7; border-radius: 8px; background: #fff; outline-color: #B76E88; width: 100%; }
+        th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; opacity: 0.55; font-weight: 600; text-align: left; padding: 8px; }
+        td { padding: 8px; vertical-align: top; font-size: 13px; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <header class="bg-white border-b border-[#EDE1E7] px-4 md:px-10 py-4 flex items-center justify-between gap-3">
+        <div>
+            <h1 class="text-2xl md:text-3xl italic">Importar chats de WhatsApp Business</h1>
+            <p class="text-[10px] uppercase tracking-widest opacity-40">El historial aparece en Mensajes, en el chat de cada paciente</p>
+        </div>
+        <a href="admin.html#mensajes" class="text-[10px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline whitespace-nowrap">← Volver a Mensajes</a>
+    </header>
+
+    <main class="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
+        <p id="auth-msg" class="text-sm opacity-60">Verificando sesión…</p>
+
+        <section id="pick" class="hidden bg-white border border-[#EDE1E7] rounded-2xl p-5 md:p-6 space-y-4">
+            <ol class="text-sm space-y-1 list-decimal pl-5 opacity-80">
+                <li>Toca <strong>Elegir archivos</strong> y selecciona <strong>todos</strong> los chats exportados de la carpeta "Chats WhatsApp" (Ctrl + A o Cmd + A dentro de la carpeta).</li>
+                <li>Revisa la tabla: a cada chat le corresponde un teléfono. Si el archivo tiene nombre en vez de número, elige el paciente o escribe el teléfono.</li>
+                <li>Toca <strong>Importar</strong>. Puedes repetir la importación sin que se dupliquen los mensajes.</li>
+            </ol>
+            <div class="grid md:grid-cols-3 gap-4 items-end">
+                <label class="md:col-span-2 block">
+                    <span class="text-[10px] uppercase tracking-widest font-bold opacity-50">Archivos exportados (.zip o .txt)</span>
+                    <input id="files" type="file" multiple class="field mt-1" onchange="readFiles(this.files)">
+                </label>
+                <label class="block">
+                    <span class="text-[10px] uppercase tracking-widest font-bold opacity-50">Nombre de la clínica en los chats</span>
+                    <input id="business-name" value="Piel Spa" class="field mt-1" oninput="reparseAll()">
+                </label>
+            </div>
+            <p id="read-status" class="text-xs opacity-60"></p>
+        </section>
+
+        <section id="review" class="hidden bg-white border border-[#EDE1E7] rounded-2xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[900px]">
+                    <thead class="bg-[#FDFBFC] border-b border-[#EDE1E7]">
+                        <tr><th></th><th>Chat</th><th>Mensajes</th><th>Paciente</th><th>Teléfono WhatsApp</th><th>Estado</th></tr>
+                    </thead>
+                    <tbody id="rows" class="divide-y divide-[#F3EAEE]"></tbody>
+                </table>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-3 p-4 border-t border-[#EDE1E7] bg-[#FDFBFC]">
+                <p id="summary" class="text-xs opacity-70"></p>
+                <button id="import-btn" onclick="importSelected()" class="bg-[#25D366] text-white px-6 py-3 rounded-full text-[10px] uppercase tracking-widest font-bold hover:opacity-90 disabled:opacity-40">Importar seleccionados</button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://qkjmrnqkoipdltauweub.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFram1ybnFrb2lwZGx0YXV3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTkyMjgsImV4cCI6MjA4OTA5NTIyOH0.EGqgJ9RNY9vYfuVeeEcGoMu_cIaygRq0hnyT-iE7zTw';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const MAX_MEDIA_BYTES = 50 * 1024 * 1024; // Supabase Storage per-file limit
+        let patients = [];
+        let chats = []; // { file, fileName, contact, text, media: Map(name → JSZipObject|null), messages, hash, duplicateOf, include, patientId, phone, status }
+
+        function escapeHtml(v) {
+            return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]));
+        }
+        const normalize = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+        // Same rule as admin.html whatsappNumber(): 10 bare digits are US numbers.
+        function waId(phone) {
+            let d = String(phone || '').replace(/\D/g, '');
+            if (d.length === 10) d = '1' + d;
+            return d.length >= 11 ? d : '';
+        }
+        function fnv(str) {
+            let h = 0x811c9dc5;
+            for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+            return (h >>> 0).toString(16).padStart(8, '0');
+        }
+        function formatBytes(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+
+        // ---------- Auth: admins only ----------
+        (async function init() {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (!user) { document.getElementById('auth-msg').innerHTML = 'Inicia sesión en el <a class="underline text-[#B76E88]" href="admin-login.html">admin</a> primero.'; return; }
+            const { data: role } = await _supabase.from('staff_roles').select('role').eq('user_id', user.id).maybeSingle();
+            if (role?.role !== 'admin') { document.getElementById('auth-msg').innerText = 'Solo los administradores pueden importar chats.'; return; }
+            const { data } = await _supabase.from('profiles').select('id, first_name, last_name, phone').order('first_name');
+            patients = (data || []).map(p => ({ ...p, full: `${p.first_name || ''} ${p.last_name || ''}`.trim(), norm: normalize(`${p.first_name || ''} ${p.last_name || ''}`) }));
+            document.getElementById('auth-msg').classList.add('hidden');
+            document.getElementById('pick').classList.remove('hidden');
+        })();
+
+        // ---------- Reading the exports ----------
+        async function readFiles(fileList) {
+            const files = [...fileList].filter(f => !/desktop\.ini$/i.test(f.name));
+            const status = document.getElementById('read-status');
+            chats = [];
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                status.innerText = `Leyendo ${i + 1} de ${files.length}: ${file.name}…`;
+                try {
+                    const head = new Uint8Array(await file.slice(0, 2).arrayBuffer());
+                    let text = '', media = new Map();
+                    if (head[0] === 0x50 && head[1] === 0x4b) { // "PK" = zip
+                        const zip = await JSZip.loadAsync(file);
+                        const entries = Object.values(zip.files).filter(e => !e.dir);
+                        const txt = entries.find(e => /\.txt$/i.test(e.name));
+                        if (!txt) throw new Error('el .zip no trae el .txt del chat');
+                        text = await txt.async('string');
+                        entries.filter(e => e !== txt).forEach(e => media.set(e.name.split('/').pop(), e));
+                    } else {
+                        text = await file.text();
+                    }
+                    const contact = file.name.replace(/\.(zip|txt)$/i, '').replace(/^WhatsApp Chat (with|-)\s*/i, '').replace(/\s*\(\d+\)$/, '').trim();
+                    chats.push({ file, fileName: file.name, contact, text, media, include: true, status: '' });
+                } catch (e) {
+                    chats.push({ file, fileName: file.name, contact: file.name, text: '', media: new Map(), include: false, status: '⚠️ No se pudo leer: ' + e.message });
+                }
+            }
+            status.innerText = `${files.length} archivo(s) leídos.`;
+            reparseAll();
+            chats.forEach(matchChat);
+            markDuplicates();
+            document.getElementById('review').classList.remove('hidden');
+            renderRows();
+        }
+
+        // ---------- Parsing the chat text ----------
+        // Android: "9/18/26, 9:22 AM - Piel Spa: texto" (lines without the date
+        // prefix continue the previous message). iPhone: "[18/9/26, 9:22:10 AM] Piel Spa: texto".
+        const LINE_ANDROID = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s(\d{1,2}):(\d{2})(?::(\d{2}))?[\s ]*([AaPp]\.?\s?[Mm]\.?)?\s[-–]\s(.*)$/;
+        const LINE_IOS = /^\[(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s(\d{1,2}):(\d{2})(?::(\d{2}))?[\s ]*([AaPp]\.?\s?[Mm]\.?)?\]\s(.*)$/;
+
+        // Wall-clock time in New York → real instant (handles daylight saving).
+        function nyToIso(y, mo, d, h, mi, s) {
+            const guess = Date.UTC(y, mo - 1, d, h, mi, s);
+            const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                .formatToParts(new Date(guess)).reduce((a, p) => (a[p.type] = p.value, a), {});
+            const asNy = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour % 24, +parts.minute, +parts.second);
+            return new Date(guess + (guess - asNy)).toISOString();
+        }
+
+        function parseChat(chat) {
+            const business = normalize(document.getElementById('business-name').value || 'Piel Spa');
+            const lines = chat.text.replace(/[‎‏﻿]/g, '').split(/\r?\n/);
+            const out = [];
+            // Day/month order: US exports are M/D. If any first number > 12, it's D/M.
+            const dmy = lines.some(l => { const m = l.match(LINE_ANDROID) || l.match(LINE_IOS); return m && +m[1] > 12; });
+            let current = null;
+            for (const line of lines) {
+                const m = line.match(LINE_ANDROID) || line.match(LINE_IOS);
+                if (!m) { if (current) current.body += '\n' + line; continue; }
+                let [, a, b, y, h, mi, s, ampm, rest] = m;
+                let month = dmy ? +b : +a, day = dmy ? +a : +b, year = +y < 100 ? 2000 + +y : +y, hour = +h;
+                if (ampm) { const pm = /p/i.test(ampm); if (pm && hour < 12) hour += 12; if (!pm && hour === 12) hour = 0; }
+                const sm = rest.match(/^([^:]{1,80}):\s([\s\S]*)$/);
+                if (!sm) { current = null; continue; } // system line (encryption notice, etc.)
+                current = { at: nyToIso(year, month, day, hour, +mi, +(s || 0)), sender: sm[1].trim(), body: sm[2] };
+                out.push(current);
+            }
+            // Attachments and who is who.
+            chat.messages = out.map(msg => {
+                let body = msg.body.trim();
+                let file = null;
+                const att = body.match(/^(.+?\.[A-Za-z0-9]{2,5}) \(file attached\)\s*([\s\S]*)$/) || body.match(/^<attached: (.+?)>\s*([\s\S]*)$/);
+                if (att) { file = att[1].trim(); body = att[2].trim(); }
+                const fromClinic = normalize(msg.sender) === business;
+                return { at: msg.at, fromClinic, sender: msg.sender, body, file };
+            });
+            chat.attachments = chat.messages.filter(m => m.file).length;
+            chat.mediaBytes = [...chat.media.values()].reduce((s, e) => s + (e?._data?.uncompressedSize || 0), 0);
+            chat.range = chat.messages.length ? [chat.messages[0].at, chat.messages[chat.messages.length - 1].at] : null;
+            chat.hash = fnv(chat.text);
+        }
+        function reparseAll() { chats.forEach(c => { if (c.text) parseChat(c); }); if (chats.length) renderRows(); }
+
+        // ---------- Matching each chat to a phone / patient ----------
+        function matchChat(chat) {
+            const fromName = waId(chat.contact);
+            if (/^\+?[\d\s()\-]+$/.test(chat.contact) && fromName) {
+                chat.phone = fromName;
+                const p = patients.find(p => waId(p.phone) === fromName);
+                chat.patientId = p?.id || '';
+                return;
+            }
+            const n = normalize(chat.contact);
+            const exact = patients.filter(p => p.norm && p.norm === n);
+            const starts = exact.length ? exact : patients.filter(p => p.norm && (p.norm.startsWith(n + ' ') || n.startsWith(p.norm)));
+            const p = starts.length === 1 ? starts[0] : null;
+            chat.patientId = p?.id || '';
+            chat.phone = p ? waId(p.phone) : '';
+            chat.suggested = !!p;
+        }
+
+        // Same contact + same text = the same export saved twice ("Fidelia" / "Fidelia (1)").
+        // Different contacts may share identical text (one broadcast message), so the
+        // contact is part of the key.
+        function markDuplicates() {
+            const seen = {};
+            chats.forEach((c, i) => {
+                if (!c.text) return;
+                const key = `${normalize(c.contact)}|${c.hash}`;
+                if (seen[key] !== undefined) { c.duplicateOf = chats[seen[key]].fileName; c.include = false; }
+                else seen[key] = i;
+            });
+        }
+
+        // ---------- Review table ----------
+        function patientOptions(selected) {
+            return `<option value="">— Sin paciente —</option>` + patients.map(p =>
+                `<option value="${p.id}" ${p.id === selected ? 'selected' : ''}>${escapeHtml(p.full || '(sin nombre)')}${p.phone ? ' · ' + escapeHtml(p.phone) : ''}</option>`).join('');
+        }
+
+        function renderRows() {
+            document.getElementById('rows').innerHTML = chats.map((c, i) => {
+                const range = c.range ? `${new Date(c.range[0]).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: '2-digit' })} – ${new Date(c.range[1]).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: '2-digit' })}` : '';
+                const warn = [];
+                if (c.duplicateOf) warn.push(`Duplicado de "${escapeHtml(c.duplicateOf)}"`);
+                if (c.text && !c.messages?.length) warn.push('No se reconocieron mensajes');
+                if (c.mediaBytes > 100 * 1048576) warn.push(`Archivos pesados (${formatBytes(c.mediaBytes)})`);
+                const phoneOk = !!waId(c.phone);
+                return `
+                <tr class="${c.include ? '' : 'opacity-50'}">
+                    <td><input type="checkbox" ${c.include ? 'checked' : ''} ${c.text ? '' : 'disabled'} onchange="chats[${i}].include = this.checked; renderRows()" class="accent-[#25D366] w-4 h-4"></td>
+                    <td class="max-w-[220px]">
+                        <div class="font-semibold">${escapeHtml(c.contact)}</div>
+                        <div class="text-[10px] opacity-40 truncate">${escapeHtml(c.fileName)}</div>
+                        ${warn.length ? `<div class="text-[10px] text-amber-700 font-bold mt-1">${warn.join(' · ')}</div>` : ''}
+                    </td>
+                    <td class="whitespace-nowrap">
+                        ${c.messages ? `${c.messages.length} mensajes` : '—'}
+                        ${c.attachments ? `<div class="text-[10px] opacity-50">📎 ${c.attachments} adjuntos${c.mediaBytes ? ' · ' + formatBytes(c.mediaBytes) : ''}</div>` : ''}
+                        <div class="text-[10px] opacity-50">${range}</div>
+                    </td>
+                    <td class="min-w-[200px]">
+                        <select class="field" onchange="pickPatient(${i}, this.value)">${patientOptions(c.patientId)}</select>
+                        ${c.suggested ? '<div class="text-[10px] text-green-700 mt-1">Coincide por nombre — revisa</div>' : ''}
+                    </td>
+                    <td class="min-w-[170px]">
+                        <input class="field ${c.include && !phoneOk ? 'border-red-400' : ''}" value="${escapeHtml(c.phone || '')}" placeholder="+1 929 000 0000" onchange="chats[${i}].phone = waId(this.value) || this.value; renderRows()">
+                        ${c.include && !phoneOk ? '<div class="text-[10px] text-red-500 mt-1">Falta el teléfono (con código de país)</div>' : ''}
+                    </td>
+                    <td class="text-xs min-w-[140px]">${c.status || ''}</td>
+                </tr>`;
+            }).join('');
+            const sel = chats.filter(c => c.include);
+            const missing = sel.filter(c => !waId(c.phone)).length;
+            document.getElementById('summary').innerText = `${sel.length} chat(s) seleccionados · ${sel.reduce((s, c) => s + (c.messages?.length || 0), 0)} mensajes` + (missing ? ` · ${missing} sin teléfono` : '');
+            document.getElementById('import-btn').disabled = !sel.length || missing > 0;
+        }
+
+        function pickPatient(i, id) {
+            chats[i].patientId = id;
+            chats[i].suggested = false;
+            const p = patients.find(p => p.id === id);
+            if (p && waId(p.phone)) chats[i].phone = waId(p.phone);
+            renderRows();
+        }
+
+        // ---------- Import ----------
+        const EXT_TYPE = { jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', heic: 'image',
+            webp: 'image', pdf: 'document', doc: 'document', docx: 'document', xls: 'document', xlsx: 'document', vcf: 'document',
+            opus: 'audio', ogg: 'audio', mp3: 'audio', m4a: 'audio', aac: 'audio', amr: 'audio',
+            mp4: 'video', '3gp': 'video', mov: 'video' };
+        const EXT_MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', heic: 'image/heic',
+            pdf: 'application/pdf', opus: 'audio/ogg', ogg: 'audio/ogg', mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac',
+            mp4: 'video/mp4', '3gp': 'video/3gpp', mov: 'video/quicktime', vcf: 'text/vcard' };
+
+        async function importSelected() {
+            const btn = document.getElementById('import-btn');
+            btn.disabled = true;
+            const { data: { user } } = await _supabase.auth.getUser();
+            for (const chat of chats.filter(c => c.include && waId(c.phone))) {
+                try { await importChat(chat, user?.id); }
+                catch (e) { chat.status = '⚠️ ' + e.message; }
+                renderRows();
+            }
+            btn.disabled = false;
+            renderRows();
+        }
+
+        function setStatus(chat, text) { chat.status = text; renderRows(); }
+
+        async function importChat(chat, staffUserId) {
+            const phone = waId(chat.phone);
+            setStatus(chat, 'Preparando…');
+
+            // The conversation for that number (created if it doesn't exist yet).
+            let { data: conv } = await _supabase.from('wa_conversations').select('*').eq('phone', phone).maybeSingle();
+            if (!conv) {
+                const { data: created, error } = await _supabase.from('wa_conversations')
+                    .insert({ phone, profile_name: chat.contact, patient_id: chat.patientId || null, bot_active: false })
+                    .select('*').single();
+                if (error) throw new Error(error.message);
+                conv = created;
+            } else if (!conv.patient_id && chat.patientId) {
+                await _supabase.from('wa_conversations').update({ patient_id: chat.patientId }).eq('id', conv.id);
+            }
+            const before = { unread_count: conv.unread_count, needs_attention: conv.needs_attention };
+
+            // Photos/files: uploaded once, at a fixed path, so a re-import reuses them.
+            const paths = {};
+            const files = chat.messages.filter(m => m.file && chat.media.has(m.file));
+            let done = 0, skipped = 0;
+            for (const m of files) {
+                const entry = chat.media.get(m.file);
+                const ext = m.file.split('.').pop().toLowerCase();
+                const path = `imported/${conv.id}/${m.file.replace(/[^\w.\-]+/g, '_')}`;
+                setStatus(chat, `Subiendo adjuntos ${++done}/${files.length}…`);
+                const blob = await entry.async('blob');
+                if (blob.size > MAX_MEDIA_BYTES) { skipped++; continue; }
+                const { error } = await _supabase.storage.from('wa-media').upload(path, blob, { contentType: EXT_MIME[ext] || 'application/octet-stream' });
+                if (error && !/exists|duplicate/i.test(error.message)) { skipped++; continue; }
+                paths[m.file] = path;
+            }
+
+            // Messages, with a fixed id per message so importing twice adds nothing new.
+            setStatus(chat, 'Guardando mensajes…');
+            const seen = {};
+            const rows = [{
+                conversation_id: conv.id, direction: 'out', sender: 'system', status: 'sent',
+                body: 'Historial importado de WhatsApp Business',
+                wa_message_id: `import:${phone}:start`,
+                created_at: new Date(new Date(chat.messages[0]?.at || Date.now()).getTime() - 1000).toISOString(),
+            }];
+            for (const m of chat.messages) {
+                const base = `${phone}|${m.at}|${m.fromClinic ? 'c' : 'p'}|${m.file || ''}|${m.body}`;
+                seen[base] = (seen[base] || 0) + 1;
+                const ext = m.file ? m.file.split('.').pop().toLowerCase() : '';
+                const path = m.file ? paths[m.file] : null;
+                rows.push({
+                    conversation_id: conv.id,
+                    direction: m.fromClinic ? 'out' : 'in',
+                    sender: m.fromClinic ? 'staff' : 'patient',
+                    staff_user_id: m.fromClinic ? staffUserId : null,
+                    body: (m.body || (m.file && !path ? `📎 ${m.file} (no incluido en la exportación)` : '')) || null,
+                    media_type: path ? (/^STK-/i.test(m.file) ? 'sticker' : (EXT_TYPE[ext] || 'document')) : null,
+                    media_path: path,
+                    media_mime: path ? (EXT_MIME[ext] || null) : null,
+                    media_filename: m.file || null,
+                    wa_message_id: `import:${fnv(base)}:${seen[base]}`,
+                    status: m.fromClinic ? 'read' : 'received',
+                    created_at: m.at,
+                });
+            }
+            for (let i = 0; i < rows.length; i += 400) {
+                const { error } = await _supabase.from('wa_messages').upsert(rows.slice(i, i + 400), { onConflict: 'wa_message_id', ignoreDuplicates: true });
+                if (error) throw new Error(error.message);
+            }
+
+            // The insert trigger treats every old patient message as new and
+            // unread; put the chat summary back as it should be.
+            const { data: last } = await _supabase.from('wa_messages').select('body, media_type, direction, created_at')
+                .eq('conversation_id', conv.id).neq('sender', 'system').order('created_at', { ascending: false }).limit(1).maybeSingle();
+            const { data: lastIn } = await _supabase.from('wa_messages').select('created_at')
+                .eq('conversation_id', conv.id).eq('direction', 'in').order('created_at', { ascending: false }).limit(1).maybeSingle();
+            const preview = last ? (last.body || ({ image: '📷 Foto', document: '📄 Documento', audio: '🎤 Audio', video: '🎥 Video' }[last.media_type] || '')) : '';
+            await _supabase.from('wa_conversations').update({
+                unread_count: before.unread_count,
+                needs_attention: before.needs_attention,
+                last_message_at: last?.created_at ?? null,
+                last_message_preview: String(preview).slice(0, 120),
+                last_message_direction: last?.direction ?? null,
+                last_inbound_at: lastIn?.created_at ?? null,
+                last_activity_at: last?.created_at ?? null,
+            }).eq('id', conv.id);
+
+            setStatus(chat, `✅ Importado${skipped ? ` (${skipped} adjunto(s) muy pesado(s) omitido(s))` : ''}`);
+            chat.include = false;
+        }
+    </script>
+</body>
+</html>

@@ -221,7 +221,10 @@
                     <input id="wa-search" oninput="renderConversationList()" placeholder="Buscar nombre o teléfono" style="padding:8px 12px;font-size:13px;width:100%;border:1px solid #EDE1E7;border-radius:9999px;outline-color:#B76E88;">
                     <div id="wa-filters" class="flex gap-1 flex-wrap"></div>
                     <div class="flex items-center justify-between gap-2">
-                        <span id="wa-live-status" class="text-[9px] uppercase tracking-widest opacity-50"></span>
+                        <span class="flex items-center gap-3">
+                            <span id="wa-live-status" class="text-[9px] uppercase tracking-widest opacity-50"></span>
+                            <a href="importar-chats.html" class="text-[9px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100 hover:text-[#B76E88]" title="Importar chats exportados de WhatsApp Business">⬆ Importar chats</a>
+                        </span>
                         <span class="flex items-center gap-3">
                             <button id="wa-notify-btn" onclick="enableWhatsAppNotifications()" class="hidden text-[9px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline">🔔 Activar avisos</button>
                             <button id="wa-notify-on" onclick="openPushDevices()" class="hidden text-[9px] uppercase tracking-widest font-bold text-green-700 hover:underline" title="Ver mis dispositivos con avisos">🔔 Avisos activos</button>
@@ -2783,7 +2786,8 @@
                     waMessages.push(m);
                     renderThread(false);
                 }
-                if (m.direction === 'in') notifyWaIncoming(m);
+                // History brought in by importar-chats.html is old news: no chime.
+                if (m.direction === 'in' && !String(m.wa_message_id || '').startsWith('import:')) notifyWaIncoming(m);
             } else if (payload.eventType === 'UPDATE' && m.conversation_id === waActiveId) {
                 const i = waMessages.findIndex(x => x.id === m.id);
                 if (i >= 0) { waMessages[i] = m; renderThread(false); }
