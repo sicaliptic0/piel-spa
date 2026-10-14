@@ -1971,7 +1971,7 @@
         // clinic number when the patient wrote in the last 24 h. Email: all at
         // once (send-announcement). Leaves out "⛔ No contactar" and patients who
         // said no to promotions. Recipients are logged per announcement.
-        const ANN_DEFAULT_TEXT = 'Hola {nombre} 👋\n\nTe escribimos de Piel Spa ✨ Este viernes estaremos atendiendo. Si quieres reservar tu cita, escríbenos a nuestro WhatsApp oficial 👉 https://wa.me/19295613388 o agenda aquí: https://piel-spa.com/agendar.html\n\n¡Te esperamos!';
+        const ANN_DEFAULT_TEXT = "Hola {nombre} 👋 Te saluda *Piel Spa* ✨\n\nTe recordamos que este *viernes 16 de octubre* estaremos atendiendo en *Divine Bliss Studio, New Brunswick, NJ*.\n\nSi te interesa algún tratamiento, o conoces a alguien a quien le pueda interesar, ¡comparte esta información! 💕 Aún mantenemos nuestros *precios especiales*:\n\n🩺 *Consulta:* $35\n\n💉 *Botox:* $9 por unidad\n\n💋 *Fillers (rellenos):*\n• Relleno de ojeras con Restylane (por hundimiento): $420\n• Aumento de labios con Restylane: $450\n• Fillers por jeringa: desde $360\n• Fillers Restylane: $420\n\n👁️ *Hidratación de ojeras NCTF:* $200 (mejora la calidad de la piel y las manchas)\n💧 *Hidratación de labios:* $280\n\n✨ *Para mejorar la piel en general y verte más luminosa:*\n• PDRN inyectado: $280\n• Skinbooster coreano: $280\n• Skinbooster Restylane: $400\n• Profhilo: $400\n\n🌿 *Bioestimuladores de colágeno:*\n• Juvelook: $680\n• Sculptra: $850\n\n📲 Para reservar tu cita escribe al *+1 (732) 421-8258* 👉 https://wa.me/17324218258\n\n¡Te esperamos! 🌸";
         let annCurrent = null;   // { id, body } once saved
         let annSent = {};        // patientId → { whatsapp: true, email: true }
         let annTextDirty = false;
