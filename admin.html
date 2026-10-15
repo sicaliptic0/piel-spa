@@ -414,6 +414,8 @@
                     <p class="text-[10px] uppercase tracking-widest opacity-40">Registro clínico del paciente</p>
                     <p id="history-patient-contact" class="text-xs opacity-70 mt-1"></p>
                     <button type="button" id="history-whatsapp-btn" onclick="openWhatsAppForCurrentPatient()" class="hidden mt-2 text-[10px] uppercase tracking-widest font-bold text-[#128C7E] border border-[#25D366] px-3 py-1.5 rounded-full hover:bg-[#25D366] hover:text-white transition">💬 Enviar WhatsApp</button>
+                    <button type="button" onclick="openDivineBookingModal()" class="admin-only mt-2 text-[10px] uppercase tracking-widest font-bold text-[#5B21B6] border border-[#7C3AED] px-3 py-1.5 rounded-full hover:bg-[#7C3AED] hover:text-white transition">📅 Cita Divine Bliss</button>
+                    <div id="history-divine-appts" class="hidden mt-2 text-xs text-[#5B21B6]"></div>
                 </div>
                 <button onclick="closeHistoryModal()" class="hidden md:block text-2xl opacity-40 hover:opacity-100 ml-4 flex-shrink-0">&times;</button>
             </div>
@@ -949,6 +951,29 @@
                 <button type="submit" class="bg-[#B76E88] text-white py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg hover:bg-[#9C5570] transition shadow-md mt-2">Schedule Appointment</button>
                 <button type="button" onclick="closeAdminBooking()" class="text-[9px] uppercase opacity-40 hover:opacity-100 transition mt-2">Cancel</button>
             </form>
+        </div>
+    </div>
+
+    <!-- ===== DIVINE BLISS BOOKING (admin only, from the patient's history) =====
+         Fridays 9 AM – 7 PM, 30-minute slots; book_divine_bliss_slot() enforces it. -->
+    <div id="divine-booking-modal" class="admin-only fixed inset-0 bg-black/60 hidden flex items-center justify-center z-[70] p-4 backdrop-blur-sm">
+        <div class="bg-white p-6 md:p-8 max-w-lg w-full rounded-2xl shadow-2xl relative max-h-[92vh] overflow-y-auto">
+            <button type="button" onclick="closeDivineBookingModal()" class="absolute top-4 right-5 text-2xl opacity-40 hover:opacity-100">&times;</button>
+            <h3 class="text-2xl italic">Cita en Divine Bliss Studio</h3>
+            <p class="text-[10px] uppercase tracking-widest opacity-50 mt-1">New Brunswick, NJ · Viernes 9:00 AM – 7:00 PM</p>
+            <p class="text-sm mt-3">Paciente: <span id="divine-book-patient" class="font-bold"></span></p>
+
+            <label class="block text-[9px] uppercase tracking-widest text-[#5B21B6] font-bold mt-5 mb-2">Viernes</label>
+            <select id="divine-book-date" onchange="loadDivineSlots()" class="w-full text-sm border border-[#EDE1E7] rounded-lg px-3 py-2 bg-white"></select>
+
+            <label class="block text-[9px] uppercase tracking-widest text-[#5B21B6] font-bold mt-5 mb-2">Hora</label>
+            <div id="divine-book-slots" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
+
+            <label class="block text-[9px] uppercase tracking-widest text-[#5B21B6] font-bold mt-5 mb-2">Tratamientos (opcional)</label>
+            <div id="divine-book-treatments" class="space-y-4 border border-[#EDE1E7] rounded-lg p-3 max-h-56 overflow-y-auto"></div>
+
+            <button type="button" id="divine-book-submit" onclick="submitDivineBooking()" class="w-full mt-6 bg-[#7C3AED] text-white py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg hover:bg-[#5B21B6] transition shadow-md disabled:opacity-40">Agendar cita</button>
+            <button type="button" onclick="closeDivineBookingModal()" class="w-full text-[9px] uppercase opacity-40 hover:opacity-100 transition mt-3">Cancelar</button>
         </div>
     </div>
 
@@ -3623,7 +3648,7 @@
             const text = [
                 `Hola${firstName ? ' ' + firstName : ''} 👋`,
                 '',
-                `Te recordamos tu cita en *Piel Spa* mañana *${day}* a las *${formatTime12h(a.appointment_time)}*${services ? ` (${services})` : ''}.`,
+                `Te recordamos tu cita ${a.location === 'divine_bliss' ? 'con *Piel Spa* en *Divine Bliss Studio, New Brunswick, NJ*' : 'en *Piel Spa*'} mañana *${day}* a las *${formatTime12h(a.appointment_time)}*${services ? ` (${services})` : ''}.`,
                 '',
                 link ? `Por favor confírmanos tu asistencia aquí 👉 ${link}` : 'Por favor confírmanos tu asistencia.',
                 'O respóndenos *SÍ* por este chat. Si necesitas reprogramar, escríbenos por aquí.',
@@ -3666,6 +3691,7 @@
                     <td class="p-6 font-medium">
                         ${appt.profiles?.last_name || 'N/A'}, ${appt.profiles?.first_name || ''}
                         ${appt.booked_via === 'web' ? '<span class="ml-1 text-[8px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#EDE1E7] px-1.5 py-0.5 rounded-full">web</span>' : ''}
+                        ${appt.location === 'divine_bliss' ? '<span class="ml-1 clinic-badge-divine">Divine Bliss</span>' : ''}
                         ${appt.patient_id && !intakeDone.has(String(appt.patient_id)) ? `
                             <div class="mt-1 flex items-center gap-2 flex-wrap">
                                 <span class="text-[8px] uppercase tracking-widest font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">⚠️ Historia incompleta</span>
@@ -3842,6 +3868,7 @@
             if (cbDivine) cbDivine.checked = currentPatientClinic.includes('divine');
             loadMarketingConsent(patientId);
             loadContactFlag(patientId);
+            loadDivineAppointmentsForPatient(patientId);
 
             // Collapse admission section on open (collapsed by default)
             const admSection = document.getElementById('admission-section');
@@ -4471,6 +4498,155 @@
                 fetchAppointments();
             }
         };
+
+        // --- DIVINE BLISS STUDIO BOOKING (admin only) ---
+        // Fridays in New Brunswick, NJ: 30-minute slots starting 9:00 … 18:30. Stored
+        // in appointments with location 'divine_bliss'; the public agenda ignores them.
+        const DIVINE_LOCATION = 'divine_bliss';
+        const DIVINE_SLOT_MINUTES = 30;
+        const DIVINE_HOURS = Array.from({ length: 20 }, (_, i) => {
+            const m = 9 * 60 + i * DIVINE_SLOT_MINUTES;
+            return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+        });
+        let divineSelectedTime = null;
+
+        function upcomingFridays(count) {
+            const today = clinicDateIso(0);
+            const d = new Date(today + 'T12:00:00Z');
+            d.setUTCDate(d.getUTCDate() + ((5 - d.getUTCDay() + 7) % 7));
+            const list = [];
+            for (let i = 0; i < count; i++) {
+                list.push(d.toISOString().slice(0, 10));
+                d.setUTCDate(d.getUTCDate() + 7);
+            }
+            return list;
+        }
+
+        function formatDivineDay(iso) {
+            return new Date(iso + 'T12:00:00Z').toLocaleDateString('es-ES', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' });
+        }
+
+        function openDivineBookingModal() {
+            if (staffRole !== 'admin' || !currentPatientId) return;
+            document.getElementById('divine-book-patient').innerText = currentPatientName || '';
+            document.getElementById('divine-book-date').innerHTML = upcomingFridays(12)
+                .map(d => `<option value="${d}">${escapeHtml(formatDivineDay(d))}</option>`).join('');
+            renderTreatmentsDropdownOptions('divine-book-treatments', 'divine-treatment-checkbox');
+            document.getElementById('divine-booking-modal').classList.remove('hidden');
+            loadDivineSlots();
+        }
+
+        function closeDivineBookingModal() {
+            document.getElementById('divine-booking-modal').classList.add('hidden');
+        }
+
+        async function loadDivineSlots() {
+            const date = document.getElementById('divine-book-date').value;
+            const box = document.getElementById('divine-book-slots');
+            divineSelectedTime = null;
+            document.getElementById('divine-book-submit').disabled = true;
+            box.innerHTML = '<p class="col-span-full text-xs opacity-50">Cargando…</p>';
+            const { data, error } = await _supabase.from('appointments')
+                .select('appointment_time, patient_id, profiles(first_name, last_name)')
+                .eq('appointment_date', date).eq('location', DIVINE_LOCATION).neq('status', 'cancelled');
+            if (error) { box.innerHTML = `<p class="col-span-full text-xs text-red-600">${escapeHtml(error.message)}</p>`; return; }
+            const taken = {};
+            (data || []).forEach(a => { taken[String(a.appointment_time).slice(0, 5)] = a; });
+            const nowIso = new Date().toLocaleString('sv-SE', { timeZone: 'America/New_York' }).slice(0, 16).replace(' ', 'T');
+            box.innerHTML = DIVINE_HOURS.map(h => {
+                const endMin = Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5)) + DIVINE_SLOT_MINUTES;
+                const end = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`;
+                const label = `${formatTime12h(h)} – ${formatTime12h(end)}`;
+                const a = taken[h];
+                if (a) {
+                    const who = `${a.profiles?.first_name || ''} ${a.profiles?.last_name || ''}`.trim() || 'Ocupado';
+                    const mine = String(a.patient_id) === String(currentPatientId);
+                    return `<div class="text-[11px] border border-[#EDE1E7] bg-gray-50 rounded-lg px-2 py-2 text-center opacity-70"><div class="font-bold">${escapeHtml(label)}</div><div class="truncate ${mine ? 'text-[#5B21B6] font-bold' : ''}">${escapeHtml(mine ? 'Este paciente' : who)}</div></div>`;
+                }
+                if (`${date}T${h}` <= nowIso) {
+                    return `<div class="text-[11px] border border-[#EDE1E7] rounded-lg px-2 py-2 text-center opacity-30"><div class="font-bold">${escapeHtml(label)}</div><div>Pasó</div></div>`;
+                }
+                return `<button type="button" data-time="${h}" onclick="selectDivineSlot(this)" class="divine-slot text-[11px] border border-[#7C3AED] text-[#5B21B6] rounded-lg px-2 py-2 text-center hover:bg-[#EDE9FE] transition"><div class="font-bold">${escapeHtml(label)}</div><div>Libre</div></button>`;
+            }).join('');
+        }
+
+        function selectDivineSlot(btn) {
+            document.querySelectorAll('.divine-slot').forEach(b => b.classList.remove('bg-[#7C3AED]', 'text-white'));
+            btn.classList.add('bg-[#7C3AED]', 'text-white');
+            divineSelectedTime = btn.dataset.time;
+            document.getElementById('divine-book-submit').disabled = false;
+        }
+
+        async function submitDivineBooking() {
+            const date = document.getElementById('divine-book-date').value;
+            if (!currentPatientId || !date || !divineSelectedTime) return;
+            const ids = getCheckedValuesByClass('divine-treatment-checkbox');
+            const btn = document.getElementById('divine-book-submit');
+            btn.disabled = true;
+            const { error } = await _supabase.rpc('book_divine_bliss_slot', {
+                p_patient_id: currentPatientId,
+                p_date: date,
+                p_time: divineSelectedTime,
+                p_service_type: ids.map(id => getTreatmentLabelById(id)).join(', '),
+                p_service_ids: ids,
+            });
+            if (error) {
+                const msg = {
+                    slot_not_available: 'Esa hora ya fue tomada. Elige otra.',
+                    divine_bliss_in_past: 'Esa hora ya pasó.',
+                    divine_bliss_fridays_only: 'Divine Bliss solo atiende los viernes.',
+                    divine_bliss_invalid_hour: 'Hora fuera del horario (9 AM – 7 PM).',
+                }[error.message] || error.message;
+                alert('No se pudo agendar: ' + msg);
+                loadDivineSlots();
+                return;
+            }
+            const time = divineSelectedTime;
+            closeDivineBookingModal();
+            loadDivineAppointmentsForPatient(currentPatientId);
+            if (currentAdminView() === 'appointments-view') fetchAppointments();
+            if (whatsappNumber(currentPatientPhone) && confirm('Cita agendada ✅\n\n¿Enviar la confirmación por WhatsApp?')) {
+                const firstName = String(currentPatientName || '').trim().split(/\s+/)[0] || '';
+                const services = ids.map(id => TREATMENT_OPTIONS.find(o => o.id === id)?.es || getTreatmentLabelById(id)).join(', ');
+                openWhatsAppModal({
+                    name: currentPatientName,
+                    phone: currentPatientPhone,
+                    text: [
+                        `Hola${firstName ? ' ' + firstName : ''} 👋 Te saluda *Piel Spa* ✨`,
+                        '',
+                        `Tu cita quedó agendada para el *${formatDivineDay(date)}* a las *${formatTime12h(time)}*${services ? ` (${services})` : ''} en *Divine Bliss Studio, New Brunswick, NJ*.`,
+                        '',
+                        'Llega 15 minutos antes, con la cara limpia y el menor maquillaje posible. Si necesitas reprogramar, escríbenos por aquí. ¡Te esperamos! 🌸',
+                    ].join('\n'),
+                });
+            }
+        }
+
+        // Upcoming Divine Bliss appointments, under the patient's name in the history.
+        async function loadDivineAppointmentsForPatient(patientId) {
+            const el = document.getElementById('history-divine-appts');
+            el.classList.add('hidden');
+            if (staffRole !== 'admin') return;
+            const { data, error } = await _supabase.from('appointments')
+                .select('id, appointment_date, appointment_time')
+                .eq('patient_id', patientId).eq('location', DIVINE_LOCATION).neq('status', 'cancelled')
+                .gte('appointment_date', clinicDateIso(0)).order('appointment_date');
+            if (error || !data?.length || String(patientId) !== String(currentPatientId)) return;
+            el.innerHTML = data.map(a => `
+                <div class="flex items-center gap-3">
+                    <span>📅 Divine Bliss: <b>${escapeHtml(formatDivineDay(a.appointment_date))}</b> · ${escapeHtml(formatTime12h(a.appointment_time))}</span>
+                    <button type="button" onclick="cancelDivineAppointment('${a.id}')" class="text-[9px] uppercase tracking-widest font-bold text-red-500 hover:underline">Cancelar</button>
+                </div>`).join('');
+            el.classList.remove('hidden');
+        }
+
+        async function cancelDivineAppointment(id) {
+            if (!confirm('¿Cancelar esta cita en Divine Bliss?')) return;
+            const { error } = await _supabase.from('appointments').update({ status: 'cancelled' }).eq('id', id);
+            if (error) { alert('No se pudo cancelar: ' + error.message); return; }
+            loadDivineAppointmentsForPatient(currentPatientId);
+            if (currentAdminView() === 'appointments-view') fetchAppointments();
+        }
 
         // --- NEW PATIENT (full intake in admin mode) ---
         // "+ Nuevo paciente" runs the same intake patients fill in (intake.html),
