@@ -972,6 +972,17 @@
             <label class="block text-[9px] uppercase tracking-widest text-[#5B21B6] font-bold mt-5 mb-2">Tratamientos (opcional)</label>
             <div id="divine-book-treatments" class="space-y-4 border border-[#EDE1E7] rounded-lg p-3 max-h-56 overflow-y-auto"></div>
 
+            <div class="mt-5 space-y-2 text-sm">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="divine-notify-email" class="accent-[#7C3AED]">
+                    <span>📧 Enviar correo de confirmación <span id="divine-email-to" class="text-xs opacity-50"></span></span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="divine-notify-wa" class="accent-[#25D366]">
+                    <span>💬 Abrir WhatsApp con la confirmación <span id="divine-wa-to" class="text-xs opacity-50"></span></span>
+                </label>
+            </div>
+
             <button type="button" id="divine-book-submit" onclick="submitDivineBooking()" class="w-full mt-6 bg-[#7C3AED] text-white py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg hover:bg-[#5B21B6] transition shadow-md disabled:opacity-40">Agendar cita</button>
             <button type="button" onclick="closeDivineBookingModal()" class="w-full text-[9px] uppercase opacity-40 hover:opacity-100 transition mt-3">Cancelar</button>
         </div>
@@ -4532,6 +4543,15 @@
             document.getElementById('divine-book-date').innerHTML = upcomingFridays(12)
                 .map(d => `<option value="${d}">${escapeHtml(formatDivineDay(d))}</option>`).join('');
             renderTreatmentsDropdownOptions('divine-book-treatments', 'divine-treatment-checkbox');
+            // Both notices on by default when the patient has that contact.
+            const hasEmail = /@/.test(currentPatientEmail || '');
+            const hasWa = !!whatsappNumber(currentPatientPhone);
+            const emailCb = document.getElementById('divine-notify-email');
+            const waCb = document.getElementById('divine-notify-wa');
+            emailCb.checked = hasEmail; emailCb.disabled = !hasEmail;
+            waCb.checked = hasWa; waCb.disabled = !hasWa;
+            document.getElementById('divine-email-to').innerText = hasEmail ? `(${currentPatientEmail})` : '(sin correo)';
+            document.getElementById('divine-wa-to').innerText = hasWa ? `(${currentPatientPhone})` : '(sin teléfono)';
             document.getElementById('divine-booking-modal').classList.remove('hidden');
             loadDivineSlots();
         }
@@ -4602,12 +4622,35 @@
                 return;
             }
             const time = divineSelectedTime;
+            const sendEmail = document.getElementById('divine-notify-email').checked;
+            const openWa = document.getElementById('divine-notify-wa').checked;
             closeDivineBookingModal();
             loadDivineAppointmentsForPatient(currentPatientId);
             if (currentAdminView() === 'appointments-view') fetchAppointments();
-            if (whatsappNumber(currentPatientPhone) && confirm('Cita agendada ✅\n\n¿Enviar la confirmación por WhatsApp?')) {
+            const services = ids.map(id => TREATMENT_OPTIONS.find(o => o.id === id)?.es || getTreatmentLabelById(id)).join(', ');
+
+            // Same confirmation email as other bookings; the place goes in the team note.
+            let mailSent = false;
+            if (sendEmail && currentPatientEmail) {
+                const { error: mailErr } = await _supabase.functions.invoke('notify-appointment-event', {
+                    body: {
+                        event_type:       'appointment_status_update',
+                        patient_id:       currentPatientId,
+                        patient_name:     currentPatientName || 'Paciente',
+                        patient_email:    currentPatientEmail,
+                        appointment_date: date,
+                        appointment_time: time,
+                        status:           'confirmed',
+                        treatments:       services ? services.split(', ') : [],
+                        instructions:     `Lugar / Location: Divine Bliss Studio, New Brunswick, NJ — ${formatDivineDay(date)}, ${formatTime12h(time)}.`
+                    }
+                });
+                if (mailErr) alert('La cita quedó agendada, pero no se pudo enviar el correo: ' + mailErr.message);
+                else mailSent = true;
+            }
+
+            if (openWa) {
                 const firstName = String(currentPatientName || '').trim().split(/\s+/)[0] || '';
-                const services = ids.map(id => TREATMENT_OPTIONS.find(o => o.id === id)?.es || getTreatmentLabelById(id)).join(', ');
                 openWhatsAppModal({
                     name: currentPatientName,
                     phone: currentPatientPhone,
@@ -4619,6 +4662,8 @@
                         'Llega 15 minutos antes, con la cara limpia y el menor maquillaje posible. Si necesitas reprogramar, escríbenos por aquí. ¡Te esperamos! 🌸',
                     ].join('\n'),
                 });
+            } else {
+                alert('Cita agendada ✅' + (mailSent ? '\nCorreo de confirmación enviado.' : ''));
             }
         }
 
