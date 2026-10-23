@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { whatsappConfig } from "../_shared/whatsapp.ts";
+import { TEMPLATES, TEMPLATE_LANGUAGE, templateComponents } from "../_shared/templates.ts";
 
 // Setup check for the WhatsApp connection. Needs the x-diag-key header
 // (DIAG_KEY secret). Reports only technical status — never tokens, message
@@ -86,6 +87,33 @@ Deno.serve(async (req) => {
     });
     const j = await r.json().catch(() => ({}));
     out.send_test = r.ok ? { ok: true, id: j?.messages?.[0]?.id } : { error: j?.error?.message, code: j?.error?.code, details: j?.error?.error_data?.details };
+  }
+
+  // ?waba=<id>&templates=create → submits every template in _shared/templates.ts
+  // that the account doesn't have yet; &templates=list → name/status/category.
+  const templatesAction = url.searchParams.get("templates");
+  if (waba && (templatesAction === "create" || templatesAction === "list")) {
+    const existing = await graph(`${waba}/message_templates?fields=name,status,category,language,rejected_reason&limit=200`);
+    const have = new Set((existing?.data ?? []).map((t: { name: string; language: string }) => `${t.name}|${t.language}`));
+    if (templatesAction === "create") {
+      const created = [];
+      for (const t of TEMPLATES) {
+        if (have.has(`${t.name}|${TEMPLATE_LANGUAGE}`)) { created.push({ name: t.name, skipped: "ya existe" }); continue; }
+        const r = await fetch(`${c.graph}/${waba}/message_templates`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${c.token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ name: t.name, language: TEMPLATE_LANGUAGE, category: "UTILITY", components: templateComponents(t) }),
+        });
+        const j = await r.json().catch(() => ({}));
+        created.push(r.ok ? { name: t.name, id: j.id, status: j.status, category: j.category }
+          : { name: t.name, error: j?.error?.error_user_msg || j?.error?.message, code: j?.error?.code });
+      }
+      out.templates_created = created;
+    }
+    const after = templatesAction === "create" ? await graph(`${waba}/message_templates?fields=name,status,category,language,rejected_reason&limit=200`) : existing;
+    out.templates = (after?.data ?? after) && Array.isArray(after?.data)
+      ? after.data.map((t: Record<string, unknown>) => ({ name: t.name, status: t.status, category: t.category, language: t.language, rejected_reason: t.rejected_reason }))
+      : after;
   }
 
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
