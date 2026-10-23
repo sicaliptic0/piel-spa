@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
   // Saved coexistence payloads (wa-media/raw/<field>/…): list them, and
   // ?reprocess=raw/<field>[/<file>] re-sends them through whatsapp-webhook.
   const raws: Record<string, number> = {};
-  for (const field of ["history", "smb_message_echoes", "smb_app_state_sync", "account_update"]) {
+  for (const field of ["history", "smb_message_echoes", "smb_app_state_sync", "account_update", "unsupported"]) {
     const { data } = await db.storage.from("wa-media").list(`raw/${field}`, { limit: 1000 });
     if (data?.length) raws[field] = data.length;
   }

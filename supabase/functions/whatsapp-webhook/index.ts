@@ -113,6 +113,14 @@ async function handleMessage(db: SupabaseClient, m: Json, contacts: Json[]) {
     }
   }
 
+  // Meta couldn't deliver the content (type "unsupported"): keep its reason, and
+  // a raw copy (private bucket) to see what the patient's app sent.
+  if (m.type === "unsupported" || m.errors) {
+    const err = m.errors?.[0];
+    row.error = err ? `${err.code ?? ""} ${err.title ?? ""} ${err.error_data?.details ?? err.message ?? ""}`.trim() : "unsupported";
+    await saveRaw(db, "unsupported", null, m);
+  }
+
   // Duplicate deliveries from Meta (same wa_message_id) are ignored.
   const { error } = await db.from("wa_messages").insert(row);
   if (error && !String(error.message).includes("duplicate")) console.error("save message:", error.message);
