@@ -231,39 +231,67 @@ async function handleEcho(db: SupabaseClient, e: Json) {
     .eq("id", conv.id).eq("bot_active", true);
 }
 
-// Past chats sent once after connecting. Saved without notifications, and the
-// chats keep their unread / "por responder" state.
+// Past chats sent once after connecting, in three shapes (as Meta actually
+// sends them): value.history[].threads[].messages (texts, grouped by chat),
+// value.messages (patients' recent photos/audio/video) and value.message_echoes
+// (what the clinic sent). Saved without notifications; each chat keeps its
+// unread / "por responder" state. Media is downloaded when Meta still has it
+// (about the last 14 days).
 const HISTORY_MEDIA_LABEL: Record<string, string> = { image: "📷 Foto", document: "📄 Documento", audio: "🎤 Audio", video: "🎥 Video", sticker: "Sticker" };
 async function handleHistory(db: SupabaseClient, value: Json): Promise<number> {
   const business = String(value.metadata?.display_phone_number || "").replace(/\D/g, "");
-  let saved = 0;
+  const byChat = new Map<string, Json[]>(); // customer wa_id → messages
+  const add = (waId: string, m: Json) => {
+    const id = String(waId || "").replace(/\D/g, "");
+    if (!id || id === business || !m?.id) return;
+    if (!byChat.has(id)) byChat.set(id, []);
+    byChat.get(id)!.push(m);
+  };
   for (const chunk of value.history ?? []) {
-    for (const thread of chunk.threads ?? []) {
-      const waId = String(thread.id || "").replace(/\D/g, "");
-      if (!waId || !(thread.messages ?? []).length) continue;
-      const conv = await getOrCreateConversation(db, waId, "");
-      if (!conv) continue;
-      const { data: before } = await db.from("wa_conversations").select("unread_count, needs_attention").eq("id", conv.id).single();
-      const rows = (thread.messages as Json[]).filter((m) => m.id).map((m) => {
-        const fromBusiness = String(m.from || "").replace(/\D/g, "") === business;
-        const caption = messageText(m);
-        const media = MEDIA_TYPES.includes(m.type) ? `[${HISTORY_MEDIA_LABEL[m.type] || "Archivo"} del historial]` : "";
-        return {
-          conversation_id: conv.id,
-          direction: fromBusiness ? "out" : "in",
-          sender: fromBusiness ? "staff" : "patient",
-          body: [media, MEDIA_TYPES.includes(m.type) ? (m[m.type]?.caption ?? "") : caption].filter(Boolean).join(" ") || null,
-          wa_message_id: m.id,
-          status: fromBusiness ? "sent" : "received",
-          created_at: m.timestamp ? new Date(Number(m.timestamp) * 1000).toISOString() : new Date().toISOString(),
-        };
-      });
-      for (let i = 0; i < rows.length; i += 400) {
-        const { error } = await db.from("wa_messages").upsert(rows.slice(i, i + 400), { onConflict: "wa_message_id", ignoreDuplicates: true });
-        if (error) console.error("history save:", error.message); else saved += rows.slice(i, i + 400).length;
+    for (const thread of chunk.threads ?? []) for (const m of thread.messages ?? []) add(thread.id || thread.context?.wa_id, m);
+  }
+  for (const m of value.messages ?? []) add(String(m.from || "").replace(/\D/g, "") === business ? m.to : m.from, m);
+  for (const e of value.message_echoes ?? []) add(e.to, { ...e, from: business });
+
+  let saved = 0;
+  for (const [waId, messages] of byChat) {
+    const conv = await getOrCreateConversation(db, waId, "");
+    if (!conv) continue;
+    const { data: before } = await db.from("wa_conversations").select("unread_count, needs_attention").eq("id", conv.id).single();
+    const rows = [];
+    for (const m of messages) {
+      const fromBusiness = String(m.from || "").replace(/\D/g, "") === business;
+      const isMedia = MEDIA_TYPES.includes(m.type);
+      const row: Record<string, unknown> = {
+        conversation_id: conv.id,
+        direction: fromBusiness ? "out" : "in",
+        sender: fromBusiness ? "staff" : "patient",
+        body: (isMedia ? (m[m.type]?.caption ?? "") : messageText(m)) || null,
+        wa_message_id: m.id,
+        status: fromBusiness ? "sent" : "received",
+        created_at: m.timestamp ? new Date(Number(m.timestamp) * 1000).toISOString() : new Date().toISOString(),
+      };
+      if (isMedia && m[m.type]?.id) {
+        row.media_type = m.type;
+        row.media_filename = m[m.type].filename ?? null;
+        try {
+          const { bytes, mime } = await downloadWhatsAppMedia(m[m.type].id);
+          const path = `history/${conv.id}/${String(m.id).replace(/[^\w-]/g, "_")}.${extensionFor(mime, m[m.type].filename)}`;
+          const { error } = await db.storage.from("wa-media").upload(path, bytes, { contentType: mime || undefined, upsert: true });
+          if (error) throw error;
+          row.media_path = path;
+          row.media_mime = mime;
+        } catch (_) {
+          row.body = [`[${HISTORY_MEDIA_LABEL[m.type] || "Archivo"} del historial]`, row.body].filter(Boolean).join(" ");
+        }
       }
-      await restoreConversationSummary(db, conv.id, before);
+      rows.push(row);
     }
+    for (let i = 0; i < rows.length; i += 400) {
+      const { error } = await db.from("wa_messages").upsert(rows.slice(i, i + 400), { onConflict: "wa_message_id", ignoreDuplicates: true });
+      if (error) console.error("history save:", error.message); else saved += rows.slice(i, i + 400).length;
+    }
+    await restoreConversationSummary(db, conv.id, before);
   }
   return saved;
 }
@@ -354,8 +382,10 @@ Deno.serve(async (req) => {
         } else if (field === "smb_app_state_sync") {
           diag.contacts_named = Number(diag.contacts_named || 0) + await handleContactSync(db, value);
         }
-        for (const m of value.messages ?? []) await handleMessage(db, m, value.contacts ?? []);
-        for (const s of value.statuses ?? []) await handleStatus(db, s);
+        if (field === "messages") {
+          for (const m of value.messages ?? []) await handleMessage(db, m, value.contacts ?? []);
+          for (const s of value.statuses ?? []) await handleStatus(db, s);
+        }
       }
     }
   } catch (e) {
