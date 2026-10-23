@@ -66,7 +66,51 @@ Deno.serve(async (req) => {
       : subs;
   }
 
+  // ?send_to=<wa_id>[&phone=<id>]: sends a short test text with OUR token —
+  // tells whether this system can send through a number connected by a partner
+  // (needs the recipient to have written in the last 24 h).
+  const sendTo = (url.searchParams.get("send_to") || "").replace(/\D/g, "");
+  if (sendTo) {
+    const r = await fetch(`${c.graph}/${phoneId}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${c.token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ messaging_product: "whatsapp", to: sendTo, type: "text", text: { body: "✅ Prueba de conexión del sistema Piel Spa." } }),
+    });
+    const j = await r.json().catch(() => ({}));
+    out.send_test = r.ok ? { ok: true, id: j?.messages?.[0]?.id } : { error: j?.error?.message, code: j?.error?.code, details: j?.error?.error_data?.details };
+  }
+
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+  // Saved coexistence payloads (wa-media/raw/<field>/…): list them, and
+  // ?reprocess=raw/<field>[/<file>] re-sends them through whatsapp-webhook.
+  const raws: Record<string, number> = {};
+  for (const field of ["history", "smb_message_echoes", "smb_app_state_sync", "account_update"]) {
+    const { data } = await db.storage.from("wa-media").list(`raw/${field}`, { limit: 1000 });
+    if (data?.length) raws[field] = data.length;
+  }
+  out.raw_payloads = raws;
+  const reprocess = url.searchParams.get("reprocess") || "";
+  if (/^raw\/[\w-]+(\/[\w.:-]+\.json)?$/.test(reprocess)) {
+    const key = Deno.env.get("WHATSAPP_WEBHOOK_KEY") ?? "";
+    const isFile = reprocess.endsWith(".json");
+    const folder = isFile ? reprocess.slice(0, reprocess.lastIndexOf("/")) : reprocess;
+    const names = isFile ? [reprocess.slice(reprocess.lastIndexOf("/") + 1)]
+      : ((await db.storage.from("wa-media").list(folder, { limit: 1000, sortBy: { column: "name", order: "asc" } })).data ?? []).map((f) => f.name);
+    const results = [];
+    for (const name of names) {
+      const { data } = await db.storage.from("wa-media").download(`${folder}/${name}`);
+      if (!data) { results.push({ name, error: "not found" }); continue; }
+      const saved = JSON.parse(await data.text());
+      const body = { object: "whatsapp_business_account", entry: [{ id: saved.entry_id, changes: [{ field: saved.field, value: saved.value }] }] };
+      const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-webhook?k=${encodeURIComponent(key)}`, {
+        method: "POST", headers: { "Content-Type": "application/json", "x-reprocess": "1" }, body: JSON.stringify(body),
+      });
+      results.push({ name, status: r.status });
+    }
+    out.reprocess_results = results;
+  }
+
   const { count: conversations } = await db.from("wa_conversations").select("id", { count: "exact", head: true });
   const { count: messages } = await db.from("wa_messages").select("id", { count: "exact", head: true });
   out.counts = { conversations, messages };

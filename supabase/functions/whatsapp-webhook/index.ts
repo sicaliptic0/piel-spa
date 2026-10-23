@@ -18,6 +18,18 @@ import {
 // home-screen icon badge and which chats are still unread, so each phone drops
 // notifications for chats someone already read. The email alert to the clinic
 // is off unless the WHATSAPP_EMAIL_ALERTS secret is "on".
+//
+// Coexistence (WhatsApp Business app + this system on the same number, through
+// Dualhook's webhook override):
+//   - Override deliveries are signed with the partner's app secret, not ours, so
+//     a POST is also accepted when the URL carries ?k=<WHATSAPP_WEBHOOK_KEY>.
+//   - smb_message_echoes: what staff send from the WhatsApp Business app → shown
+//     in the chat as staff messages, and the chat switches to human mode.
+//   - history: up to 180 days of past chats, sent ONCE right after connecting.
+//   - smb_app_state_sync: contact names from the app.
+//   These, account_update and any unknown field are first saved untouched to
+//   wa-media/raw/ (private), so they can be re-processed by whatsapp-diagnose if
+//   something was read wrong — the history sync can't be requested twice.
 
 const MEDIA_TYPES = ["image", "document", "audio", "video", "sticker"];
 
@@ -187,6 +199,106 @@ async function alertStaff(waId: string, name: string, preview: string) {
   }
 }
 
+// A message staff sent from the WhatsApp Business app (coexistence echo).
+async function handleEcho(db: SupabaseClient, e: Json) {
+  const waId = String(e.to || "");
+  if (!waId || !e.id) return;
+  const conv = await getOrCreateConversation(db, waId, "");
+  if (!conv) return;
+  const row: Record<string, unknown> = {
+    conversation_id: conv.id, direction: "out", sender: "staff", staff_user_id: null,
+    body: messageText(e) || null, wa_message_id: e.id, status: "sent",
+    created_at: e.timestamp ? new Date(Number(e.timestamp) * 1000).toISOString() : new Date().toISOString(),
+  };
+  if (MEDIA_TYPES.includes(e.type) && e[e.type]?.id) {
+    row.media_type = e.type;
+    row.media_filename = e[e.type].filename ?? null;
+    try {
+      const { bytes, mime } = await downloadWhatsAppMedia(e[e.type].id);
+      const path = `outbound/${conv.id}/${e.id}.${extensionFor(mime, e[e.type].filename)}`;
+      const { error } = await db.storage.from("wa-media").upload(path, bytes, { contentType: mime || undefined, upsert: true });
+      if (error) throw error;
+      row.media_path = path;
+      row.media_mime = mime;
+    } catch (err) {
+      row.error = `media: ${(err as Error).message}`;
+    }
+  }
+  const { error } = await db.from("wa_messages").insert(row);
+  if (error) return; // duplicate delivery
+  // Staff is handling this chat from the phone: the bot steps back.
+  await db.from("wa_conversations").update({ bot_active: false, human_since: new Date().toISOString() })
+    .eq("id", conv.id).eq("bot_active", true);
+}
+
+// Past chats sent once after connecting. Saved without notifications, and the
+// chats keep their unread / "por responder" state.
+const HISTORY_MEDIA_LABEL: Record<string, string> = { image: "📷 Foto", document: "📄 Documento", audio: "🎤 Audio", video: "🎥 Video", sticker: "Sticker" };
+async function handleHistory(db: SupabaseClient, value: Json): Promise<number> {
+  const business = String(value.metadata?.display_phone_number || "").replace(/\D/g, "");
+  let saved = 0;
+  for (const chunk of value.history ?? []) {
+    for (const thread of chunk.threads ?? []) {
+      const waId = String(thread.id || "").replace(/\D/g, "");
+      if (!waId || !(thread.messages ?? []).length) continue;
+      const conv = await getOrCreateConversation(db, waId, "");
+      if (!conv) continue;
+      const { data: before } = await db.from("wa_conversations").select("unread_count, needs_attention").eq("id", conv.id).single();
+      const rows = (thread.messages as Json[]).filter((m) => m.id).map((m) => {
+        const fromBusiness = String(m.from || "").replace(/\D/g, "") === business;
+        const caption = messageText(m);
+        const media = MEDIA_TYPES.includes(m.type) ? `[${HISTORY_MEDIA_LABEL[m.type] || "Archivo"} del historial]` : "";
+        return {
+          conversation_id: conv.id,
+          direction: fromBusiness ? "out" : "in",
+          sender: fromBusiness ? "staff" : "patient",
+          body: [media, MEDIA_TYPES.includes(m.type) ? (m[m.type]?.caption ?? "") : caption].filter(Boolean).join(" ") || null,
+          wa_message_id: m.id,
+          status: fromBusiness ? "sent" : "received",
+          created_at: m.timestamp ? new Date(Number(m.timestamp) * 1000).toISOString() : new Date().toISOString(),
+        };
+      });
+      for (let i = 0; i < rows.length; i += 400) {
+        const { error } = await db.from("wa_messages").upsert(rows.slice(i, i + 400), { onConflict: "wa_message_id", ignoreDuplicates: true });
+        if (error) console.error("history save:", error.message); else saved += rows.slice(i, i + 400).length;
+      }
+      await restoreConversationSummary(db, conv.id, before);
+    }
+  }
+  return saved;
+}
+
+// The insert trigger treats every old message as new; put the summary back.
+async function restoreConversationSummary(db: SupabaseClient, conversationId: string, before: Json) {
+  const { data: last } = await db.from("wa_messages").select("body, media_type, direction, created_at")
+    .eq("conversation_id", conversationId).neq("sender", "system").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const { data: lastIn } = await db.from("wa_messages").select("created_at")
+    .eq("conversation_id", conversationId).eq("direction", "in").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  await db.from("wa_conversations").update({
+    unread_count: before?.unread_count ?? 0,
+    needs_attention: before?.needs_attention ?? false,
+    last_message_at: last?.created_at ?? null,
+    last_message_preview: String(last?.body || HISTORY_MEDIA_LABEL[String(last?.media_type)] || "").slice(0, 120),
+    last_message_direction: last?.direction ?? null,
+    last_inbound_at: lastIn?.created_at ?? null,
+    last_activity_at: last?.created_at ?? null,
+  }).eq("id", conversationId);
+}
+
+// Contact names from the WhatsApp Business app, for chats that exist.
+async function handleContactSync(db: SupabaseClient, value: Json): Promise<number> {
+  let updated = 0;
+  for (const item of value.state_sync ?? []) {
+    const c = item.contact ?? {};
+    const waId = String(c.phone_number || "").replace(/\D/g, "");
+    const name = String(c.full_name || c.first_name || "").trim();
+    if (!waId || !name || item.action === "remove") continue;
+    const { data } = await db.from("wa_conversations").update({ profile_name: name }).eq("phone", waId).is("patient_id", null).select("id");
+    updated += data?.length ?? 0;
+  }
+  return updated;
+}
+
 async function handleStatus(db: SupabaseClient, s: Json) {
   const order = ["sent", "delivered", "read"];
   const { data: msg } = await db.from("wa_messages").select("id, status").eq("wa_message_id", s.id).maybeSingle();
@@ -213,12 +325,15 @@ Deno.serve(async (req) => {
   const raw = await req.text();
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const signatureOk = await validWebhookSignature(raw, req.headers.get("x-hub-signature-256"));
-  if (!signatureOk) {
-    await saveDiagnostic(db, { signature_ok: false, has_signature_header: !!req.headers.get("x-hub-signature-256"), bytes: raw.length });
+  const urlKey = Deno.env.get("WHATSAPP_WEBHOOK_KEY") ?? "";
+  const keyOk = !!urlKey && url.searchParams.get("k") === urlKey;
+  if (!signatureOk && !keyOk) {
+    await saveDiagnostic(db, { signature_ok: false, key_ok: false, has_signature_header: !!req.headers.get("x-hub-signature-256"), bytes: raw.length });
     return new Response("invalid signature", { status: 401 });
   }
+  const reprocessing = keyOk && req.headers.get("x-reprocess") === "1";
 
-  const diag: Record<string, unknown> = { signature_ok: true, fields: [], messages: 0, statuses: 0 };
+  const diag: Record<string, unknown> = { signature_ok: signatureOk, key_ok: keyOk, reprocessing, fields: [], messages: 0, statuses: 0 };
   try {
     const payload = JSON.parse(raw);
     for (const entry of payload.entry ?? []) {
@@ -228,6 +343,17 @@ Deno.serve(async (req) => {
         diag.phone_number_id = value.metadata?.phone_number_id ?? diag.phone_number_id;
         diag.messages = Number(diag.messages) + (value.messages ?? []).length;
         diag.statuses = Number(diag.statuses) + (value.statuses ?? []).length;
+        diag.waba_id = entry.id ?? diag.waba_id;
+        const field = String(change.field);
+        if (field !== "messages" && !reprocessing) await saveRaw(db, field, entry.id, value);
+        if (field === "smb_message_echoes") {
+          for (const e of value.message_echoes ?? []) await handleEcho(db, e);
+          diag.echoes = Number(diag.echoes || 0) + (value.message_echoes ?? []).length;
+        } else if (field === "history") {
+          diag.history_saved = Number(diag.history_saved || 0) + await handleHistory(db, value);
+        } else if (field === "smb_app_state_sync") {
+          diag.contacts_named = Number(diag.contacts_named || 0) + await handleContactSync(db, value);
+        }
         for (const m of value.messages ?? []) await handleMessage(db, m, value.contacts ?? []);
         for (const s of value.statuses ?? []) await handleStatus(db, s);
       }
@@ -240,6 +366,17 @@ Deno.serve(async (req) => {
   await saveDiagnostic(db, diag);
   return new Response("ok", { status: 200 });
 });
+
+// Untouched copy of a coexistence/unknown payload (private bucket), so it can
+// be re-processed: whatsapp-diagnose ?reprocess=raw/<field>/<file>.
+async function saveRaw(db: SupabaseClient, field: string, entryId: unknown, value: Json) {
+  try {
+    const at = new Date().toISOString();
+    const name = `raw/${field.replace(/[^\w-]/g, "_")}/${at}-${crypto.randomUUID().slice(0, 8)}.json`;
+    await db.storage.from("wa-media").upload(name,
+      new Blob([JSON.stringify({ field, entry_id: entryId, value })], { type: "application/json" }), { upsert: true });
+  } catch (_) { /* never break the webhook */ }
+}
 
 // Technical trace of each call (never message content), read by
 // whatsapp-diagnose while the connection is being set up.

@@ -3268,7 +3268,9 @@
                 if (m.sender === 'system') return sep + `<div class="text-center text-[10px] opacity-50 italic">${escapeHtml(m.body || '')}</div>`;
                 const out = m.direction === 'out';
                 const bubble = out ? (m.sender === 'bot' ? 'bg-[#EFE7F7]' : 'bg-[#DCF8C6]') : 'bg-white';
-                const who = out ? (m.sender === 'bot' ? '🤖 IA' : '') : '';
+                // Written from the WhatsApp Business app (coexistence echo or synced history).
+                const fromApp = out && m.sender === 'staff' && !m.staff_user_id && !String(m.wa_message_id || '').startsWith('import:');
+                const who = out ? (m.sender === 'bot' ? '🤖 IA' : fromApp ? '📱 App' : '') : '';
                 const ticks = !out ? '' : m.status === 'failed' ? '<span class="text-red-500" title="' + escapeHtml(m.error || '') + '">⚠️ No enviado</span>'
                     : m.status === 'read' ? '<span class="text-sky-500">✓✓</span>' : m.status === 'delivered' ? '✓✓' : '✓';
                 const time = new Date(m.created_at).toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' });
