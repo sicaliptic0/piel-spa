@@ -137,7 +137,6 @@
                             <th class="px-4 py-3">Procedimientos</th>
                             <th class="px-4 py-3 text-right">Monto</th>
                             <th class="px-4 py-3">Observaciones</th>
-                            <th class="px-4 py-3"></th>
                         </tr>
                     </thead>
                     <tbody id="today-table-body"></tbody>
@@ -167,7 +166,6 @@
                             <th class="px-5 py-4 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('visit')">Última atención <span class="sort-icon" data-key="visit"></span></th>
                             <th class="px-5 py-4 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('registered')">Registro <span class="sort-icon" data-key="registered"></span></th>
                             <th class="px-5 py-4 cursor-pointer select-none hover:text-[#B76E88]" onclick="sortPatients('clinic')">Clínica <span class="sort-icon" data-key="clinic"></span></th>
-                            <th class="px-5 py-4">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="patient-table-body" class="text-sm"></tbody>
@@ -194,11 +192,11 @@
                     <table class="w-full text-left min-w-[600px]">
                         <thead class="bg-gray-50 text-[10px] uppercase tracking-widest opacity-60">
                             <tr>
-                                <th class="p-6">Patient</th>
-                                <th class="p-6">Procedure</th>
-                                <th class="p-6">Date/Time</th>
-                                <th class="p-6">Status</th>
-                                <th class="p-6">Action</th>
+                                <th class="p-6">Paciente</th>
+                                <th class="p-6">Teléfono</th>
+                                <th class="p-6">Tratamiento</th>
+                                <th class="p-6">Fecha y hora</th>
+                                <th class="p-6">Estado</th>
                             </tr>
                         </thead>
                         <tbody id="appointment-table-body" class="text-sm"></tbody>
@@ -340,6 +338,9 @@
             <p class="text-[11px] opacity-50">Para agregar otro teléfono, abre el admin en ese teléfono e inicia sesión con tu cuenta → Mensajes → Activar avisos.</p>
         </div>
     </div>
+
+    <!-- Row "⋮" menu shared by Hoy / Pacientes / Citas (filled by openRowMenu) -->
+    <div id="row-menu" class="hidden fixed bg-white rounded-xl shadow-2xl border border-[#EDE1E7] py-1" style="z-index: 95; width: 240px;"></div>
 
     <!-- ===== ANNOUNCEMENT ("📣 Anuncio"): one message to many patients ===== -->
     <div id="ann-modal" class="fixed inset-0 z-[70] hidden bg-black/40 backdrop-blur-sm items-stretch md:items-center justify-center md:p-4">
@@ -2332,7 +2333,7 @@
 
         function renderPatientTable(patients) {
             if (!patients.length) {
-                document.getElementById('patient-table-body').innerHTML = `<tr><td colspan="8" class="px-5 py-12 text-center text-sm opacity-40 italic">No hay pacientes que coincidan.</td></tr>`;
+                document.getElementById('patient-table-body').innerHTML = `<tr><td colspan="7" class="px-5 py-12 text-center text-sm opacity-40 italic">No hay pacientes que coincidan.</td></tr>`;
                 return;
             }
             document.getElementById('patient-table-body').innerHTML = patients.map(p => {
@@ -2345,21 +2346,16 @@
 
                 return `
                 <tr class="border-t border-gray-50 hover:bg-gray-50 transition">
-                    <td class="px-5 py-4 font-medium">${escapeHtml([p.last_name, p.first_name].filter(v => String(v || '').trim()).join(', ') || p.email || 'Paciente')}${p.do_not_contact ? ' <span title="No contactar" class="text-[9px] font-bold text-red-700 bg-red-50 px-1.5 py-0.5 rounded-full">⛔ No contactar</span>' : ''}</td>
+                    <td class="px-5 py-4 font-medium">
+                        ${patientNameCell(p.id, [p.last_name, p.first_name].filter(v => String(v || '').trim()).join(', ') || p.email || 'Paciente', patientMenuItems(p.id))}
+                        ${p.do_not_contact ? ' <span title="No contactar" class="text-[9px] font-bold text-red-700 bg-red-50 px-1.5 py-0.5 rounded-full">⛔ No contactar</span>' : ''}
+                    </td>
                     <td class="px-5 py-4 text-xs">${calcAge(p.dob)}</td>
-                    <td class="px-5 py-4 text-xs whitespace-nowrap">${escapeHtml(formatPhone(p.phone) || '-')}</td>
+                    <td class="px-5 py-4 text-xs">${phoneCell(p.phone, p.id)}</td>
                     <td class="px-5 py-4 text-xs">${escapeHtml(p.email || '-')}</td>
                     <td class="px-5 py-4 text-xs whitespace-nowrap">${p.last_visit_date ? formatVisitDate(p.last_visit_date) : '<span class="text-[9px] uppercase tracking-widest font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">Sin atender</span>'}</td>
                     <td class="px-5 py-4 text-xs whitespace-nowrap opacity-60">${formatCreatedAt(p.created_at)}</td>
                     <td class="px-5 py-4 text-xs">${clinicBadges}</td>
-                    <td class="px-5 py-4">
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <button onclick="openHistoryById('${p.id}')" class="text-[#B76E88] font-bold text-[10px] uppercase hover:underline">Historia</button>
-                            ${whatsappNumber(p.phone) ? `<button onclick="openWhatsAppForPatient('${p.id}')" class="text-[#128C7E] font-bold text-[10px] uppercase hover:underline">💬 WhatsApp</button>` : ''}
-                            <button onclick="openEditPatient('${p.id}')" class="text-blue-500 font-bold text-[10px] uppercase hover:underline">Editar</button>
-                            <button onclick="deletePatient('${p.id}')" class="text-red-400 font-bold text-[10px] uppercase hover:underline">Eliminar</button>
-                        </div>
-                    </td>
                 </tr>`;
             }).join('');
         }
@@ -2374,7 +2370,136 @@
                 p = data;
             }
             if (!p) { alert('No se encontró el paciente.'); return; }
-            openHistory(p.id, `${p.first_name || ''} ${p.last_name || ''}`.trim(), p.dob || '');
+            await openHistory(p.id, `${p.first_name || ''} ${p.last_name || ''}`.trim(), p.dob || '');
+        }
+
+        // --- SHARED ROW PIECES: name → history, "⋮" menu, phone actions ---
+        // Used by Hoy, Pacientes and Citas. Menus are kept in a registry keyed
+        // by id, so rows never inline names into onclick strings.
+        const rowMenuRegistry = {};
+        let rowMenuSeq = 0;
+        let appointmentsById = {};
+
+        function patientNameCell(patientId, label, menuItems) {
+            const key = 'm' + (++rowMenuSeq);
+            rowMenuRegistry[key] = menuItems;
+            return `<span class="inline-flex items-center gap-1">
+                <button onclick="openHistoryById('${patientId}')" class="text-left font-medium hover:text-[#B76E88] hover:underline" title="Ver historia">${escapeHtml(label)}</button>
+                <button onclick="openRowMenu(event, '${key}')" class="w-7 h-7 flex-shrink-0 rounded-full hover:bg-[#FBF0F3] text-lg leading-none opacity-60 hover:opacity-100" aria-label="Opciones" title="Opciones">⋮</button>
+            </span>`;
+        }
+
+        function patientMenuItems(patientId) {
+            return [
+                { label: '📋 Ver historia', run: () => openHistoryById(patientId) },
+                { label: '💬 Enviar mensaje', run: () => openPatientChat(patientId) },
+                { label: '📱 WhatsApp por la app', run: () => openWhatsAppApp(patientId) },
+                { label: '📅 Agregar cita Piel Spa', run: () => openAdminBooking(patientId) },
+                { label: '📅 Agregar cita Divine Bliss', run: () => openDivineBookingFor(patientId) },
+                { label: '✏️ Editar paciente', run: () => openEditPatient(patientId) },
+                { label: '🗑 Eliminar paciente', danger: true, run: () => deletePatient(patientId) },
+            ];
+        }
+
+        function appointmentMenuItems(appt) {
+            const decide = (status) => () => {
+                const a = appointmentsById[appt.id] || appt;
+                const name = `${a.profiles?.first_name || ''} ${a.profiles?.last_name || ''}`.trim();
+                openAppointmentDecisionModal(a.id, a.patient_id || '', name, status, a.appointment_date, a.appointment_time);
+            };
+            return [
+                { label: '📋 Ver historia', run: () => openHistoryById(appt.patient_id) },
+                { label: '✏️ Modificar', run: decide('modified') },
+                { label: '✅ Confirmar', run: decide('confirmed') },
+                { label: '✖ Cancelar', run: decide('cancelled') },
+                { label: '🗑 Eliminar', danger: true, run: () => deleteAppointmentAdmin(appt.id) },
+            ];
+        }
+
+        function openRowMenu(event, key) {
+            event.stopPropagation();
+            const items = rowMenuRegistry[key] || [];
+            const menu = document.getElementById('row-menu');
+            menu.innerHTML = items.map((it, i) => `<button data-i="${i}" class="w-full text-left px-4 py-2 text-sm hover:bg-[#FBF0F3] ${it.danger ? 'text-red-600' : ''}">${escapeHtml(it.label)}</button>`).join('');
+            menu.querySelectorAll('button').forEach(b => b.onclick = (e) => { e.stopPropagation(); closeRowMenu(); items[Number(b.dataset.i)].run(); });
+            menu.classList.remove('hidden');
+            const r = event.currentTarget.getBoundingClientRect();
+            const w = menu.offsetWidth, h = menu.offsetHeight;
+            menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
+            menu.style.top = (r.bottom + h + 8 > window.innerHeight ? Math.max(8, r.top - h - 4) : r.bottom + 4) + 'px';
+        }
+        function closeRowMenu() { document.getElementById('row-menu').classList.add('hidden'); }
+        document.addEventListener('click', closeRowMenu);
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeRowMenu(); });
+        window.addEventListener('resize', closeRowMenu);
+        document.addEventListener('scroll', closeRowMenu, true);
+
+        // Phone with its three actions: 💬 chat in the panel (admins), 📱 the
+        // WhatsApp app of this device, 📞 call.
+        function phoneCell(phone, patientId) {
+            const shown = formatPhone(phone);
+            if (!shown) return '<span class="opacity-40">—</span>';
+            const wa = whatsappNumber(phone);
+            const digits = String(phone || '').replace(/\D/g, '');
+            const tel = wa ? '+' + wa : digits;
+            const btn = 'w-7 h-7 inline-flex items-center justify-center rounded-full hover:bg-[#FBF0F3] text-sm';
+            return `<span class="inline-flex items-center gap-0.5 whitespace-nowrap">
+                <span class="mr-1">${escapeHtml(shown)}</span>
+                ${wa && patientId && staffRole === 'admin' ? `<button onclick="openPatientChat('${patientId}')" class="${btn}" title="Enviar mensaje (panel, número de Piel Spa)">💬</button>` : ''}
+                ${wa ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener" class="${btn}" title="WhatsApp por la app de este dispositivo">📱</a>` : ''}
+                <a href="tel:${tel}" class="${btn}" title="Llamar">📞</a>
+            </span>`;
+        }
+
+        // Patient data for the actions, from whichever list has it.
+        async function patientForActions(patientId) {
+            const appt = Object.values(appointmentsById).find(a => a.patient_id === patientId && a.profiles);
+            let p = allPatients.find(x => x.id === patientId) || todayProfiles[patientId]
+                || (appt && { id: patientId, ...appt.profiles });
+            if (!p || p.phone === undefined) {
+                const { data } = await _supabase.from('profiles').select('id, first_name, last_name, dob, phone, email').eq('id', patientId).maybeSingle();
+                p = data ? { ...data, do_not_contact: p?.do_not_contact } : p;
+            }
+            return p;
+        }
+
+        // "💬 Enviar mensaje": the patient's chat in Mensajes, created if new.
+        async function openPatientChat(patientId) {
+            const p = await patientForActions(patientId);
+            const wa = whatsappNumber(p?.phone);
+            if (!wa) { alert('Este paciente no tiene un teléfono válido para WhatsApp.'); return; }
+            if (p.do_not_contact && !confirm('Este paciente está marcado "⛔ No contactar". ¿Escribirle de todas formas?')) return;
+            let conv = waConversations.find(c => c.phone === wa);
+            if (!conv) {
+                const { data: existing } = await _supabase.from('wa_conversations').select('*').eq('phone', wa).maybeSingle();
+                conv = existing;
+                if (!conv) {
+                    const { data: created, error } = await _supabase.from('wa_conversations')
+                        .insert({ phone: wa, patient_id: patientId, profile_name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || null, bot_active: false })
+                        .select('*').single();
+                    if (error) { alert('No se pudo abrir el chat: ' + error.message); return; }
+                    conv = created;
+                }
+                if (!waConversations.some(c => c.id === conv.id)) waConversations.unshift(conv);
+            }
+            waFilter = 'all';
+            switchAdminView('messages-view', document.getElementById('nav-messages'));
+            openConversation(conv.id);
+        }
+
+        // "📱 WhatsApp por la app": opens WhatsApp on this device.
+        async function openWhatsAppApp(patientId) {
+            const p = await patientForActions(patientId);
+            const wa = whatsappNumber(p?.phone);
+            if (!wa) { alert('Este paciente no tiene un teléfono válido para WhatsApp.'); return; }
+            if (p.do_not_contact && !confirm('Este paciente está marcado "⛔ No contactar". ¿Escribirle de todas formas?')) return;
+            window.open(`https://wa.me/${wa}`, '_blank', 'noopener');
+        }
+
+        // "Agregar cita Divine Bliss": its booking lives in the patient's history.
+        async function openDivineBookingFor(patientId) {
+            await openHistoryById(patientId);
+            openDivineBookingModal();
         }
 
         // --- TODAY ("Hoy"): the daily sheet ---
@@ -2428,7 +2553,7 @@
             const { data: rows, error } = await _supabase.rpc('day_sheet', { p_date: date });
             if (error) {
                 const missingFn = /day_sheet|PGRST202|schema cache/i.test(`${error.code} ${error.message}`);
-                body.innerHTML = `<tr><td colspan="11" class="px-4 py-12 text-center text-sm text-red-500">${escapeHtml(missingFn
+                body.innerHTML = `<tr><td colspan="10" class="px-4 py-12 text-center text-sm text-red-500">${escapeHtml(missingFn
                     ? 'Falta correr el SQL de supabase/migrations/20260926_staff_roles_and_rls_fix.sql en Supabase.'
                     : 'No se pudo cargar el día: ' + error.message)}</td></tr>`;
                 summaryEl.innerText = '';
@@ -2457,11 +2582,11 @@
                 <tr class="text-sm">
                     <td colspan="8" class="px-4 py-3 text-right text-[10px] uppercase tracking-widest font-bold text-[#B76E88]">Total del día${withoutAmount ? ` <span class="normal-case tracking-normal font-semibold text-amber-700">(${withoutAmount} sin monto)</span>` : ''}</td>
                     <td class="px-4 py-3 text-right font-bold text-base whitespace-nowrap">${escapeHtml(formatAmount(total))}</td>
-                    <td colspan="2"></td>
+                    <td></td>
                 </tr>` : '';
 
             if (!visits.length) {
-                body.innerHTML = `<tr><td colspan="11" class="px-4 py-12 text-center text-sm opacity-40 italic">${isToday ? 'Todavía no hay pacientes atendidos hoy.' : 'No hubo pacientes atendidos este día.'}</td></tr>`;
+                body.innerHTML = `<tr><td colspan="10" class="px-4 py-12 text-center text-sm opacity-40 italic">${isToday ? 'Todavía no hay pacientes atendidos hoy.' : 'No hubo pacientes atendidos este día.'}</td></tr>`;
                 return;
             }
 
@@ -2471,10 +2596,10 @@
                 return `
                 <tr class="border-t border-gray-100 align-top hover:bg-[#FDFBFC]">
                     <td class="px-4 py-3 font-bold text-[#B76E88]">${idx + 1}</td>
-                    <td class="px-4 py-3 font-medium whitespace-nowrap">${escapeHtml(name)}</td>
+                    <td class="px-4 py-3 font-medium whitespace-nowrap">${staffRole === 'admin' ? patientNameCell(v.patient_id, name, patientMenuItems(v.patient_id)) : escapeHtml(name)}</td>
                     <td class="px-4 py-3 text-xs whitespace-nowrap">${escapeHtml(formatDob(p.dob))}</td>
                     <td class="px-4 py-3 text-xs whitespace-nowrap">${escapeHtml(p.dob ? calcAge(p.dob) : '—')}</td>
-                    <td class="px-4 py-3 text-xs whitespace-nowrap">${escapeHtml(formatPhone(p.phone) || '—')}</td>
+                    <td class="px-4 py-3 text-xs">${phoneCell(p.phone, v.patient_id)}</td>
                     <td class="px-4 py-3 text-xs">${escapeHtml(locations[v.patient_id] || '—')}</td>
                     <td class="px-4 py-3 text-xs whitespace-nowrap">${escapeHtml(formatVisitTime(v.visit_time) || '—')}</td>
                     <td class="px-4 py-3 text-xs min-w-[14rem]">${escapeHtml(encounterSummaryText(v) || '—')}</td>
@@ -2483,7 +2608,6 @@
                         <textarea class="today-notes resize-y" rows="2" data-id="${v.id}" style="padding:6px 8px;font-size:12px;" placeholder="Observaciones">${escapeHtml(v.frontdesk_notes || '')}</textarea>
                         <p class="today-notes-status text-[9px] uppercase tracking-widest font-bold mt-0.5 h-3"></p>
                     </td>
-                    <td class="px-4 py-3"><button onclick="openHistoryById('${v.patient_id}')" class="admin-only text-[#B76E88] font-bold text-[10px] uppercase hover:underline whitespace-nowrap">Historia</button></td>
                 </tr>`;
             }).join('');
 
@@ -3699,10 +3823,13 @@
             }
             const nameFor = (appt) => `${appt.profiles?.first_name || ''} ${appt.profiles?.last_name || ''}`.trim();
 
+            appointmentsById = Object.fromEntries(data.map(a => [a.id, a]));
             document.getElementById('appointment-table-body').innerHTML = data.map(appt => `
                 <tr class="border-t border-gray-50 hover:bg-gray-50 transition">
                     <td class="p-6 font-medium">
-                        ${appt.profiles?.last_name || 'N/A'}, ${appt.profiles?.first_name || ''}
+                        ${appt.patient_id
+                            ? patientNameCell(appt.patient_id, `${appt.profiles?.last_name || 'N/A'}, ${appt.profiles?.first_name || ''}`, appointmentMenuItems(appt))
+                            : escapeHtml(`${appt.profiles?.last_name || 'N/A'}, ${appt.profiles?.first_name || ''}`)}
                         ${appt.booked_via === 'web' ? '<span class="ml-1 text-[8px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#EDE1E7] px-1.5 py-0.5 rounded-full">web</span>' : ''}
                         ${appt.location === 'divine_bliss' ? '<span class="ml-1 clinic-badge-divine">Divine Bliss</span>' : ''}
                         ${appt.patient_id && !intakeDone.has(String(appt.patient_id)) ? `
@@ -3711,19 +3838,12 @@
                                 <button data-name="${escapeHtml(nameFor(appt))}" onclick="openCompleteIntakeModal('${appt.patient_id}', this.dataset.name)" class="text-[9px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline">Completar</button>
                             </div>` : ''}
                     </td>
+                    <td class="p-6 text-xs">${phoneCell(appt.profiles?.phone, appt.patient_id)}</td>
                     <td class="p-6 uppercase text-[9px] tracking-widest">${Array.isArray(appt.service_type_ids) && appt.service_type_ids.length ? formatTreatmentIds(appt.service_type_ids) : (appt.service_type || '')}</td>
                     <td class="p-6 text-xs">${appt.appointment_date} @ ${appt.appointment_time.substring(0,5)}</td>
                     <td class="p-6">
                         <span class="status-badge status-${appt.status}">${appt.status}</span>
                         ${appointmentReminderNote(appt)}
-                    </td>
-                    <td class="p-6">
-                        <div class="flex items-center gap-4">
-                            <button onclick="openAppointmentDecisionModal('${appt.id}', '${appt.patient_id || ''}', '${(appt.profiles?.first_name || '').replace(/'/g, "\\'")} ${(appt.profiles?.last_name || '').replace(/'/g, "\\'")}', 'confirmed', '${appt.appointment_date}', '${appt.appointment_time}')" class="text-green-600 font-bold text-[10px] uppercase hover:underline">Confirm</button>
-                            <button onclick="openAppointmentDecisionModal('${appt.id}', '${appt.patient_id || ''}', '${(appt.profiles?.first_name || '').replace(/'/g, "\\'")} ${(appt.profiles?.last_name || '').replace(/'/g, "\\'")}', 'modified', '${appt.appointment_date}', '${appt.appointment_time}')" class="text-orange-600 font-bold text-[10px] uppercase hover:underline">Modify</button>
-                            <button onclick="openAppointmentDecisionModal('${appt.id}', '${appt.patient_id || ''}', '${(appt.profiles?.first_name || '').replace(/'/g, "\\'")} ${(appt.profiles?.last_name || '').replace(/'/g, "\\'")}', 'cancelled', '${appt.appointment_date}', '${appt.appointment_time}')" class="text-red-500 font-bold text-[10px] uppercase hover:underline">Cancel</button>
-                            <button onclick="deleteAppointmentAdmin('${appt.id}')" class="text-red-500 font-bold text-[10px] uppercase hover:underline">Delete</button>
-                        </div>
                     </td>
                 </tr>
             `).join('');
@@ -4449,7 +4569,11 @@
         }
 
         // --- ADMIN BOOKING LOGIC ---
-        function openAdminBooking() { document.getElementById('admin-booking-modal').classList.remove('hidden'); }
+        function openAdminBooking(patientId) {
+            const select = document.getElementById('admin-book-patient');
+            if (typeof patientId === 'string' && patientId && [...select.options].some(o => o.value === patientId)) select.value = patientId;
+            document.getElementById('admin-booking-modal').classList.remove('hidden');
+        }
         function closeAdminBooking() {
             document.getElementById('admin-booking-modal').classList.add('hidden');
             closeAdminDropdowns();
