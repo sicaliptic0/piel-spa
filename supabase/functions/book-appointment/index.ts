@@ -5,6 +5,9 @@ import {
 } from "../_shared/clinic.ts";
 import { type HistoricPatient, findHistoricPatient, nameMatchesRecord } from "../_shared/historicPatient.ts";
 import { consentFields } from "../_shared/marketing.ts";
+import { whatsappConnected } from "../_shared/whatsapp.ts";
+import { sendTemplate } from "../_shared/sendTemplate.ts";
+import { clinicPlaces, dayEs, placeFor } from "../_shared/appointmentText.ts";
 
 // Public online booking (agendar.html). Two ways in:
 //  - New patient: only the Step 1 basics (name, phone, email, DOB, sex). Creates
@@ -303,6 +306,21 @@ Deno.serve(async (req) => {
       }
       const results = await Promise.allSettled(jobs);
       results.forEach((r) => { if (r.status === "rejected") console.error("book-appointment email:", r.reason); });
+    }
+
+    // ---------- WhatsApp confirmation (template; never fails the booking) ----------
+    if (whatsappConnected() && patientPhone) {
+      try {
+        const sent = await sendTemplate(adminClient, {
+          template: "confirmacion_cita",
+          params: [firstName || "paciente", placeFor(await clinicPlaces(adminClient), "piel_spa"), dayEs(date), formatTime12h(time)],
+          patientId,
+          appointmentId: String(appointmentId),
+        });
+        if (!sent.ok) console.error("book-appointment whatsapp:", sent.error, "detail" in sent ? sent.detail : "");
+      } catch (e) {
+        console.error("book-appointment whatsapp:", (e as Error).message);
+      }
     }
 
     return jsonResponse({ ok: true, appointment_id: appointmentId, is_new: isNew, historic: !!historic, intake_complete: intakeComplete, date, time });

@@ -1,14 +1,20 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   CLINIC_WHATSAPP, CORS_HEADERS, appointmentDetailsTable, clinicDate, clinicHour, emailConfig, emailShell,
-  escapeHtml, jsonResponse, sendEmail, treatmentLabels,
+  escapeHtml, formatTime12h, jsonResponse, sendEmail, treatmentLabels,
 } from "../_shared/clinic.ts";
+import { whatsappConnected } from "../_shared/whatsapp.ts";
+import { sendTemplate } from "../_shared/sendTemplate.ts";
+import { clinicPlaces, dayEs, placeFor } from "../_shared/appointmentText.ts";
 
 // Called every hour by pg_cron (migration 20261005_appointment_reminders.sql).
-// Between 10:00 and 20:59 New York time it emails a reminder for each of
-// tomorrow's appointments that hasn't had one, with links to confirm or cancel
-// (cita.html). Each appointment is reminded once, so extra calls do nothing.
-// WhatsApp reminders will be added here once the Meta API is connected.
+// Between 10:00 and 20:59 New York time, for each of tomorrow's appointments
+// that hasn't had a reminder:
+//   - email with links to confirm or cancel (cita.html), when there's an email;
+//   - WhatsApp template recordatorio_cita (buttons Confirmo asistencia /
+//     Reprogramar / Cancelar cita, answered by whatsapp-webhook), when there's
+//     a phone and the patient isn't marked "No contactar".
+// Each appointment is reminded once, so extra calls do nothing.
 
 const SEND_FROM_HOUR = 10;
 const SEND_UNTIL_HOUR = 20;
@@ -58,51 +64,78 @@ Deno.serve(async (req) => {
   const tomorrow = clinicDate(1);
   const { data: due, error } = await adminClient
     .from("appointments")
-    .select("id, appointment_date, appointment_time, service_type, service_type_ids, status, response_token, created_at, profiles(first_name, email)")
+    .select("id, patient_id, appointment_date, appointment_time, service_type, service_type_ids, status, location, response_token, created_at, whatsapp_reminder_at, profiles(first_name, email, phone)")
     .eq("appointment_date", tomorrow)
     .is("reminder_sent_at", null)
     .neq("status", "cancelled");
   if (error) return jsonResponse({ error: error.message }, 500);
 
-  const result = { sent: 0, no_email: 0, skipped_recent: 0, failed: 0 };
+  const result = { sent: 0, whatsapp: 0, no_contact: 0, skipped_recent: 0, failed: 0 };
   const recentCutoff = Date.now() - SKIP_IF_BOOKED_WITHIN_HOURS * 3600000;
+  const useWhatsApp = whatsappConnected();
+  const places = await clinicPlaces(adminClient);
+  const { data: flags } = await adminClient.from("patient_staff_flags").select("patient_id").eq("do_not_contact", true);
+  const doNotContact = new Set((flags || []).map((f) => String(f.patient_id)));
 
   for (const appt of due || []) {
     // deno-lint-ignore no-explicit-any
     const profile = (Array.isArray(appt.profiles) ? appt.profiles[0] : appt.profiles) as any;
     const email = String(profile?.email || "").trim();
-    let channel: string;
+    const time = String(appt.appointment_time).substring(0, 5);
+    const channels: string[] = [];
+    let failed = false;
+    let whatsappAt: string | null = null;
 
     if (appt.created_at && new Date(appt.created_at).getTime() > recentCutoff) {
-      channel = "skipped_recent";
       result.skipped_recent++;
-    } else if (!email) {
-      channel = "none";
-      result.no_email++;
+      channels.push("skipped_recent");
     } else {
-      try {
-        const time = String(appt.appointment_time).substring(0, 5);
-        await sendEmail(resendApiKey, from, [email], "Recordatorio: tu cita es mañana | Piel Spa",
-          renderReminderEmail({
-            firstName: String(profile?.first_name || "").trim(),
-            date: appt.appointment_date,
-            time,
-            treatmentsEs: treatmentLabels(appt.service_type_ids, appt.service_type, "es"),
-            token: String(appt.response_token),
-          }),
-          staffEmail || undefined);
-        channel = "email";
-        result.sent++;
-      } catch (e) {
-        // Left unmarked, so the next hourly run tries again.
-        console.error(`reminder ${appt.id}:`, (e as Error).message);
+      if (email) {
+        try {
+          await sendEmail(resendApiKey, from, [email], "Recordatorio: tu cita es mañana | Piel Spa",
+            renderReminderEmail({
+              firstName: String(profile?.first_name || "").trim(),
+              date: appt.appointment_date,
+              time,
+              treatmentsEs: treatmentLabels(appt.service_type_ids, appt.service_type, "es"),
+              token: String(appt.response_token),
+            }),
+            staffEmail || undefined);
+          channels.push("email");
+          result.sent++;
+        } catch (e) {
+          console.error(`reminder email ${appt.id}:`, (e as Error).message);
+          failed = true;
+        }
+      }
+      // Skipped if the admin already sent it by hand from "Recordatorios de mañana".
+      if (useWhatsApp && profile?.phone && !appt.whatsapp_reminder_at && !doNotContact.has(String(appt.patient_id))) {
+        const firstName = String(profile?.first_name || "").trim() || "paciente";
+        const sent = await sendTemplate(adminClient, {
+          template: "recordatorio_cita",
+          params: [firstName, dayEs(appt.appointment_date), formatTime12h(time), placeFor(places, appt.location)],
+          patientId: appt.patient_id,
+          appointmentId: String(appt.id),
+        });
+        if (sent.ok) {
+          channels.push("whatsapp");
+          whatsappAt = new Date().toISOString();
+          result.whatsapp++;
+        } else {
+          console.error(`reminder whatsapp ${appt.id}:`, sent.error, "detail" in sent ? sent.detail : "");
+          failed = true;
+        }
+      }
+      if (!channels.length && failed) {
+        // Nothing went out: left unmarked, so the next hourly run tries again.
         result.failed++;
         continue;
       }
+      if (!channels.length) { channels.push("none"); result.no_contact++; }
     }
 
     await adminClient.from("appointments")
-      .update({ reminder_sent_at: new Date().toISOString(), reminder_channel: channel })
+      .update({ reminder_sent_at: new Date().toISOString(), reminder_channel: channels.join("+"), ...(whatsappAt ? { whatsapp_reminder_at: whatsappAt } : {}) })
       .eq("id", appt.id);
   }
 

@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { emailConfig, escapeHtml, sendEmail } from "../_shared/clinic.ts";
+import { clinicDate, emailConfig, escapeHtml, formatTime12h, sendEmail } from "../_shared/clinic.ts";
+import { clinicPlaces, dayEs, placeFor } from "../_shared/appointmentText.ts";
 import { sendPushToStaff } from "../_shared/push.ts";
 import { consentFields, consentReply } from "../_shared/marketing.ts";
 import {
@@ -134,6 +135,13 @@ async function handleMessage(db: SupabaseClient, m: Json, contacts: Json[]) {
     return;
   }
 
+  // A button of one of our appointment templates ("Confirmo asistencia"…):
+  // update the appointment and answer. Confirmations need no staff.
+  if (m.type === "button" && m.context?.id) {
+    const outcome = await handleTemplateButton(db, conv.id, waId, String(m.context.id), String(m.button?.text || m.button?.payload || ""));
+    if (outcome === "done") return;
+  }
+
   const { data: after } = await db.from("wa_conversations").select("needs_attention, profile_name, patient_id").eq("id", conv.id).single();
   const name = await displayName(db, waId, after ?? conv);
   const preview = String(row.body || ({ image: "📷 Foto", document: "📄 Documento", audio: "🎤 Audio", video: "🎥 Video" } as Record<string, string>)[String(row.media_type)] || "📎 Archivo");
@@ -155,6 +163,68 @@ async function handleMessage(db: SupabaseClient, m: Json, contacts: Json[]) {
   if (Deno.env.get("WHATSAPP_EMAIL_ALERTS") === "on" && after?.needs_attention && !conv.needs_attention) {
     await alertStaff(waId, name, preview);
   }
+}
+
+// What each quick-reply button of the appointment templates does
+// (supabase/functions/_shared/templates.ts).
+type ButtonAction = "confirm" | "cancel" | "reschedule" | "later";
+const TEMPLATE_BUTTONS: Record<string, Record<string, ButtonAction>> = {
+  recordatorio_cita: { "confirmo asistencia": "confirm", "reprogramar": "reschedule", "cancelar cita": "cancel" },
+  confirmacion_cita: { "necesito cambiarla": "reschedule" },
+  cita_reprogramada: { "confirmo": "confirm", "necesito otro horario": "reschedule" },
+  cita_cancelada: { "sí, reprogramar": "reschedule", "más adelante": "later" },
+};
+
+// Returns "done" when nothing is left for staff, "staff" when someone should
+// follow up (reschedule, cancellation), null when it isn't one of our buttons.
+async function handleTemplateButton(db: SupabaseClient, conversationId: string, waId: string, contextId: string, buttonText: string): Promise<"done" | "staff" | null> {
+  const { data: origin } = await db.from("wa_messages").select("template, appointment_id").eq("wa_message_id", contextId).maybeSingle();
+  const action = origin?.template ? TEMPLATE_BUTTONS[origin.template]?.[buttonText.trim().toLowerCase()] : undefined;
+  if (!action) return null;
+
+  let appt: Json = null;
+  if (origin?.appointment_id) {
+    ({ data: appt } = await db.from("appointments")
+      .select("id, appointment_date, appointment_time, status, location, patient_confirmed_at")
+      .eq("id", origin.appointment_id).maybeSingle());
+  }
+  const active = !!appt && appt.status !== "cancelled" && appt.appointment_date >= clinicDate(0);
+  const when = appt ? `${dayEs(appt.appointment_date)} a las ${formatTime12h(String(appt.appointment_time).slice(0, 5))}` : "";
+
+  let reply: string;
+  let outcome: "done" | "staff" = "staff";
+  if ((action === "confirm" || action === "cancel") && !active) {
+    reply = "Esa cita ya no está vigente. Si necesitas una nueva, escríbenos por aquí y te ayudamos. 💕";
+  } else if (action === "confirm") {
+    await db.from("appointments").update({ patient_confirmed_at: appt.patient_confirmed_at || new Date().toISOString() }).eq("id", appt.id);
+    reply = `¡Gracias! Tu cita del ${when} quedó confirmada. Te esperamos en ${placeFor(await clinicPlaces(db), appt.location)}. 💕`;
+    outcome = "done";
+  } else if (action === "cancel") {
+    await db.from("appointments").update({ status: "cancelled", patient_cancelled_at: new Date().toISOString() }).eq("id", appt.id);
+    reply = `Listo, cancelamos tu cita del ${when}. Si quieres agendar otra fecha, escríbenos por aquí. 💕`;
+  } else if (action === "reschedule") {
+    reply = "¡Claro! En un momento te escribimos para buscar un nuevo horario. 😊";
+  } else {
+    reply = "Perfecto. Cuando quieras reagendar, escríbenos por aquí. 💕";
+    outcome = "done";
+  }
+
+  let waMessageId = "";
+  let sendError = "";
+  try {
+    waMessageId = await sendWhatsAppMessage(waId, { type: "text", text: { body: reply } });
+  } catch (e) {
+    sendError = (e as Error).message;
+  }
+  await db.from("wa_messages").insert({
+    conversation_id: conversationId, direction: "out", sender: "system", body: reply,
+    wa_message_id: waMessageId || null, status: sendError ? "failed" : "sent", error: sendError || null,
+    appointment_id: appt?.id ? String(appt.id) : null,
+  });
+  if (outcome === "done") {
+    await db.from("wa_conversations").update({ needs_attention: false, unread_count: 0 }).eq("id", conversationId);
+  }
+  return outcome;
 }
 
 async function handleConsentReply(db: SupabaseClient, conversationId: string, waId: string, consent: "yes" | "no") {

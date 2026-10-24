@@ -184,7 +184,7 @@
                         <h3 class="text-xl italic">Recordatorios de mañana</h3>
                         <p id="wa-reminders-date" class="text-[10px] uppercase tracking-widest opacity-40"></p>
                     </div>
-                    <p class="text-[11px] opacity-60 max-w-md">El correo se envía solo. Aquí envías también el WhatsApp. Vale cualquier confirmación: el enlace del correo, el del WhatsApp, o si responde "Sí" (márcalo con ✅).</p>
+                    <p class="text-[11px] opacity-60 max-w-md">El correo y el WhatsApp (con botones Confirmo / Reprogramar / Cancelar) se envían solos desde las 10 AM del día anterior; si el paciente toca un botón, la cita se actualiza sola. Si responde "Sí" escribiendo, márcalo con ✅.</p>
                 </div>
                 <div id="wa-reminders-list" class="divide-y divide-[#EDE1E7]"></div>
             </div>
@@ -4647,7 +4647,7 @@
                 if (!whatsappNumber(p?.phone)) problems.push('WhatsApp: sin teléfono');
                 else {
                     const { data, error } = await _supabase.functions.invoke('whatsapp-template', {
-                        body: { ...APPOINTMENT_TEMPLATES[event](firstName, appt), patient_id: appt.patient_id },
+                        body: { ...APPOINTMENT_TEMPLATES[event](firstName, appt), patient_id: appt.patient_id, appointment_id: appt.id },
                     });
                     if (error || data?.error) problems.push('WhatsApp: ' + await functionError(error, data));
                     else sent.push('WhatsApp');
