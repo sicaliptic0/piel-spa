@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { clinicDate, emailConfig, escapeHtml, formatTime12h, sendEmail } from "../_shared/clinic.ts";
 import { clinicPlaces, dayEs, placeFor } from "../_shared/appointmentText.ts";
+import { handleRescheduleReply, startReschedule } from "./reschedule.ts";
 import { sendPushToStaff } from "../_shared/push.ts";
 import { consentFields, consentReply } from "../_shared/marketing.ts";
 import {
@@ -139,6 +140,19 @@ async function handleMessage(db: SupabaseClient, m: Json, contacts: Json[]) {
   // wrote, so the 24 h window is open — deliver it now.
   const delivered = await deliverPending(db, conv.id, waId);
 
+  // A choice in the reschedule menus (day / time / "Hablar con alguien").
+  const listReplyId = m.type === "interactive" ? String(m.interactive?.list_reply?.id || "") : "";
+  if (listReplyId.startsWith("rs:")) {
+    const outcome = await handleRescheduleReply(db, conv.id, waId, listReplyId).catch((e) => {
+      console.error("reschedule reply:", (e as Error).message);
+      return null;
+    });
+    if (outcome === "done") {
+      await db.from("wa_conversations").update({ needs_attention: false, unread_count: 0 }).eq("id", conv.id);
+      return;
+    }
+  }
+
   // A button of one of our templates ("Confirmo asistencia", "Sí, envíenmela"…):
   // update the appointment and/or answer. Some need no staff at all.
   if (m.type === "button" && m.context?.id) {
@@ -221,7 +235,10 @@ async function handleTemplateButton(db: SupabaseClient, conversationId: string, 
     await db.from("appointments").update({ status: "cancelled", patient_cancelled_at: new Date().toISOString() }).eq("id", appt.id);
     reply = `Listo, cancelamos tu cita del ${when}. Si quieres agendar otra fecha, escríbenos por aquí. 💕`;
   } else if (action === "reschedule") {
-    reply = "¡Claro! En un momento te escribimos para buscar un nuevo horario. 😊";
+    // The patient picks the new day and time from menus; staff only if that can't start.
+    const menu = await startReschedule(db, conversationId, waId, origin?.appointment_id ? String(origin.appointment_id) : null);
+    if (menu) outcome = menu;
+    else reply = "¡Claro! En un momento te escribimos para buscar un nuevo horario. 😊";
   } else {
     reply = "Perfecto. Cuando quieras reagendar, escríbenos por aquí. 💕";
     outcome = "done";
