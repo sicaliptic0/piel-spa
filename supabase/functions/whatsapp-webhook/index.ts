@@ -135,10 +135,14 @@ async function handleMessage(db: SupabaseClient, m: Json, contacts: Json[]) {
     return;
   }
 
-  // A button of one of our appointment templates ("Confirmo asistencia"…):
-  // update the appointment and answer. Confirmations need no staff.
+  // Text staff left waiting behind a "door opener" template: the patient just
+  // wrote, so the 24 h window is open — deliver it now.
+  const delivered = await deliverPending(db, conv.id, waId);
+
+  // A button of one of our templates ("Confirmo asistencia", "Sí, envíenmela"…):
+  // update the appointment and/or answer. Some need no staff at all.
   if (m.type === "button" && m.context?.id) {
-    const outcome = await handleTemplateButton(db, conv.id, waId, String(m.context.id), String(m.button?.text || m.button?.payload || ""));
+    const outcome = await handleTemplateButton(db, conv.id, waId, String(m.context.id), String(m.button?.text || m.button?.payload || ""), delivered);
     if (outcome === "done") return;
   }
 
@@ -167,17 +171,20 @@ async function handleMessage(db: SupabaseClient, m: Json, contacts: Json[]) {
 
 // What each quick-reply button of the appointment templates does
 // (supabase/functions/_shared/templates.ts).
-type ButtonAction = "confirm" | "cancel" | "reschedule" | "later";
+type ButtonAction = "confirm" | "cancel" | "reschedule" | "later" | "accept" | "fine" | "question" | "book";
 const TEMPLATE_BUTTONS: Record<string, Record<string, ButtonAction>> = {
   recordatorio_cita: { "confirmo asistencia": "confirm", "reprogramar": "reschedule", "cancelar cita": "cancel" },
   confirmacion_cita: { "necesito cambiarla": "reschedule" },
   cita_reprogramada: { "confirmo": "confirm", "necesito otro horario": "reschedule" },
   cita_cancelada: { "sí, reprogramar": "reschedule", "más adelante": "later" },
+  mensaje_tratamiento: { "sí, envíenmela": "accept" },
+  seguimiento_tratamiento: { "todo bien": "fine", "tengo una pregunta": "question" },
+  recordatorio_retoque: { "coordinar mi cita": "book" },
 };
 
 // Returns "done" when nothing is left for staff, "staff" when someone should
 // follow up (reschedule, cancellation), null when it isn't one of our buttons.
-async function handleTemplateButton(db: SupabaseClient, conversationId: string, waId: string, contextId: string, buttonText: string): Promise<"done" | "staff" | null> {
+async function handleTemplateButton(db: SupabaseClient, conversationId: string, waId: string, contextId: string, buttonText: string, delivered = 0): Promise<"done" | "staff" | null> {
   const { data: origin } = await db.from("wa_messages").select("template, appointment_id").eq("wa_message_id", contextId).maybeSingle();
   const action = origin?.template ? TEMPLATE_BUTTONS[origin.template]?.[buttonText.trim().toLowerCase()] : undefined;
   if (!action) return null;
@@ -191,9 +198,20 @@ async function handleTemplateButton(db: SupabaseClient, conversationId: string, 
   const active = !!appt && appt.status !== "cancelled" && appt.appointment_date >= clinicDate(0);
   const when = appt ? `${dayEs(appt.appointment_date)} a las ${formatTime12h(String(appt.appointment_time).slice(0, 5))}` : "";
 
-  let reply: string;
+  let reply = "";
   let outcome: "done" | "staff" = "staff";
-  if ((action === "confirm" || action === "cancel") && !active) {
+  if (action === "accept") {
+    // The waiting text already went out (deliverPending); nothing else to say.
+    if (delivered) outcome = "done";
+    else reply = "¡Gracias! En un momento te escribimos. 😊";
+  } else if (action === "fine") {
+    reply = "¡Qué bueno saberlo! 💕 Si tienes cualquier duda, escríbenos por aquí.";
+    outcome = "done";
+  } else if (action === "question") {
+    reply = "Cuéntanos, te leemos. 😊";
+  } else if (action === "book") {
+    reply = "¡Perfecto! En un momento te escribimos para coordinar tu cita. 😊";
+  } else if ((action === "confirm" || action === "cancel") && !active) {
     reply = "Esa cita ya no está vigente. Si necesitas una nueva, escríbenos por aquí y te ayudamos. 💕";
   } else if (action === "confirm") {
     await db.from("appointments").update({ patient_confirmed_at: appt.patient_confirmed_at || new Date().toISOString() }).eq("id", appt.id);
@@ -209,22 +227,63 @@ async function handleTemplateButton(db: SupabaseClient, conversationId: string, 
     outcome = "done";
   }
 
-  let waMessageId = "";
-  let sendError = "";
-  try {
-    waMessageId = await sendWhatsAppMessage(waId, { type: "text", text: { body: reply } });
-  } catch (e) {
-    sendError = (e as Error).message;
+  if (reply) {
+    let waMessageId = "";
+    let sendError = "";
+    try {
+      waMessageId = await sendWhatsAppMessage(waId, { type: "text", text: { body: reply } });
+    } catch (e) {
+      sendError = (e as Error).message;
+    }
+    await db.from("wa_messages").insert({
+      conversation_id: conversationId, direction: "out", sender: "system", body: reply,
+      wa_message_id: waMessageId || null, status: sendError ? "failed" : "sent", error: sendError || null,
+      appointment_id: appt?.id ? String(appt.id) : null,
+    });
   }
-  await db.from("wa_messages").insert({
-    conversation_id: conversationId, direction: "out", sender: "system", body: reply,
-    wa_message_id: waMessageId || null, status: sendError ? "failed" : "sent", error: sendError || null,
-    appointment_id: appt?.id ? String(appt.id) : null,
-  });
   if (outcome === "done") {
     await db.from("wa_conversations").update({ needs_attention: false, unread_count: 0 }).eq("id", conversationId);
   }
   return outcome;
+}
+
+// Delivers the texts staff wrote while the chat was closed (wa_pending_messages,
+// sent with a door-opener template by whatsapp-send). Texts older than a week
+// are dropped as stale. The patient's new message still counts as unread / to
+// answer, even though staff messages normally clear that.
+const PENDING_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+
+async function deliverPending(db: SupabaseClient, conversationId: string, waId: string): Promise<number> {
+  const { data: pending } = await db.from("wa_pending_messages")
+    .select("id, body, created_by, created_at").eq("conversation_id", conversationId).eq("status", "pending")
+    .order("created_at");
+  if (!pending?.length) return 0;
+  const { data: before } = await db.from("wa_conversations").select("needs_attention, unread_count").eq("id", conversationId).single();
+
+  let delivered = 0;
+  for (const p of pending) {
+    if (Date.now() - new Date(p.created_at).getTime() > PENDING_MAX_AGE_MS) {
+      await db.from("wa_pending_messages").update({ status: "expired" }).eq("id", p.id);
+      continue;
+    }
+    let waMessageId = "";
+    let sendError = "";
+    try {
+      waMessageId = await sendWhatsAppMessage(waId, { type: "text", text: { body: p.body, preview_url: true } });
+    } catch (e) {
+      sendError = (e as Error).message;
+    }
+    await db.from("wa_messages").insert({
+      conversation_id: conversationId, direction: "out", sender: "staff", staff_user_id: p.created_by, body: p.body,
+      wa_message_id: waMessageId || null, status: sendError ? "failed" : "sent", error: sendError || null,
+    });
+    await db.from("wa_pending_messages")
+      .update(sendError ? { status: "failed", error: sendError } : { status: "sent", sent_at: new Date().toISOString() })
+      .eq("id", p.id);
+    if (!sendError) delivered++;
+  }
+  if (before) await db.from("wa_conversations").update(before).eq("id", conversationId);
+  return delivered;
 }
 
 async function handleConsentReply(db: SupabaseClient, conversationId: string, waId: string, consent: "yes" | "no") {

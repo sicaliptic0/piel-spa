@@ -358,8 +358,9 @@
                         <button id="wa-chat-action" class="flex-shrink-0 text-[9px] uppercase tracking-widest font-bold px-3 py-2 rounded-full transition"></button>
                     </div>
                     <div id="wa-thread" class="flex-1 overflow-y-auto p-3 md:p-5 space-y-2 bg-[#F7F2F4]"></div>
+                    <div id="wa-pending" class="hidden bg-[#FBF0F3] border-t border-[#EDE1E7] text-[#7A3E57] text-[11px] px-4 py-2 space-y-1"></div>
                     <div id="wa-window-note" class="hidden bg-amber-50 border-t border-amber-200 text-amber-800 text-[11px] px-4 py-2">
-                        Pasaron más de 24 horas desde el último mensaje del paciente. WhatsApp solo permite escribirle de nuevo con una plantilla aprobada por Meta (se agregará con los recordatorios automáticos).
+                        Chat cerrado: pasaron más de 24 h desde el último mensaje del paciente. Escribe tu mensaje y pulsa ➤: primero le llega un aviso aprobado por WhatsApp y tu mensaje se le entrega en cuanto responda.
                     </div>
                     <div class="bg-white border-t border-[#EDE1E7] p-2 md:p-3 safe-bottom">
                         <div id="wa-attachment" class="hidden mb-2 flex items-center gap-2 text-[11px] bg-[#FBF0F3] rounded-lg px-3 py-2">
@@ -1014,6 +1015,51 @@
 
                 <button type="submit" class="w-full bg-[#B76E88] text-white py-4 uppercase text-[10px] tracking-widest font-bold hover:bg-[#9C5570] transition shadow-md rounded-lg mt-2">Save Changes</button>
             </form>
+        </div>
+    </div>
+
+    <!-- ===== DOOR OPENER: approved template for a closed chat; the typed text waits for the answer ===== -->
+    <div id="opener-modal" class="admin-only fixed inset-0 bg-black/60 hidden flex items-center justify-center z-[80] p-4 backdrop-blur-sm">
+        <div class="bg-white p-6 md:p-8 max-w-lg w-full rounded-2xl shadow-2xl relative max-h-[92vh] overflow-y-auto">
+            <button type="button" onclick="closeOpenerModal()" class="absolute top-4 right-5 text-2xl opacity-40 hover:opacity-100">&times;</button>
+            <h3 class="text-2xl italic">Abrir la conversación</h3>
+            <p class="text-xs opacity-60 mt-1">El chat está cerrado (más de 24 h). WhatsApp solo deja empezar con un aviso aprobado.</p>
+
+            <label class="block text-[9px] uppercase tracking-widest text-[#B76E88] font-bold mt-5 mb-2">Aviso</label>
+            <select id="opener-template" onchange="syncOpenerModal()" class="w-full text-sm border border-[#EDE1E7] rounded-lg px-3 py-2 bg-white">
+                <option value="mensaje_tratamiento">Tengo información para ti</option>
+                <option value="seguimiento_tratamiento">¿Cómo te has sentido?</option>
+                <option value="recordatorio_retoque">Le toca su control / retoque</option>
+            </select>
+            <p id="opener-hint" class="text-[11px] opacity-60 mt-1"></p>
+
+            <div class="grid grid-cols-2 gap-3 mt-4">
+                <div>
+                    <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Nombre</label>
+                    <input type="text" id="opener-nombre" oninput="syncOpenerModal()" class="text-sm">
+                </div>
+                <div>
+                    <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Fecha del tratamiento</label>
+                    <input type="text" id="opener-fecha" oninput="syncOpenerModal()" placeholder="18 de septiembre" class="text-sm">
+                </div>
+                <div class="col-span-2">
+                    <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Tratamiento</label>
+                    <input type="text" id="opener-tratamiento" oninput="syncOpenerModal()" placeholder="aplicación de Botox" class="text-sm">
+                </div>
+                <div id="opener-cuando-wrap" class="col-span-2 hidden">
+                    <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Cuándo le corresponde</label>
+                    <input type="text" id="opener-cuando" oninput="syncOpenerModal()" placeholder="esta semana" class="text-sm">
+                </div>
+            </div>
+
+            <label class="block text-[9px] uppercase tracking-widest text-[#B76E88] font-bold mt-4 mb-1">Así le llega</label>
+            <div id="opener-preview" class="text-sm whitespace-pre-wrap bg-[#DCF8C6] rounded-2xl rounded-br-sm px-3 py-2"></div>
+
+            <label id="opener-text-label" class="block text-[9px] uppercase tracking-widest text-[#B76E88] font-bold mt-4 mb-1"></label>
+            <textarea id="opener-text" rows="4" oninput="syncOpenerModal()" class="w-full text-sm border border-[#EDE1E7] rounded-lg px-3 py-2"></textarea>
+
+            <button type="button" id="opener-send" onclick="sendOpener()" class="w-full mt-5 bg-[#25D366] text-white py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg hover:opacity-90 transition disabled:opacity-40">Enviar aviso</button>
+            <button type="button" onclick="closeOpenerModal()" class="w-full text-[9px] uppercase opacity-40 hover:opacity-100 transition mt-3">Cancelar</button>
         </div>
     </div>
 
@@ -3233,6 +3279,7 @@
             _supabase.channel('wa-inbox')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations' }, onWaConversationChange)
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_messages' }, onWaMessageChange)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_pending_messages' }, (p) => { if ((p.new || p.old)?.conversation_id === waActiveId) loadWaPending(waActiveId); })
                 .subscribe(status => { waLiveStatus = status; renderWaStatus(); });
             // Browsers only allow sound after the user has interacted with the page.
             document.addEventListener('click', unlockWaChime, { once: true });
@@ -3398,6 +3445,7 @@
             clearWhatsAppAttachment();
             renderChatHeader();
             renderConversationList();
+            loadWaPending(id);
             const { data, error } = await _supabase.from('wa_messages').select('*')
                 .eq('conversation_id', id).order('created_at', { ascending: false }).limit(200);
             if (waActiveId !== id) return;
@@ -3452,9 +3500,11 @@
                 action.classList.toggle('hidden', !waSettings.bot_enabled && !WA_SHOW_ATTENTION);
             }
 
+            // Closed chat: text still goes, behind a door-opener template (no files).
             const windowOpen = waWindowOpen(c);
             document.getElementById('wa-window-note').classList.toggle('hidden', windowOpen);
-            ['wa-input', 'wa-send-btn', 'wa-file'].forEach(id => { document.getElementById(id).disabled = !windowOpen; });
+            document.getElementById('wa-file').disabled = !windowOpen;
+            document.getElementById('wa-input').placeholder = windowOpen ? 'Escribe un mensaje…' : 'Escribe el mensaje que le llegará cuando responda…';
         }
 
         async function takeWaConversation(id) {
@@ -3479,12 +3529,13 @@
                 const day = new Date(m.created_at).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
                 const sep = day !== lastDay ? `<div class="text-center my-3"><span class="text-[9px] uppercase tracking-widest bg-white/80 px-3 py-1 rounded-full opacity-60">${escapeHtml(day)}</span></div>` : '';
                 lastDay = day;
-                if (m.sender === 'system') return sep + `<div class="text-center text-[10px] opacity-50 italic">${escapeHtml(m.body || '')}</div>`;
+                // Internal notes stay small and centered; automatic messages that went to the patient are bubbles.
+                if (m.sender === 'system' && !m.wa_message_id && !m.template) return sep + `<div class="text-center text-[10px] opacity-50 italic">${escapeHtml(m.body || '')}</div>`;
                 const out = m.direction === 'out';
                 const bubble = out ? (m.sender === 'bot' ? 'bg-[#EFE7F7]' : 'bg-[#DCF8C6]') : 'bg-white';
                 // Written from the WhatsApp Business app (coexistence echo or synced history).
                 const fromApp = out && m.sender === 'staff' && !m.staff_user_id && !String(m.wa_message_id || '').startsWith('import:');
-                const who = out ? (m.sender === 'bot' ? '🤖 IA' : fromApp ? '📱 App' : '') : '';
+                const who = out ? (m.sender === 'bot' ? '🤖 IA' : fromApp ? '📱 App' : m.template ? '📋 Plantilla' : m.sender === 'system' ? '⚙️ Automático' : '') : '';
                 const ticks = !out ? '' : m.status === 'failed' ? '<span class="text-red-500" title="' + escapeHtml(m.error || '') + '">⚠️ No enviado</span>'
                     : m.status === 'read' ? '<span class="text-sky-500">✓✓</span>' : m.status === 'delivered' ? '✓✓' : '✓';
                 const time = new Date(m.created_at).toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' });
@@ -3531,6 +3582,133 @@
                 if (el.hasAttribute('data-wa-media')) el.src = waMediaUrls[path];
                 else el.href = waMediaUrls[path];
             }
+        }
+
+        // --- DOOR OPENER (chat closed: more than 24 h since the patient wrote) ---
+        // WhatsApp only lets the clinic start with an approved template. Staff
+        // writes the message as usual; it waits (wa_pending_messages) while the
+        // template goes out, and whatsapp-webhook delivers it as soon as the
+        // patient answers anything or taps "Sí, envíenmela".
+        const OPENER_TEMPLATES = {
+            mensaje_tratamiento: {
+                label: 'Tengo información para ti',
+                hint: 'Para escribirle sobre su tratamiento. Tu mensaje le llega cuando responda.',
+                needsText: true,
+                preview: (p) => `Hola ${p.nombre}, el equipo de Piel Spa tiene información sobre tu ${p.tratamiento} del ${p.fecha}.\n\n¿Te la enviamos por aquí?\n[Sí, envíenmela]`,
+                params: (p) => [p.nombre, p.tratamiento, p.fecha],
+            },
+            seguimiento_tratamiento: {
+                label: '¿Cómo te has sentido?',
+                hint: 'Seguimiento después de un tratamiento. Si escribiste un mensaje, le llega cuando responda.',
+                preview: (p) => `Hola ${p.nombre}, te escribimos de Piel Spa para saber cómo te has sentido después de tu ${p.tratamiento} del ${p.fecha}.\n\nSi tienes alguna molestia o pregunta, responde a este mensaje.\n[Todo bien] [Tengo una pregunta]`,
+                params: (p) => [p.nombre, p.tratamiento, p.fecha],
+            },
+            recordatorio_retoque: {
+                label: 'Le toca su control / retoque',
+                hint: 'Para invitarle a agendar. Si escribiste un mensaje, le llega cuando responda.',
+                needsWhen: true,
+                preview: (p) => `Hola ${p.nombre}, según tu plan de tratamiento, tu control de ${p.tratamiento} realizado el ${p.fecha} corresponde para ${p.cuando}.\n\nToca el botón o responde a este mensaje para coordinar tu cita.\n[Coordinar mi cita]`,
+                params: (p) => [p.nombre, p.tratamiento, p.fecha, p.cuando],
+            },
+        };
+        let waPending = [];
+
+        function formatDayMonthEs(iso) {
+            return new Date(String(iso).slice(0, 10) + 'T12:00:00Z').toLocaleDateString('es-ES', { timeZone: 'UTC', day: 'numeric', month: 'long' });
+        }
+
+        async function openOpenerModal(text) {
+            const c = waConversations.find(x => x.id === waActiveId);
+            if (!c) return;
+            document.getElementById('opener-text').value = text || '';
+            document.getElementById('opener-template').value = 'mensaje_tratamiento';
+            ['opener-nombre', 'opener-tratamiento', 'opener-fecha', 'opener-cuando'].forEach(id => { document.getElementById(id).value = ''; });
+            document.getElementById('opener-cuando').value = 'esta semana';
+            document.getElementById('opener-send').disabled = false;
+            document.getElementById('opener-modal').classList.remove('hidden');
+
+            // Prefill from the patient's last visit (or last appointment).
+            let first = String(c.profile_name || '').trim().split(/\s+/)[0] || '';
+            if (c.patient_id) {
+                const [{ data: p }, { data: visit }, { data: appt }] = await Promise.all([
+                    _supabase.from('profiles').select('first_name').eq('id', c.patient_id).maybeSingle(),
+                    _supabase.from('clinical_history').select('visit_date, procedures_summary').eq('patient_id', c.patient_id).order('visit_date', { ascending: false }).limit(1).maybeSingle(),
+                    _supabase.from('appointments').select('appointment_date, service_type, service_type_ids').eq('patient_id', c.patient_id).neq('status', 'cancelled').lte('appointment_date', clinicDateIso(0)).order('appointment_date', { ascending: false }).limit(1).maybeSingle(),
+                ]);
+                first = String(p?.first_name || '').trim().split(/\s+/)[0] || first;
+                if (visit?.visit_date) {
+                    document.getElementById('opener-tratamiento').value = String(visit.procedures_summary || '').split(/[;\n]/)[0].trim().slice(0, 80) || 'consulta';
+                    document.getElementById('opener-fecha').value = formatDayMonthEs(visit.visit_date);
+                } else if (appt?.appointment_date) {
+                    const ids = Array.isArray(appt.service_type_ids) ? appt.service_type_ids : [];
+                    document.getElementById('opener-tratamiento').value = (ids.length ? (TREATMENT_OPTIONS.find(o => o.id === ids[0])?.es || '') : String(appt.service_type || '')).toLowerCase() || 'consulta';
+                    document.getElementById('opener-fecha').value = formatDayMonthEs(appt.appointment_date);
+                }
+            }
+            document.getElementById('opener-nombre').value = first;
+            syncOpenerModal();
+        }
+
+        function closeOpenerModal() { document.getElementById('opener-modal').classList.add('hidden'); }
+
+        function openerValues() {
+            const v = (id) => document.getElementById(id).value.trim();
+            return { nombre: v('opener-nombre'), tratamiento: v('opener-tratamiento'), fecha: v('opener-fecha'), cuando: v('opener-cuando') };
+        }
+
+        function syncOpenerModal() {
+            const t = OPENER_TEMPLATES[document.getElementById('opener-template').value];
+            const p = openerValues();
+            document.getElementById('opener-hint').innerText = t.hint;
+            document.getElementById('opener-cuando-wrap').classList.toggle('hidden', !t.needsWhen);
+            const shown = Object.fromEntries(Object.entries(p).map(([k, val]) => [k, val || `[${k}]`]));
+            document.getElementById('opener-preview').innerText = t.preview(shown);
+            const text = document.getElementById('opener-text').value.trim();
+            document.getElementById('opener-text-label').innerText = t.needsText ? 'Tu mensaje (le llega cuando responda)' : 'Tu mensaje (opcional; le llega cuando responda)';
+            document.getElementById('opener-send').disabled = !p.nombre || !p.tratamiento || !p.fecha || (t.needsWhen && !p.cuando) || (t.needsText && !text);
+        }
+
+        async function sendOpener() {
+            const template = document.getElementById('opener-template').value;
+            const t = OPENER_TEMPLATES[template];
+            const text = document.getElementById('opener-text').value.trim();
+            const btn = document.getElementById('opener-send');
+            btn.disabled = true;
+            const { data, error } = await _supabase.functions.invoke('whatsapp-send', {
+                body: { conversation_id: waActiveId, text, opener: { template, params: t.params(openerValues()) } },
+            });
+            if (error || data?.error) {
+                alert('No se pudo enviar el aviso: ' + await functionError(error, data));
+                btn.disabled = false;
+                return;
+            }
+            closeOpenerModal();
+            const input = document.getElementById('wa-input');
+            input.value = '';
+            autoGrowWhatsAppInput();
+            loadWaPending(waActiveId);
+        }
+
+        async function loadWaPending(convId) {
+            const box = document.getElementById('wa-pending');
+            if (!convId) { box.classList.add('hidden'); return; }
+            const { data, error } = await _supabase.from('wa_pending_messages').select('id, body, created_at')
+                .eq('conversation_id', convId).eq('status', 'pending').order('created_at');
+            if (convId !== waActiveId) return;
+            waPending = error ? [] : (data || []);
+            box.innerHTML = waPending.map(p => `
+                <div class="flex items-start gap-2">
+                    <span class="flex-1">⏳ <b>Esperando su respuesta para entregar:</b> «${escapeHtml(p.body.length > 140 ? p.body.slice(0, 140) + '…' : p.body)}»</span>
+                    <button onclick="discardWaPending('${p.id}')" class="text-[9px] uppercase tracking-widest font-bold text-red-500 hover:underline flex-shrink-0">Descartar</button>
+                </div>`).join('');
+            box.classList.toggle('hidden', !waPending.length);
+        }
+
+        async function discardWaPending(id) {
+            if (!confirm('¿Descartar este mensaje? No se le enviará.')) return;
+            const { error } = await _supabase.from('wa_pending_messages').update({ status: 'discarded' }).eq('id', id);
+            if (error) { alert('No se pudo descartar: ' + error.message); return; }
+            loadWaPending(waActiveId);
         }
 
         // ---------- Live updates ----------
@@ -3776,6 +3954,12 @@
             const input = document.getElementById('wa-input');
             const text = input.value.trim();
             if (!convId || (!text && !waPendingFile)) return;
+            const conv = waConversations.find(c => c.id === convId);
+            if (conv && !waWindowOpen(conv)) {
+                if (waPendingFile) { alert('Con el chat cerrado solo se puede dejar un texto; envía el archivo cuando responda.'); return; }
+                openOpenerModal(text);
+                return;
+            }
             const btn = document.getElementById('wa-send-btn');
             btn.disabled = true;
             try {
