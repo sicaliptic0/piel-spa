@@ -34,6 +34,11 @@
         }
         .admin-sidebar { background-color: #ffffff; border-right: 1px solid #EDE1E7; }
         .nav-link { cursor: pointer; transition: 0.3s; }
+        .nav-hint { display: block; font-size: 10px; text-transform: none; letter-spacing: 0; font-weight: 400; opacity: 0.6; margin-top: 2px; }
+        .home-card { background: #fff; border: 1px solid #EDE1E7; border-radius: 14px; box-shadow: 0 1px 2px rgba(42,35,48,0.04); }
+        .home-card-title { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.35rem; line-height: 1.2; }
+        .home-stat { text-align: left; transition: 0.2s; }
+        .home-stat:hover { border-color: #B76E88; }
         .active-link { background-color: #FDFBFC; color: #B76E88; border-right: 4px solid #B76E88; font-weight: bold; opacity: 1 !important; }
         .status-badge { font-size: 8px; padding: 2px 8px; border-radius: 99px; text-transform: uppercase; font-weight: bold; }
         .status-pending { background-color: #FEF3C7; color: #92400E; }
@@ -43,7 +48,7 @@
         input:not([type="checkbox"]):not([type="radio"]), textarea, select { border: 1px solid #EDE1E7; background: #fff; padding: 10px; border-radius: 8px; outline-color: #B76E88; width: 100%; font-size: 14px; }
         .no-spinner::-webkit-inner-spin-button, .no-spinner::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         .no-spinner { -moz-appearance: textfield; }
-        /* Front desk sees only the "Hoy" sheet: everything else is admin-only. */
+        /* Front desk sees only the "Atendidos" sheet: everything else is admin-only. */
         body.frontdesk-mode .admin-only { display: none !important; }
         .enc-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; color: #B76E88; }
         input.enc-compact { width: auto !important; padding: 4px 8px !important; font-size: 13px !important; }
@@ -73,19 +78,30 @@
             <h1 class="text-xl tracking-widest font-bold"><span class="brand-piel">Piel</span> <span class="brand-spa">spa</span></h1>
             <p id="staff-role-label" class="text-[9px] uppercase tracking-[0.3em] opacity-40 mt-1">Admin</p>
         </div>
-        <nav class="flex-1 space-y-2">
-            <a onclick="switchAdminView('today-view', this)" class="nav-link active-link block px-4 py-3 text-[10px] uppercase tracking-widest">Hoy</a>
-            <a id="nav-messages" onclick="switchAdminView('messages-view', this)" class="admin-only nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest flex items-center justify-between">
-                <span>Mensajes</span>
+        <nav class="flex-1 space-y-1 overflow-y-auto">
+            <a id="nav-home" onclick="switchAdminView('home-view', this)" class="admin-only nav-link active-link block px-4 py-2.5 text-[10px] uppercase tracking-widest">
+                <span>Inicio</span><span class="nav-hint">Resumen de la semana</span>
+            </a>
+            <a id="nav-today" onclick="switchAdminView('today-view', this)" class="nav-link block px-4 py-2.5 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">
+                <span>Atendidos</span><span class="nav-hint">Pacientes del día y cobros</span>
+            </a>
+            <a id="nav-messages" onclick="switchAdminView('messages-view', this)" class="admin-only nav-link block px-4 py-2.5 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest flex items-center justify-between">
+                <span><span>Mensajes</span><span class="nav-hint">WhatsApp de la clínica</span></span>
                 <span id="wa-badge" class="hidden bg-[#25D366] text-white text-[9px] font-bold px-2 py-0.5 rounded-full leading-none">0</span>
             </a>
-            <a onclick="switchAdminView('patients-view', this)" class="admin-only nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">Pacientes</a>
-            <a onclick="switchAdminView('appointments-view', this)" class="admin-only nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest flex items-center justify-between">
-                <span>Citas</span>
+            <a id="nav-patients" onclick="switchAdminView('patients-view', this)" class="admin-only nav-link block px-4 py-2.5 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">
+                <span>Pacientes</span><span class="nav-hint">Fichas e historias clínicas</span>
+            </a>
+            <a id="nav-appointments" onclick="switchAdminView('appointments-view', this)" class="admin-only nav-link block px-4 py-2.5 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest flex items-center justify-between">
+                <span><span>Citas</span><span class="nav-hint">Agenda y confirmaciones</span></span>
                 <span id="pending-badge" class="hidden bg-amber-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full leading-none">0</span>
             </a>
-            <a onclick="switchAdminView('schedule-view', this)" class="admin-only nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">Horarios</a>
-            <a onclick="switchAdminView('recommendations-view', this)" class="admin-only nav-link block px-4 py-3 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">Recomendaciones</a>
+            <a onclick="switchAdminView('schedule-view', this)" class="admin-only nav-link block px-4 py-2.5 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">
+                <span>Horarios</span><span class="nav-hint">Días y horas de atención</span>
+            </a>
+            <a onclick="switchAdminView('recommendations-view', this)" class="admin-only nav-link block px-4 py-2.5 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">
+                <span>Recomendaciones</span><span class="nav-hint">Textos de cuidados</span>
+            </a>
         </nav>
         <button onclick="logout()" class="text-[10px] uppercase tracking-widest opacity-40 hover:opacity-100 transition mt-auto">Logout</button>
     </aside>
@@ -100,7 +116,10 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
-                <h2 id="view-title" class="text-2xl italic">Hoy</h2>
+                <div class="min-w-0">
+                    <h2 id="view-title" class="text-2xl italic leading-tight">Inicio</h2>
+                    <p id="view-hint" class="text-[11px] opacity-50 leading-snug">Lo que tienes esta semana: citas, mensajes y pendientes.</p>
+                </div>
                 <!-- WhatsApp shortcut with the unread-chats count; opens Mensajes → No leídos -->
                 <button id="wa-header-btn" onclick="openUnreadMessages()" class="admin-only relative p-2 rounded-full hover:bg-[#FBF0F3] transition" aria-label="Mensajes de WhatsApp sin leer" title="Mensajes sin leer">
                     <svg class="w-6 h-6 text-[#128C7E]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m-9 6l2.3-3.4A8 8 0 1112 20a7.9 7.9 0 01-3.9-1"/></svg>
@@ -113,8 +132,94 @@
             </div>
         </header>
 
-        <!-- Today View: the daily sheet, one row per visit (clinical_history) -->
-        <div id="today-view" class="flex-1 flex flex-col overflow-hidden p-4 md:p-8 gap-4">
+        <!-- Home View ("Inicio", admins): the week at a glance — upcoming
+             appointments by day and clinic, unread chats, things to do. -->
+        <div id="home-view" class="flex-1 overflow-y-auto p-4 md:p-8">
+            <div class="max-w-6xl mx-auto space-y-5">
+                <div class="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <p id="home-greeting" class="text-2xl md:text-3xl italic" style="font-family:'Cormorant Garamond',serif;">Hola 👋</p>
+                        <p id="home-date" class="text-[10px] uppercase tracking-widest opacity-50"></p>
+                    </div>
+                    <button onclick="toggleHomeGuide()" class="text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#EDE1E7] bg-white px-4 py-2 rounded-full hover:border-[#B76E88] transition">❓ Guía rápida</button>
+                </div>
+
+                <!-- Quick guide for whoever is alone at the clinic -->
+                <div id="home-guide" class="hidden home-card p-5 md:p-6">
+                    <div class="flex items-start justify-between gap-3 mb-3">
+                        <h3 class="home-card-title">¿Cómo hago…?</h3>
+                        <button onclick="toggleHomeGuide()" class="text-2xl leading-none opacity-40 hover:opacity-100" aria-label="Cerrar guía">&times;</button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm leading-relaxed">
+                        <div>
+                            <p class="font-semibold">🧍 Llegó un paciente</p>
+                            <p class="opacity-70">Busca su nombre en <b>Pacientes</b> y tócalo para abrir su historia → <b>+ Nuevo encuentro</b>. Anota lo que se hizo y el monto. Ya aparece en <b>Atendidos</b>.</p>
+                        </div>
+                        <div>
+                            <p class="font-semibold">🆕 Es un paciente nuevo</p>
+                            <p class="opacity-70">Botón <b>+ Nuevo paciente</b> arriba a la derecha. Llena nombre, teléfono y fecha de nacimiento.</p>
+                        </div>
+                        <div>
+                            <p class="font-semibold">📅 Agendar una cita</p>
+                            <p class="opacity-70">Botón <b>+ Nueva cita</b>. Elige paciente, clínica (Piel Spa o Divine Bliss), tratamiento, día y hora. Solo salen las horas libres.</p>
+                        </div>
+                        <div>
+                            <p class="font-semibold">✅ Confirmar o cancelar una cita</p>
+                            <p class="opacity-70">Toca los tres puntos <b>⋮</b> junto al nombre del paciente → <b>Confirmar</b> o <b>Cancelar</b>. Puedes avisarle por WhatsApp o correo desde ahí mismo.</p>
+                        </div>
+                        <div>
+                            <p class="font-semibold">💬 Responder un WhatsApp</p>
+                            <p class="opacity-70">En <b>Mensajes</b> los chats sin leer salen resaltados en verde. Toca uno, escribe abajo y pulsa ➤.</p>
+                        </div>
+                        <div>
+                            <p class="font-semibold">💵 Cerrar el día</p>
+                            <p class="opacity-70">En <b>Atendidos</b> ves cada paciente del día con su monto y el total abajo. Si dice <b>Pendiente</b>, falta poner el monto en su encuentro.</p>
+                        </div>
+                    </div>
+                    <p class="text-[11px] opacity-50 mt-4">Consejo: el menú <b>⋮</b> al lado de cada nombre tiene todas las acciones (ver historia, mensaje, cita, editar).</p>
+                </div>
+
+                <!-- Numbers that link to the section behind them -->
+                <div id="home-stats" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+                    <!-- Upcoming appointments, by day -->
+                    <section class="home-card lg:col-span-2 overflow-hidden">
+                        <div class="flex flex-wrap items-center justify-between gap-2 px-5 pt-5 pb-3">
+                            <div>
+                                <h3 class="home-card-title">Citas de la semana</h3>
+                                <p class="text-[10px] uppercase tracking-widest opacity-40">Hoy y los próximos 6 días · por hora</p>
+                            </div>
+                            <div id="home-clinic-filter" class="flex gap-1 flex-wrap"></div>
+                        </div>
+                        <div id="home-week" class="pb-2"><p class="px-5 py-8 text-sm opacity-40 text-center">Cargando…</p></div>
+                    </section>
+
+                    <div class="space-y-5">
+                        <!-- Unread WhatsApp chats -->
+                        <section class="home-card overflow-hidden">
+                            <div class="flex items-center justify-between gap-2 px-5 pt-5 pb-3">
+                                <h3 class="home-card-title">Mensajes sin leer</h3>
+                                <button onclick="openAllMessages()" class="text-[9px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline">Ver todos →</button>
+                            </div>
+                            <div id="home-messages"><p class="px-5 py-6 text-sm opacity-40 text-center">Cargando…</p></div>
+                        </section>
+
+                        <!-- Things to do -->
+                        <section class="home-card overflow-hidden">
+                            <div class="px-5 pt-5 pb-3">
+                                <h3 class="home-card-title">Pendientes</h3>
+                                <p class="text-[10px] uppercase tracking-widest opacity-40">Cosas que requieren tu atención</p>
+                            </div>
+                            <div id="home-todo"><p class="px-5 py-6 text-sm opacity-40 text-center">Cargando…</p></div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- "Atendidos" View: the daily sheet, one row per visit (clinical_history) -->
+        <div id="today-view" class="flex-1 flex flex-col overflow-hidden p-4 md:p-8 gap-4 hidden">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-2">
                     <button onclick="shiftTodayDate(-1)" class="w-9 h-9 rounded-full border border-[#EDE1E7] bg-white hover:border-[#B76E88] transition" aria-label="Día anterior">‹</button>
@@ -1327,6 +1432,8 @@
             { id: 'nctf_skin_boosting', category: 'lasers', label: 'NCTF Skin Boosting', es: 'Impulso de la Piel con NCTF' },
             { id: 'fractional_co2_laser_resurfacing', category: 'lasers', label: 'Fractional CO2 Laser Resurfacing', es: 'Resurfacing con Láser CO2 Fraccionado' },
             { id: 'facial_cleansing', category: 'lasers', label: 'Facial Cleansing', es: 'Limpieza Facial' },
+            { id: 'endolaser', category: 'lasers', label: 'Endolaser', es: 'Endoláser' },
+            { id: 'hyaluronidase_injection', category: 'lasers', label: 'Hyaluronidase Injection', es: 'Inyección de Hialuronidasa' },
         ];
 
         const TREATMENT_CATEGORIES = [
@@ -2092,23 +2199,28 @@
             if (staffRole === 'frontdesk') {
                 document.body.classList.add('frontdesk-mode');
                 document.getElementById('staff-role-label').innerText = 'Recepción';
-                setTodayDate(null);
+                document.getElementById('today-date').value = localIsoDate();
+                switchAdminView('today-view', document.getElementById('nav-today'));
                 return;
             }
-            setTodayDate(null);
+            document.getElementById('today-date').value = localIsoDate();
+            // Admins land on "Inicio"; it loads itself (and again once the chats arrive).
+            switchAdminView('home-view', document.getElementById('nav-home'));
             fetchPatients();
             refreshPendingBadge(); // Show pending count on sidebar from the start
             renderAdmissionOptionLists();
             startWhatsAppInbox(); // live badge + alerts for new WhatsApp messages, in every view
         }
 
+        // Title and one-line explanation shown in the header for each section.
         const ADMIN_VIEWS = {
-            'today-view': 'Hoy',
-            'patients-view': 'Pacientes',
-            'appointments-view': 'Citas',
-            'recommendations-view': 'Recomendaciones',
-            'messages-view': 'Mensajes',
-            'schedule-view': 'Horarios',
+            'home-view': ['Inicio', 'Lo que tienes esta semana: citas, mensajes y pendientes.'],
+            'today-view': ['Pacientes atendidos', 'Quién vino cada día, qué se le hizo y cuánto se cobró. Usa ‹ › para cambiar de día.'],
+            'patients-view': ['Pacientes', 'Toca un nombre para ver su historia clínica; ⋮ para más acciones.'],
+            'appointments-view': ['Citas', 'Agenda de la clínica. Confirma, modifica o cancela con ⋮ junto al nombre.'],
+            'recommendations-view': ['Recomendaciones', 'Textos de cuidados que se envían al paciente desde su historia.'],
+            'messages-view': ['Mensajes', 'WhatsApp de la clínica. Los chats sin leer salen resaltados en verde.'],
+            'schedule-view': ['Horarios', 'Días y horas en que se puede agendar en cada clínica.'],
         };
 
         function currentAdminView() {
@@ -2123,14 +2235,16 @@
             });
             element.classList.add('active-link');
             element.classList.remove('opacity-60');
-            document.getElementById('view-title').innerText = ADMIN_VIEWS[viewId];
+            document.getElementById('view-title').innerText = ADMIN_VIEWS[viewId][0];
+            document.getElementById('view-hint').innerText = ADMIN_VIEWS[viewId][1];
             refreshCurrentAdminView();
             closeMobileSidebar();
         }
 
         function refreshCurrentAdminView() {
             const viewId = currentAdminView();
-            if (viewId === 'today-view') loadToday();
+            if (viewId === 'home-view') loadHome();
+            else if (viewId === 'today-view') loadToday();
             else if (viewId === 'appointments-view') fetchAppointments();
             else if (viewId === 'recommendations-view') fetchRecommendationTemplates();
             else if (viewId === 'messages-view') loadConversations();
@@ -2388,6 +2502,7 @@
             const blocked = new Set((flags || []).map(f => f.patient_id));
             allPatients = (data || []).map(p => ({ ...p, last_visit_date: lastVisitByPatient[p.id] || null, do_not_contact: blocked.has(p.id) }));
             renderSortedPatients();
+            if (currentAdminView() === 'home-view' && homeData) renderHomeTodo(); // birthdays need the list
         }
 
         function calcAge(dob) {
@@ -2783,6 +2898,259 @@
             if (document.activeElement && document.activeElement.classList.contains('today-notes')) return;
             loadToday();
         }, 30000);
+
+        // --- HOME ("Inicio"): the week at a glance ---
+        // Appointments from today through the next 6 days (by day and time, with
+        // the clinic), unread chats (from the live WhatsApp inbox), and a to-do
+        // list: bookings to confirm, tomorrow's unconfirmed visits, missing health
+        // histories, follow-ups and birthdays. Every number links to its section.
+        let homeData = null;
+        let homeClinicFilter = 'all';
+        let homeLoading = null;
+        const homeActions = {};
+        let homeActionSeq = 0;
+
+        function homeAction(fn) { const key = 'h' + (++homeActionSeq); homeActions[key] = fn; return key; }
+        function runHomeAction(key) { homeActions[key]?.(); }
+        function toggleHomeGuide() { document.getElementById('home-guide').classList.toggle('hidden'); }
+        function goToView(viewId, navId) { switchAdminView(viewId, document.getElementById(navId)); }
+
+        function homeDayLabel(iso) {
+            const prefix = iso === clinicDateIso(0) ? 'Hoy · ' : iso === clinicDateIso(1) ? 'Mañana · ' : '';
+            return prefix + formatDayTitle(iso);
+        }
+        function apptName(a) { return `${a.profiles?.first_name || ''} ${a.profiles?.last_name || ''}`.trim() || 'Paciente'; }
+        function apptServices(a) { return Array.isArray(a.service_type_ids) && a.service_type_ids.length ? formatTreatmentIds(a.service_type_ids) : (a.service_type || ''); }
+        function clinicBadgeHtml(id) {
+            const cls = (id || 'piel_spa') === 'piel_spa' ? 'clinic-badge-fs' : id === 'divine_bliss' ? 'clinic-badge-divine' : 'clinic-badge-viva';
+            return `<span class="${cls}">📍 ${escapeHtml(clinicById(id).name)}</span>`;
+        }
+
+        function loadHome() {
+            if (staffRole !== 'admin') return;
+            if (!homeLoading) homeLoading = fetchHomeData().finally(() => { homeLoading = null; });
+            return homeLoading;
+        }
+
+        async function fetchHomeData() {
+            const today = clinicDateIso(0), end = clinicDateIso(6);
+            document.getElementById('home-date').innerText = formatDayTitle(today);
+            const hour = Number(new Date().toLocaleString('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false }));
+            document.getElementById('home-greeting').innerText = hour < 12 ? 'Buenos días ☀️' : hour < 19 ? 'Buenas tardes 🌸' : 'Buenas noches 🌙';
+
+            const apptSelect = '*, profiles(first_name, last_name, phone)';
+            const [, weekRes, pendingRes, followRes, dayRes] = await Promise.all([
+                loadClinics(),
+                _supabase.from('appointments').select(apptSelect).gte('appointment_date', today).lte('appointment_date', end)
+                    .neq('status', 'cancelled').order('appointment_date').order('appointment_time'),
+                _supabase.from('appointments').select(apptSelect).eq('status', 'pending').gte('appointment_date', today)
+                    .order('appointment_date').order('appointment_time'),
+                // Overdue ones stay for a week, since there's no "done" mark.
+                _supabase.from('follow_ups').select('id, patient_id, contact_date, reason')
+                    .gte('contact_date', clinicDateIso(-7)).lte('contact_date', end).order('contact_date'),
+                _supabase.rpc('day_sheet', { p_date: localIsoDate() }),
+            ]);
+            if (weekRes.error) console.error('Home week error:', weekRes.error.message);
+            if (followRes.error) console.warn('Home follow-ups:', followRes.error.message);
+            const week = weekRes.data || [];
+            const pending = pendingRes.data || [];
+            [...week, ...pending].forEach(a => { appointmentsById[a.id] = a; });
+
+            const ids = [...new Set([...week, ...pending].map(a => a.patient_id).filter(Boolean))];
+            const intakeDone = new Set();
+            if (ids.length) {
+                const { data } = await _supabase.from('admission_history').select('patient_id, intake_completed_at').in('patient_id', ids);
+                (data || []).forEach(i => { if (i.intake_completed_at) intakeDone.add(String(i.patient_id)); });
+            }
+
+            const followUps = followRes.data || [];
+            const followNames = {};
+            const missing = followUps.map(f => f.patient_id).filter(id => !allPatients.some(p => p.id === id));
+            if (missing.length) {
+                const { data } = await _supabase.from('profiles').select('id, first_name, last_name').in('id', [...new Set(missing)]);
+                (data || []).forEach(p => { followNames[p.id] = `${p.first_name || ''} ${p.last_name || ''}`.trim(); });
+            }
+            allPatients.forEach(p => { followNames[p.id] = `${p.first_name || ''} ${p.last_name || ''}`.trim(); });
+
+            const visits = dayRes.data || [];
+            homeData = {
+                today, end, week, pending, followUps, followNames,
+                intakeMissing: new Set(ids.filter(id => !intakeDone.has(String(id)))),
+                attendedToday: visits.length,
+                attendedTotal: visits.reduce((sum, v) => sum + (Number(v.amount) || 0), 0),
+            };
+            renderHome();
+        }
+
+        function renderHome() {
+            renderHomeStats();
+            renderHomeWeek();
+            renderHomeMessages();
+            renderHomeTodo();
+        }
+
+        function renderHomeStats() {
+            const el = document.getElementById('home-stats');
+            if (!el) return;
+            const d = homeData;
+            const unreadChats = waConversations.filter(c => c.unread_count > 0).length;
+            const todayCount = d ? d.week.filter(a => a.appointment_date === d.today).length : 0;
+            const tile = (onclick, value, label, sub, tone) => `
+                <button onclick="${onclick}" class="home-card home-stat p-4">
+                    <div class="text-3xl font-semibold ${tone}">${value}</div>
+                    <div class="text-[10px] uppercase tracking-widest font-bold mt-1">${label}</div>
+                    <div class="text-[11px] opacity-50 mt-0.5">${sub}</div>
+                </button>`;
+            el.innerHTML = [
+                tile("document.getElementById('home-week').scrollIntoView({ behavior: 'smooth' })", d ? d.week.length : '…', 'Citas esta semana', d ? `${todayCount} hoy` : '', 'text-[#2A2330]'),
+                tile("goToView('appointments-view', 'nav-appointments')", d ? d.pending.length : '…', 'Por confirmar', d && d.pending.length ? 'Toca para revisarlas' : 'Todo confirmado', d && d.pending.length ? 'text-amber-600' : 'text-[#2A2330]'),
+                tile('openUnreadMessages()', unreadChats, 'Chats sin leer', unreadChats ? 'Toca para responder' : 'Todo leído', unreadChats ? 'text-[#128C7E]' : 'text-[#2A2330]'),
+                tile("goToView('today-view', 'nav-today')", d ? d.attendedToday : '…', 'Atendidos hoy', d ? `Total ${escapeHtml(formatAmount(d.attendedTotal))}` : '', 'text-[#B76E88]'),
+            ].join('');
+        }
+
+        function setHomeClinicFilter(id) { homeClinicFilter = id; renderHomeWeek(); }
+
+        function renderHomeWeek() {
+            const el = document.getElementById('home-week');
+            const d = homeData;
+            if (!d) return;
+            const clinicIds = [...new Set(d.week.map(a => a.location || 'piel_spa'))];
+            if (homeClinicFilter !== 'all' && !clinicIds.includes(homeClinicFilter)) homeClinicFilter = 'all';
+            const chip = (id, label, n) => `<button onclick="setHomeClinicFilter('${id}')" class="text-[9px] uppercase tracking-widest font-bold px-2.5 py-1 rounded-full border transition ${homeClinicFilter === id ? 'bg-[#2A2330] text-white border-[#2A2330]' : 'border-[#EDE1E7] opacity-70 hover:opacity-100'}">${escapeHtml(label)} (${n})</button>`;
+            document.getElementById('home-clinic-filter').innerHTML = clinicIds.length > 1
+                ? chip('all', 'Todas', d.week.length) + clinicIds.map(id => chip(id, clinicById(id).name, d.week.filter(a => (a.location || 'piel_spa') === id).length)).join('')
+                : '';
+
+            const shown = d.week.filter(a => homeClinicFilter === 'all' || (a.location || 'piel_spa') === homeClinicFilter);
+            if (!shown.length) {
+                el.innerHTML = `<div class="px-5 py-10 text-center">
+                    <p class="text-sm opacity-50">No hay citas agendadas en los próximos 7 días.</p>
+                    <button onclick="openAppointmentModal()" class="mt-3 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline">+ Agendar una cita</button>
+                </div>`;
+                return;
+            }
+            const days = Array.from({ length: 7 }, (_, i) => clinicDateIso(i));
+            el.innerHTML = days.map(day => {
+                const appts = shown.filter(a => a.appointment_date === day);
+                if (!appts.length) return `<div class="px-5 py-2 border-t border-[#F3EAEE] flex items-center gap-2 text-xs opacity-40"><span class="font-semibold">${escapeHtml(homeDayLabel(day))}</span><span>· Sin citas</span></div>`;
+                const isToday = day === d.today;
+                return `
+                <div class="border-t border-[#F3EAEE]">
+                    <div class="px-5 py-2 flex items-center justify-between gap-2 ${isToday ? 'bg-[#FBF0F3]' : 'bg-gray-50/60'}">
+                        <span class="text-xs font-bold ${isToday ? 'text-[#B76E88]' : ''}">${escapeHtml(homeDayLabel(day))}</span>
+                        <span class="text-[10px] uppercase tracking-widest opacity-50">${appts.length} cita${appts.length === 1 ? '' : 's'}</span>
+                    </div>
+                    ${appts.map(a => {
+                        const chips = [];
+                        if (a.patient_confirmed_at) chips.push('<span class="text-green-700">✅ Paciente confirmó</span>');
+                        if (a.booked_via === 'web') chips.push('<span class="text-[#B76E88]">🌐 Agendó por la web</span>');
+                        if (a.patient_id && d.intakeMissing.has(a.patient_id)) chips.push('<span class="text-amber-700">⚠️ Historia incompleta</span>');
+                        return `
+                        <div class="px-5 py-3 flex gap-4 items-start hover:bg-[#FDFBFC]">
+                            <div class="w-16 flex-shrink-0 pt-1">
+                                <div class="text-sm font-bold whitespace-nowrap">${escapeHtml(formatTime12h(a.appointment_time))}</div>
+                                <div class="text-[10px] opacity-50">${escapeHtml(durationLabel(a.duration_minutes))}</div>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    ${a.patient_id ? patientNameCell(a.patient_id, apptName(a), appointmentMenuItems(a)) : `<span class="font-medium">${escapeHtml(apptName(a))}</span>`}
+                                    <span class="status-badge status-${a.status}">${escapeHtml(STATUS_ES[a.status] || a.status)}</span>
+                                </div>
+                                <div class="flex items-center gap-2 flex-wrap mt-1">
+                                    ${clinicBadgeHtml(a.location)}
+                                    <span class="text-[10px] uppercase tracking-widest opacity-60">${escapeHtml(apptServices(a))}</span>
+                                </div>
+                                ${chips.length ? `<div class="mt-1 flex gap-3 flex-wrap text-[9px] font-bold uppercase tracking-widest">${chips.join('')}</div>` : ''}
+                            </div>
+                            <div class="hidden md:block text-xs flex-shrink-0 pt-1">${phoneCell(a.profiles?.phone, a.patient_id)}</div>
+                        </div>`;
+                    }).join('')}
+                </div>`;
+            }).join('');
+        }
+
+        function renderHomeMessages() {
+            const el = document.getElementById('home-messages');
+            if (!el) return;
+            if (!waLoadedOnce) { el.innerHTML = '<p class="px-5 py-6 text-sm opacity-40 text-center">Cargando…</p>'; return; }
+            const unread = waConversations.filter(c => c.unread_count > 0);
+            if (!unread.length) {
+                el.innerHTML = `<p class="px-5 pb-5 pt-1 text-sm opacity-50">✨ No tienes mensajes sin leer.</p>`;
+                return;
+            }
+            el.innerHTML = unread.slice(0, 6).map(c => `
+                <button onclick="openMessageFromHome('${c.id}')" class="w-full text-left px-5 py-3 border-t border-[#F3EAEE] bg-[#EFFAF3] hover:bg-[#E3F6EA] border-l-4 border-l-[#25D366] transition flex gap-3 items-start">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-bold text-sm truncate">${escapeHtml(waName(c))}</span>
+                            <span class="text-[10px] text-[#128C7E] font-bold flex-shrink-0">${waShortTime(c.last_message_at)}</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-2 mt-0.5">
+                            <span class="text-xs font-semibold truncate">${escapeHtml(c.last_message_preview || '')}</span>
+                            <span class="bg-[#25D366] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">${c.unread_count}</span>
+                        </div>
+                    </div>
+                </button>`).join('')
+                + (unread.length > 6 ? `<button onclick="openUnreadMessages()" class="w-full px-5 py-3 border-t border-[#F3EAEE] text-[10px] uppercase tracking-widest font-bold text-[#128C7E] hover:underline">Ver los ${unread.length} sin leer →</button>` : '');
+        }
+
+        function renderHomeTodo() {
+            const el = document.getElementById('home-todo');
+            const d = homeData;
+            if (!el || !d) return;
+            const items = [];
+            const item = (icon, html, buttonLabel, fn, tone = '') => items.push(`
+                <div class="px-5 py-3 border-t border-[#F3EAEE] flex gap-3 items-start ${tone}">
+                    <span class="text-base leading-5">${icon}</span>
+                    <div class="min-w-0 flex-1 text-sm leading-snug">${html}</div>
+                    ${buttonLabel ? `<button onclick="runHomeAction('${homeAction(fn)}')" class="flex-shrink-0 text-[9px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#EDE1E7] px-2.5 py-1 rounded-full hover:border-[#B76E88] transition">${buttonLabel}</button>` : ''}
+                </div>`);
+            const when = (a) => `${escapeHtml(formatDayShortEs(a.appointment_date))} · ${escapeHtml(formatTime12h(a.appointment_time))} · ${escapeHtml(clinicById(a.location).name)}`;
+
+            d.pending.forEach(a => item('📥',
+                `<b>${escapeHtml(apptName(a))}</b> pidió cita y falta confirmarla<div class="text-[11px] opacity-60">${when(a)}${a.booked_via === 'web' ? ' · por la web' : ''}</div>`,
+                'Confirmar', () => openAppointmentDecision(appointmentsById[a.id] || a, 'confirmed')));
+
+            const tomorrow = clinicDateIso(1);
+            const unconfirmed = d.week.filter(a => a.appointment_date === tomorrow && !a.patient_confirmed_at);
+            if (unconfirmed.length) item('📞',
+                `<b>${unconfirmed.length} cita${unconfirmed.length === 1 ? '' : 's'} de mañana</b> sin respuesta del paciente<div class="text-[11px] opacity-60">${unconfirmed.map(a => escapeHtml(apptName(a))).join(', ')}</div>`,
+                'Recordar', () => goToView('appointments-view', 'nav-appointments'));
+
+            const seen = new Set();
+            d.week.forEach(a => {
+                if (!a.patient_id || !d.intakeMissing.has(a.patient_id) || seen.has(a.patient_id)) return;
+                seen.add(a.patient_id);
+                item('📝', `<b>${escapeHtml(apptName(a))}</b> no ha completado su historia médica<div class="text-[11px] opacity-60">Cita: ${when(a)}</div>`,
+                    'Completar', () => openCompleteIntakeModal(a.patient_id, apptName(a)));
+            });
+
+            d.followUps.forEach(f => {
+                const late = f.contact_date < d.today;
+                item('🔔', `Contactar a <b>${escapeHtml(d.followNames[f.patient_id] || 'paciente')}</b>${f.reason ? ` — ${escapeHtml(f.reason)}` : ''}<div class="text-[11px] ${late ? 'text-amber-700 font-semibold' : 'opacity-60'}">${late ? 'Atrasado · ' : ''}${escapeHtml(formatDayShortEs(f.contact_date))}</div>`,
+                    'Escribir', () => openPatientChat(f.patient_id));
+            });
+
+            const days = Array.from({ length: 7 }, (_, i) => clinicDateIso(i));
+            allPatients.forEach(p => {
+                if (p.do_not_contact) return;
+                const md = String(p.dob || '').slice(5, 10);
+                const day = md && days.find(iso => iso.slice(5) === md);
+                if (!day) return;
+                item('🎂', `Cumpleaños de <b>${escapeHtml(`${p.first_name || ''} ${p.last_name || ''}`.trim())}</b><div class="text-[11px] opacity-60">${escapeHtml(homeDayLabel(day))}</div>`,
+                    'Felicitar', () => openPatientChat(p.id));
+            });
+
+            el.innerHTML = items.length ? items.join('') : '<p class="px-5 pb-5 pt-1 text-sm opacity-50">✨ Nada pendiente por ahora.</p>';
+        }
+
+        // Keep "Inicio" current while it's on screen.
+        setInterval(() => {
+            if (currentAdminView() !== 'home-view' || document.hidden) return;
+            if (document.getElementById('history-modal').classList.contains('modal-open')) return;
+            loadHome();
+        }, 120000);
 
         // --- PENDING BADGE ---
         async function refreshPendingBadge() {
@@ -3269,8 +3637,10 @@
         // the AI assistant, as the list of chats the bot hands to a person.
         // Set to true to show it again (filter, chips, "Resuelto" button, badge).
         const WA_SHOW_ATTENTION = false;
-        let waFilter = WA_SHOW_ATTENTION ? 'attention' : 'unread';
+        // Opens on every chat (unread ones highlighted); "No leídos" narrows it.
+        let waFilter = WA_SHOW_ATTENTION ? 'attention' : 'all';
         let waLiveStatus = '';
+        let waLoadedOnce = false;
         let waPendingFile = null;
         const waPatientNames = {};
         const waMediaUrls = {};
@@ -3293,9 +3663,8 @@
                 if (params.get('filter') === 'unread') waFilter = 'unread';
                 switchAdminView('messages-view', document.getElementById('nav-messages'));
                 if (params.get('chat')) openConversation(params.get('chat'));
-            } else if (isInstalledApp()) {
-                openUnreadMessages();
             }
+            if (currentAdminView() === 'home-view') renderHomeMessages();
             // Coming back to the app (phones pause it in the background): reload the
             // chats, so the icon number and notifications match what the other
             // phone already read.
@@ -3313,6 +3682,7 @@
                 return;
             }
             waConversations = data || [];
+            waLoadedOnce = true;
             await loadWaPatientNames();
             renderConversationList();
             updateWaBadge();
@@ -3347,11 +3717,21 @@
             if (waActiveId) closeConversation();
             switchAdminView('messages-view', document.getElementById('nav-messages'));
         }
+        function openAllMessages() {
+            waFilter = 'all';
+            if (waActiveId) closeConversation();
+            switchAdminView('messages-view', document.getElementById('nav-messages'));
+        }
+        function openMessageFromHome(id) {
+            waFilter = 'all';
+            switchAdminView('messages-view', document.getElementById('nav-messages'));
+            openConversation(id);
+        }
 
         function renderConversationList() {
             const filters = WA_SHOW_ATTENTION
                 ? [['unread', 'No leídos'], ['attention', 'Por responder'], ['all', 'Todos'], ['human', 'Atención humana']]
-                : [['unread', 'No leídos'], ['all', 'Todos']];
+                : [['all', 'Todos'], ['unread', 'No leídos']];
             if (waSettings.bot_enabled) filters.push(['bot', 'IA']);
             const counts = { attention: waConversations.filter(c => c.needs_attention).length, unread: waConversations.filter(c => c.unread_count > 0).length };
             document.getElementById('wa-filters').innerHTML = filters.map(([id, label]) => `
@@ -3376,16 +3756,22 @@
                 el.innerHTML = `<p class="p-6 text-sm opacity-40 text-center">${!query && waFilter === 'attention' ? '✨ No hay mensajes por responder.' : !query && waFilter === 'unread' ? '✨ No hay mensajes sin leer.' : 'No hay conversaciones.'}</p>`;
                 return;
             }
-            el.innerHTML = list.map(c => `
-                <button onclick="openConversation('${c.id}')" class="w-full text-left px-4 py-3 border-b border-[#F3EAEE] hover:bg-[#FDFBFC] transition flex gap-3 items-start ${c.id === waActiveId ? 'bg-[#FBF0F3]' : ''}">
-                    <div class="w-10 h-10 rounded-full bg-[#EDE1E7] flex items-center justify-center text-sm font-bold text-[#B76E88] flex-shrink-0">${escapeHtml(waName(c).replace(/^\+/, '').charAt(0).toUpperCase())}</div>
+            // Unread chats stand out: green edge, tinted row, bold name and preview.
+            el.innerHTML = list.map(c => {
+                const unread = c.unread_count > 0 && c.id !== waActiveId;
+                const rowTone = c.id === waActiveId ? 'bg-[#FBF0F3] border-l-4 border-l-[#B76E88]'
+                    : unread ? 'bg-[#EFFAF3] border-l-4 border-l-[#25D366] hover:bg-[#E3F6EA]'
+                    : 'border-l-4 border-l-transparent hover:bg-[#FDFBFC]';
+                return `
+                <button onclick="openConversation('${c.id}')" class="w-full text-left px-4 py-3 border-b border-[#F3EAEE] transition flex gap-3 items-start ${rowTone}">
+                    <div class="w-10 h-10 rounded-full ${unread ? 'bg-[#25D366] text-white' : 'bg-[#EDE1E7] text-[#B76E88]'} flex items-center justify-center text-sm font-bold flex-shrink-0">${escapeHtml(waName(c).replace(/^\+/, '').charAt(0).toUpperCase())}</div>
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center justify-between gap-2">
-                            <span class="font-semibold text-sm truncate">${escapeHtml(waName(c))}</span>
+                            <span class="${unread ? 'font-bold' : 'font-medium'} text-sm truncate">${escapeHtml(waName(c))}</span>
                             <span class="text-[10px] flex-shrink-0 ${c.unread_count ? 'text-[#128C7E] font-bold' : 'opacity-40'}">${waShortTime(c.last_message_at)}</span>
                         </div>
                         <div class="flex items-center justify-between gap-2 mt-0.5">
-                            <span class="text-xs opacity-60 truncate">${c.last_message_direction === 'out' ? '↪ ' : ''}${escapeHtml(c.last_message_preview || '')}</span>
+                            <span class="text-xs truncate ${unread ? 'font-semibold text-[#2A2330]' : 'opacity-60'}">${c.last_message_direction === 'out' ? '↪ ' : ''}${escapeHtml(c.last_message_preview || '')}</span>
                             ${c.unread_count ? `<span class="bg-[#25D366] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">${c.unread_count}</span>` : ''}
                         </div>
                         <div class="flex gap-2 mt-1 text-[8px] uppercase tracking-widest font-bold">
@@ -3394,7 +3780,8 @@
                             ${waSettings.bot_enabled ? (c.bot_active ? '<span class="text-purple-600">🤖 IA</span>' : '<span class="text-[#B76E88]">👤 Humano</span>') : ''}
                         </div>
                     </div>
-                </button>`).join('');
+                </button>`;
+            }).join('');
         }
 
         // Number on the home-screen icon = unread messages in all chats (the same
@@ -3424,6 +3811,7 @@
             headerBadge.textContent = n > 99 ? '99+' : n;
             headerBadge.classList.toggle('hidden', !n);
             document.title = (n ? `(${n}) ` : '') + document.title.replace(/^\(\d+\)\s*/, '');
+            if (currentAdminView() === 'home-view') { renderHomeMessages(); renderHomeStats(); }
         }
 
         function renderWaStatus() {
@@ -4874,6 +5262,7 @@
         // After any appointment change: the lists that show it.
         function refreshAfterAppointmentChange(patientId) {
             if (currentAdminView() === 'appointments-view') fetchAppointments();
+            if (currentAdminView() === 'home-view') loadHome();
             if (currentAdminView() === 'schedule-view') loadSchedulePreview();
             if (patientId && String(patientId) === String(currentPatientId)) loadPatientAppointments(patientId);
             refreshPendingBadge();

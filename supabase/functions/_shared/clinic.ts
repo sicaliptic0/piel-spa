@@ -51,6 +51,8 @@ export const TREATMENTS: Record<string, { en: string; es: string; bookable?: fal
   nctf_skin_boosting: { en: "NCTF Skin Boosting", es: "Impulso de la Piel con NCTF" },
   fractional_co2_laser_resurfacing: { en: "Fractional CO2 Laser Resurfacing", es: "Resurfacing con Láser CO2 Fraccionado" },
   facial_cleansing: { en: "Facial Cleansing", es: "Limpieza Facial" },
+  endolaser: { en: "Endolaser", es: "Endoláser" },
+  hyaluronidase_injection: { en: "Hyaluronidase Injection", es: "Inyección de Hialuronidasa" },
 };
 
 export function isBookableTreatment(id: string): boolean {

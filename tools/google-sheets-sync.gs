@@ -64,6 +64,8 @@ const PROCEDURE_LABELS = {
   nctf_skin_boosting: 'Impulso de la Piel con NCTF',
   fractional_co2_laser_resurfacing: 'Resurfacing con Láser CO2 Fraccionado',
   facial_cleansing: 'Limpieza Facial',
+  endolaser: 'Endoláser',
+  hyaluronidase_injection: 'Inyección de Hialuronidasa',
 };
 
 // ---------- Menu ----------
