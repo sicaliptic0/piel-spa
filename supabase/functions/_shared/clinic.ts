@@ -31,6 +31,7 @@ export const CLINIC_WHATSAPP = "19295613388";
 // `bookable: false` = shown in visit history only.
 export const TREATMENTS: Record<string, { en: string; es: string; bookable?: false }> = {
   general_consultation: { en: "General Consultation", es: "Consulta General" },
+  revaluation_touch_up: { en: "Re-evaluation / Touch-up", es: "Revaloración / Retoque", bookable: false },
   upper_face_rejuvenation: { en: "Upper Face Rejuvenation", es: "Rejuvenecimiento de la Parte Superior" },
   masseter_reduction_bruxism: { en: "Masseter Reduction (Bruxism)", es: "Reducción del Masetero (Bruxismo)" },
   gummy_smile_correction: { en: "Gummy Smile Correction", es: "Corrección de Sonrisa Gingival" },

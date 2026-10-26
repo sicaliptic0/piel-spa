@@ -45,6 +45,7 @@ const WEEKDAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes
 // Spanish names for encounters saved before the procedures summary existed.
 const PROCEDURE_LABELS = {
   general_consultation: 'Consulta General',
+  revaluation_touch_up: 'Revaloración / Retoque',
   upper_face_rejuvenation: 'Rejuvenecimiento de la Parte Superior',
   masseter_reduction_bruxism: 'Reducción del Masetero (Bruxismo)',
   gummy_smile_correction: 'Corrección de Sonrisa Gingival',
