@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
   const adminClient = createClient(supabaseUrl, serviceRole);
 
   // deno-lint-ignore no-explicit-any
-  const sendResetLink = async (profiles: any[], redirectTo: string): Promise<{ sent_to?: string; reason?: string; detail?: string }> => {
+  const sendResetLink = async (profiles: any[], redirectTo: string, fromAdmin = false): Promise<{ sent_to?: string; reason?: string; detail?: string; staff?: boolean }> => {
     // A phone can have several profiles (a historic patient, or a staff member
     // with a separate patient account). The one that logs in by phone is the
     // account with the internal email, so that's the one whose password changes.
@@ -91,6 +91,26 @@ Deno.serve(async (req) => {
     }
     const account = accounts.find((a) => a.email.endsWith(PATIENT_LOGIN_DOMAIN)) ?? accounts[0];
     if (!account) return { reason: "no_login" };
+
+    // An account with a real email isn't a phone login, so a new password here
+    // wouldn't let its owner in by phone. Staff keep it that way, and their (admin)
+    // password never changes from the patient form; an old patient account
+    // becomes a phone login, keeping its id and history.
+    let staff = false;
+    if (!account.email.endsWith(PATIENT_LOGIN_DOMAIN)) {
+      const { data: role } = await adminClient.from("staff_roles").select("role").eq("user_id", account.profile.id).maybeSingle();
+      staff = !!role;
+      if (staff && !fromAdmin) return { reason: "staff_account" };
+      const digits = onlyDigits(account.profile.phone);
+      const national = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
+      if (!staff && national.length >= 7) {
+        const phoneLogin = `${national}${PATIENT_LOGIN_DOMAIN}`;
+        const { error: moveError } = await adminClient.auth.admin.updateUserById(account.profile.id, { email: phoneLogin, email_confirm: true });
+        if (moveError) console.error("phone login update error:", moveError.message);
+        else account.email = phoneLogin;
+      }
+    }
+
     const deliverTo = String(account.profile.email || "").trim() || String(profiles.find((p) => p.email)?.email || "").trim();
     if (!deliverTo) return { reason: "no_email" };
 
@@ -119,7 +139,7 @@ Deno.serve(async (req) => {
       console.error("Resend error:", detail);
       return { reason: "email_failed", detail };
     }
-    return { sent_to: deliverTo };
+    return { sent_to: deliverTo, staff };
   };
 
   try {
@@ -133,9 +153,9 @@ Deno.serve(async (req) => {
       if (!authData?.user) return jsonResponse({ error: "not_signed_in" }, 401);
       const { data: role } = await adminClient.from("staff_roles").select("role").eq("user_id", authData.user.id).maybeSingle();
       if (role?.role !== "admin") return jsonResponse({ error: "not_allowed" }, 403);
-      const { data: profile } = await adminClient.from("profiles").select("id, email, first_name").eq("id", String(body.patient_id)).maybeSingle();
+      const { data: profile } = await adminClient.from("profiles").select("id, email, first_name, phone").eq("id", String(body.patient_id)).maybeSingle();
       if (!profile) return jsonResponse({ error: "not_found" }, 404);
-      const outcome = await sendResetLink([profile], redirectTo);
+      const outcome = await sendResetLink([profile], redirectTo, true);
       return jsonResponse(outcome.sent_to ? { ok: true, ...outcome } : { error: outcome.reason, detail: outcome.detail }, outcome.sent_to ? 200 : 502);
     }
 
@@ -148,7 +168,7 @@ Deno.serve(async (req) => {
     // profiles.phone may or may not carry the country code; so may what was typed.
     const { data: profiles } = await adminClient
       .from("profiles")
-      .select("id, email, first_name")
+      .select("id, email, first_name, phone")
       .ilike("phone", `%${phoneDigits.slice(-10)}`)
       .limit(5);
     if (profiles?.length) {

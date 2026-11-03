@@ -2882,7 +2882,7 @@
                 alert(known[problem] || 'No se pudo enviar: ' + problem);
                 return;
             }
-            alert('✓ Enlace enviado a ' + data.sent_to);
+            alert('✓ Enlace enviado a ' + data.sent_to + (data.staff ? '\n\nEs una cuenta del personal: el enlace cambia la contraseña con la que entra al admin.' : ''));
         }
 
         function openRowMenu(event, key) {
