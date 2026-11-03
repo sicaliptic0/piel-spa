@@ -55,7 +55,10 @@
 
     <header class="w-full py-4 px-4 md:px-12 flex justify-between items-center bg-white border-b border-[#EDE1E7] sticky top-0 z-40">
         <a href="index.html" class="text-[15px] md:text-xl whitespace-nowrap"><span class="brand-piel">Piel</span> <span class="brand-spa">spa</span></a>
-        <button id="lang-toggle" class="whitespace-nowrap text-[10px] tracking-widest text-[#B76E88] hover:text-[#2A2330] uppercase transition">EN / ES</button>
+        <div class="flex items-center gap-4">
+            <button id="lang-toggle" class="whitespace-nowrap text-[10px] tracking-widest text-[#B76E88] hover:text-[#2A2330] uppercase transition">EN / ES</button>
+            <button id="exit-btn" onclick="exitBooking()" class="whitespace-nowrap text-[10px] tracking-widest font-bold uppercase border border-[#EDE1E7] rounded-full px-3 py-1.5 hover:border-[#B76E88] hover:text-[#B76E88] transition" data-en="✕ Exit" data-es="✕ Salir">✕ Salir</button>
+        </div>
     </header>
 
     <main class="max-w-2xl mx-auto px-4 py-8 md:py-12">
@@ -306,6 +309,13 @@
         }
         const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
+        // Leaves at any point; nothing is saved until "Confirmar cita".
+        function exitBooking() {
+            const started = selectedTreatments.size || selectedTime || patientMode;
+            if (started && !confirm(t('Leave without booking? Your appointment will not be saved.', '¿Salir sin agendar? Tu cita no se guardará.'))) return;
+            window.location.href = 'index.html';
+        }
+
         // ---------- Step navigation ----------
         function goToStep(step) {
             if (step >= 2 && !selectedTreatments.size) step = 1;
@@ -455,7 +465,7 @@
             });
             alert(error
                 ? 'Error: ' + error.message
-                : t('If that phone is registered, we sent a reset link to the email on file.', 'Si ese teléfono está registrado, enviamos un enlace para cambiar la contraseña al correo asociado.'));
+                : t('If that phone is registered, we sent a reset link to the email on file. Check your spam folder too. If it does not arrive in a few minutes, message us on WhatsApp and we will help you.', 'Si ese teléfono está registrado, enviamos un enlace para cambiar la contraseña al correo asociado. Revisa también el spam. Si no llega en unos minutos, escríbenos por WhatsApp y te ayudamos.'));
         }
 
         async function signOutAndReset() {
@@ -551,6 +561,7 @@
 
         function showDone(result) {
             document.getElementById('booking-flow').classList.add('hidden');
+            document.getElementById('exit-btn').classList.add('hidden');
             document.getElementById('done').classList.remove('hidden');
             document.getElementById('done-slot').innerText =
                 `${capitalize(formatDay(result.date, { weekday: 'long', day: 'numeric', month: 'long' }))} · ${formatTime12h(result.time)}`;

@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { CORS_HEADERS, jsonResponse } from "../_shared/clinic.ts";
-import { sendWhatsAppMessage, whatsappConnected } from "../_shared/whatsapp.ts";
+import { sendWhatsAppMessage, toWhatsAppId, whatsappConnected } from "../_shared/whatsapp.ts";
 import { sendTemplate } from "../_shared/sendTemplate.ts";
 
 // Staff reply from the admin's "Mensajes" view.
@@ -9,6 +9,10 @@ import { sendTemplate } from "../_shared/sendTemplate.ts";
 //   { conversation_id, text?, opener: { template, params } }
 // sends the approved template now and keeps the text in wa_pending_messages;
 // whatsapp-webhook delivers it as soon as the patient answers.
+// Post-treatment recommendations, nothing to open on the staff's side:
+//   { recommendation: { patient_id, texts: [...], tratamiento, fecha } }
+// Go straight out with the 24 h window open; otherwise template
+// recomendaciones_tratamiento now and the texts as soon as the patient taps its button.
 // Only admins. A file is uploaded to the wa-media bucket by the page first;
 // here it's handed to WhatsApp as a short-lived link. Sending as staff takes
 // the chat over (bot_active = false) — the AI stops answering it.
@@ -40,6 +44,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const text = String(body?.text || "").trim();
 
+    if (body?.recommendation) return await sendRecommendation(adminClient, user.id, body.recommendation);
     if (body?.opener) return await sendOpener(adminClient, user.id, String(body?.conversation_id || ""), text, body.opener);
 
     const mediaPath = String(body?.media_path || "").trim();
@@ -140,4 +145,65 @@ async function sendOpener(db: any, userId: string, conversationId: string, text:
     .eq("id", conv.id).eq("bot_active", true);
 
   return jsonResponse({ ok: true, opener: true, pending_id: pendingId, message_id: result.messageId });
+}
+
+// deno-lint-ignore no-explicit-any
+async function sendRecommendation(db: any, userId: string, input: any) {
+  const patientId = String(input?.patient_id || "");
+  const texts: string[] = (Array.isArray(input?.texts) ? input.texts : []).map((t: unknown) => String(t || "").trim()).filter(Boolean);
+  if (!patientId || !texts.length) return jsonResponse({ error: "empty" }, 400);
+
+  const { data: profile } = await db.from("profiles").select("first_name, last_name, phone").eq("id", patientId).maybeSingle();
+  const phone = toWhatsAppId(profile?.phone);
+  if (!phone) return jsonResponse({ error: "no_phone" }, 400);
+
+  let { data: conv } = await db.from("wa_conversations").select("id, last_inbound_at").eq("phone", phone).maybeSingle();
+  if (!conv) {
+    const profileName = `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim();
+    const { data: created, error } = await db.from("wa_conversations")
+      .insert({ phone, patient_id: patientId, profile_name: profileName || null, bot_active: false })
+      .select("id, last_inbound_at").single();
+    if (error) return jsonResponse({ error: error.message }, 500);
+    conv = created;
+  }
+
+  // Window open: the texts themselves can go now.
+  if (conv.last_inbound_at && Date.now() - new Date(conv.last_inbound_at).getTime() < WINDOW_MS) {
+    for (const text of texts) {
+      let waMessageId = "";
+      let sendError = "";
+      try {
+        waMessageId = await sendWhatsAppMessage(phone, { type: "text", text: { body: text, preview_url: true } });
+      } catch (e) {
+        sendError = (e as Error).message;
+      }
+      await db.from("wa_messages").insert({
+        conversation_id: conv.id, direction: "out", sender: "staff", staff_user_id: userId, body: text,
+        wa_message_id: waMessageId || null, status: sendError ? "failed" : "sent", error: sendError || null,
+      });
+      if (sendError) return jsonResponse({ error: "send_failed", detail: sendError }, 502);
+    }
+    return jsonResponse({ ok: true, delivered: true });
+  }
+
+  // Window closed: the texts wait behind the approved template.
+  const { data: pending, error: pendingError } = await db.from("wa_pending_messages")
+    .insert(texts.map((body) => ({ conversation_id: conv.id, body, created_by: userId }))).select("id");
+  if (pendingError) return jsonResponse({ error: pendingError.message }, 500);
+  const pendingIds = (pending || []).map((p: { id: string }) => p.id);
+
+  const firstName = String(profile?.first_name || "").trim().split(/\s+/)[0] || "paciente";
+  const result = await sendTemplate(db, {
+    template: "recomendaciones_tratamiento",
+    params: [firstName, String(input?.tratamiento || "tratamiento"), String(input?.fecha || "")],
+    patientId,
+    phone,
+    staffUserId: userId,
+  });
+  if (!result.ok) {
+    await db.from("wa_pending_messages").delete().in("id", pendingIds);
+    return jsonResponse(result, result.error === "send_failed" ? 502 : 400);
+  }
+  await db.from("wa_pending_messages").update({ opener_message_id: result.messageId ?? null }).in("id", pendingIds);
+  return jsonResponse({ ok: true, delivered: false });
 }

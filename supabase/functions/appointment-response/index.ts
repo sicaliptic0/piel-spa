@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
 
     const { data: appt } = await adminClient
       .from("appointments")
-      .select("id, appointment_date, appointment_time, service_type, service_type_ids, status, patient_confirmed_at, patient_cancelled_at, profiles(first_name, last_name, phone)")
+      .select("id, appointment_date, appointment_time, service_type, service_type_ids, status, patient_confirmed_at, patient_confirmed_via, patient_cancelled_at, profiles(first_name, last_name, phone)")
       .eq("response_token", token)
       .maybeSingle();
     if (!appt) return jsonResponse({ error: "not_found" }, 404);
@@ -64,6 +64,7 @@ Deno.serve(async (req) => {
       treatments_en: treatmentLabels(appt.service_type_ids, appt.service_type, "en"),
       status: appt.status,
       confirmed: !!appt.patient_confirmed_at,
+      confirmed_via: appt.patient_confirmed_via || null,
       is_past: isPast,
     });
 
@@ -73,9 +74,13 @@ Deno.serve(async (req) => {
     if (isCancelled) return jsonResponse({ error: "cancelled" }, 409);
 
     if (action === "confirm") {
-      const confirmedAt = appt.patient_confirmed_at || new Date().toISOString();
-      await adminClient.from("appointments").update({ patient_confirmed_at: confirmedAt }).eq("id", appt.id);
-      appt.patient_confirmed_at = confirmedAt;
+      // Already confirmed (maybe by WhatsApp): keep the first answer; the page says so.
+      if (!appt.patient_confirmed_at) {
+        const confirmedAt = new Date().toISOString();
+        await adminClient.from("appointments").update({ patient_confirmed_at: confirmedAt, patient_confirmed_via: "email" }).eq("id", appt.id);
+        appt.patient_confirmed_at = confirmedAt;
+        appt.patient_confirmed_via = "email";
+      }
       return jsonResponse(view());
     }
 

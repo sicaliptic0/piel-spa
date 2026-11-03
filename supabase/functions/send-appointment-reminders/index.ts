@@ -14,7 +14,10 @@ import { clinicPlaces, dayEs, placeFor } from "../_shared/appointmentText.ts";
 //   - WhatsApp template recordatorio_cita (buttons Confirmo asistencia /
 //     Reprogramar / Cancelar cita, answered by whatsapp-webhook), when there's
 //     a phone and the patient isn't marked "No contactar".
-// Each appointment is reminded once, so extra calls do nothing.
+// Each appointment is reminded once, so extra calls do nothing. If only one
+// channel went out, the other is retried on the next run.
+// An admin can also send one on the spot ("Enviar recordatorio ahora" in Citas):
+//   { appointment_id } with their session, ignoring hours and earlier sends.
 
 const SEND_FROM_HOUR = 10;
 const SEND_UNTIL_HOUR = 20;
@@ -58,19 +61,32 @@ Deno.serve(async (req) => {
   if (!supabaseUrl || !serviceRole || !resendApiKey) return jsonResponse({ error: "Missing required env vars" }, 500);
   const adminClient = createClient(supabaseUrl, serviceRole);
 
-  const hour = clinicHour();
-  if (hour < SEND_FROM_HOUR || hour > SEND_UNTIL_HOUR) return jsonResponse({ ok: true, skipped: "outside_hours", hour });
+  const body = await req.json().catch(() => ({}));
+  const forcedId = String(body?.appointment_id || "");
+  if (forcedId) {
+    const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    const { data: authData } = await adminClient.auth.getUser(token);
+    if (!authData?.user) return jsonResponse({ error: "not_signed_in" }, 401);
+    const { data: role } = await adminClient.from("staff_roles").select("role").eq("user_id", authData.user.id).maybeSingle();
+    if (role?.role !== "admin") return jsonResponse({ error: "not_allowed" }, 403);
+  } else {
+    const hour = clinicHour();
+    if (hour < SEND_FROM_HOUR || hour > SEND_UNTIL_HOUR) return jsonResponse({ ok: true, skipped: "outside_hours", hour });
+  }
 
   const tomorrow = clinicDate(1);
-  const { data: due, error } = await adminClient
+  let dueQuery = adminClient
     .from("appointments")
-    .select("id, patient_id, appointment_date, appointment_time, service_type, service_type_ids, status, location, response_token, created_at, whatsapp_reminder_at, profiles(first_name, email, phone)")
+    .select("id, patient_id, appointment_date, appointment_time, service_type, service_type_ids, status, location, response_token, created_at, whatsapp_reminder_at, reminder_channel, profiles(first_name, email, phone)")
     .eq("appointment_date", tomorrow)
-    .is("reminder_sent_at", null)
     .neq("status", "cancelled");
+  dueQuery = forcedId ? dueQuery.eq("id", forcedId) : dueQuery.is("reminder_sent_at", null);
+  const { data: due, error } = await dueQuery;
   if (error) return jsonResponse({ error: error.message }, 500);
+  // The texts say "mañana", so only tomorrow's appointments can be sent by hand.
+  if (forcedId && !due?.length) return jsonResponse({ error: "not_tomorrow" }, 409);
 
-  const result = { sent: 0, whatsapp: 0, no_contact: 0, skipped_recent: 0, failed: 0 };
+  const result = { sent: 0, whatsapp: 0, no_contact: 0, skipped_recent: 0, failed: 0, errors: [] as string[] };
   const recentCutoff = Date.now() - SKIP_IF_BOOKED_WITHIN_HOURS * 3600000;
   const useWhatsApp = whatsappConnected();
   const places = await clinicPlaces(adminClient);
@@ -85,12 +101,16 @@ Deno.serve(async (req) => {
     const channels: string[] = [];
     let failed = false;
     let whatsappAt: string | null = null;
+    // An earlier run already emailed it and only WhatsApp is left to retry.
+    const alreadyEmailed = !forcedId && String(appt.reminder_channel || "").split("+").includes("email");
 
-    if (appt.created_at && new Date(appt.created_at).getTime() > recentCutoff) {
+    if (!forcedId && appt.created_at && new Date(appt.created_at).getTime() > recentCutoff) {
       result.skipped_recent++;
       channels.push("skipped_recent");
     } else {
-      if (email) {
+      if (alreadyEmailed) {
+        channels.push("email");
+      } else if (email) {
         try {
           await sendEmail(resendApiKey, from, [email], "Recordatorio: tu cita es mañana | Piel Spa",
             renderReminderEmail({
@@ -105,11 +125,12 @@ Deno.serve(async (req) => {
           result.sent++;
         } catch (e) {
           console.error(`reminder email ${appt.id}:`, (e as Error).message);
+          result.errors.push(`correo: ${(e as Error).message}`);
           failed = true;
         }
       }
       // Skipped if the admin already sent it by hand from "Recordatorios de mañana".
-      if (useWhatsApp && profile?.phone && !appt.whatsapp_reminder_at && !doNotContact.has(String(appt.patient_id))) {
+      if (useWhatsApp && profile?.phone && (forcedId || !appt.whatsapp_reminder_at) && !doNotContact.has(String(appt.patient_id))) {
         const firstName = String(profile?.first_name || "").trim() || "paciente";
         const sent = await sendTemplate(adminClient, {
           template: "recordatorio_cita",
@@ -123,12 +144,18 @@ Deno.serve(async (req) => {
           result.whatsapp++;
         } else {
           console.error(`reminder whatsapp ${appt.id}:`, sent.error, "detail" in sent ? sent.detail : "");
+          result.errors.push(`whatsapp: ${"detail" in sent && sent.detail ? sent.detail : sent.error}`);
           failed = true;
         }
       }
-      if (!channels.length && failed) {
-        // Nothing went out: left unmarked, so the next hourly run tries again.
+      if (failed) {
+        // Left unmarked, so the next hourly run tries again what didn't go out.
         result.failed++;
+        if (channels.length) {
+          await adminClient.from("appointments")
+            .update({ reminder_channel: channels.join("+"), ...(whatsappAt ? { whatsapp_reminder_at: whatsappAt } : {}) })
+            .eq("id", appt.id);
+        }
         continue;
       }
       if (!channels.length) { channels.push("none"); result.no_contact++; }

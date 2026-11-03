@@ -106,7 +106,12 @@
             const state = document.getElementById('state');
             if (cancelled) { state.innerText = t('❌ This appointment is cancelled.', '❌ Esta cita está cancelada.'); state.className = 'pt-2 text-sm font-semibold text-red-700'; }
             else if (appt.is_past) { state.innerText = t('This appointment has already passed.', 'Esta cita ya pasó.'); state.className = 'pt-2 text-sm font-semibold opacity-60'; }
-            else if (appt.confirmed) { state.innerText = t('✓ You confirmed your attendance. See you soon!', '✓ Confirmaste tu asistencia. ¡Te esperamos!'); state.className = 'pt-2 text-sm font-semibold text-green-700'; }
+            else if (appt.confirmed) {
+                state.innerText = appt.confirmed_via === 'whatsapp'
+                    ? t('✓ You already confirmed by WhatsApp, no need to do anything else. See you soon!', '✓ Ya confirmaste por WhatsApp, no necesitas hacer nada más. ¡Te esperamos!')
+                    : t('✓ You confirmed your attendance. See you soon!', '✓ Confirmaste tu asistencia. ¡Te esperamos!');
+                state.className = 'pt-2 text-sm font-semibold text-green-700';
+            }
             else { state.innerText = ''; }
 
             const canAct = !cancelled && !appt.is_past;

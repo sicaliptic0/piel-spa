@@ -192,6 +192,7 @@ const TEMPLATE_BUTTONS: Record<string, Record<string, ButtonAction>> = {
   cita_reprogramada: { "confirmo": "confirm", "necesito otro horario": "reschedule" },
   cita_cancelada: { "sí, reprogramar": "reschedule", "más adelante": "later" },
   mensaje_tratamiento: { "sí, envíenmela": "accept" },
+  recomendaciones_tratamiento: { "ver recomendaciones": "accept" },
   seguimiento_tratamiento: { "todo bien": "fine", "tengo una pregunta": "question" },
   recordatorio_retoque: { "coordinar mi cita": "book" },
 };
@@ -206,7 +207,7 @@ async function handleTemplateButton(db: SupabaseClient, conversationId: string, 
   let appt: Json = null;
   if (origin?.appointment_id) {
     ({ data: appt } = await db.from("appointments")
-      .select("id, appointment_date, appointment_time, status, location, patient_confirmed_at")
+      .select("id, appointment_date, appointment_time, status, location, patient_confirmed_at, patient_confirmed_via")
       .eq("id", origin.appointment_id).maybeSingle());
   }
   const active = !!appt && appt.status !== "cancelled" && appt.appointment_date >= clinicDate(0);
@@ -228,8 +229,14 @@ async function handleTemplateButton(db: SupabaseClient, conversationId: string, 
   } else if ((action === "confirm" || action === "cancel") && !active) {
     reply = "Esa cita ya no está vigente. Si necesitas una nueva, escríbenos por aquí y te ayudamos. 💕";
   } else if (action === "confirm") {
-    await db.from("appointments").update({ patient_confirmed_at: appt.patient_confirmed_at || new Date().toISOString() }).eq("id", appt.id);
-    reply = `¡Gracias! Tu cita del ${when} quedó confirmada. Te esperamos en ${placeFor(await clinicPlaces(db), appt.location)}. 💕`;
+    const place = placeFor(await clinicPlaces(db), appt.location);
+    if (appt.patient_confirmed_at) {
+      const how = appt.patient_confirmed_via === "email" ? " por correo" : "";
+      reply = `Ya habías confirmado${how} tu cita del ${when}, no necesitas hacer nada más. Te esperamos en ${place}. 💕`;
+    } else {
+      await db.from("appointments").update({ patient_confirmed_at: new Date().toISOString(), patient_confirmed_via: "whatsapp" }).eq("id", appt.id);
+      reply = `¡Gracias! Tu cita del ${when} quedó confirmada. Te esperamos en ${place}. 💕`;
+    }
     outcome = "done";
   } else if (action === "cancel") {
     await db.from("appointments").update({ status: "cancelled", patient_cancelled_at: new Date().toISOString() }).eq("id", appt.id);

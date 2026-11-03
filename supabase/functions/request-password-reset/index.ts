@@ -25,12 +25,7 @@ function onlyDigits(value: unknown): string {
   return String(value ?? "").replace(/\D/g, "");
 }
 
-// Must match create-patient-account's syntheticEmail() exactly — that's the actual
-// auth.users identifier for this account, distinct from the patient's real email
-// (stored only in profiles.email, used purely as the delivery address below).
-function syntheticEmail(phoneDigits: string): string {
-  return `${phoneDigits}@patients.piel-spa.internal`;
-}
+const PATIENT_LOGIN_DOMAIN = "@patients.piel-spa.internal";
 
 function renderResetEmail(input: { firstName: string; actionLink: string; contactEmail: string }) {
   return `
@@ -84,52 +79,82 @@ Deno.serve(async (req) => {
 
   const adminClient = createClient(supabaseUrl, serviceRole);
 
-  // Always responds { ok: true } on the happy path AND on "not found" so the
-  // UI can't be used to enumerate which phone numbers are registered.
-  try {
-    const body = await req.json();
-    const phoneDigits = onlyDigits(body?.phone);
-    const redirectTo = String(body?.redirect_to || "https://piel-spa.com/reset-password.html");
-
-    if (!phoneDigits) return jsonResponse({ error: "Missing phone" }, 400);
-
-    // profiles.phone stores the full dialable number (with country code), but login
-    // (and this form) only ever deals in the bare digits — match by suffix instead of
-    // exact equality so "9175551234" still finds a stored "+19175551234".
-    const { data: profiles } = await adminClient
-      .from("profiles")
-      .select("id, email, first_name")
-      .ilike("phone", `%${phoneDigits}`)
-      .limit(1);
-    const profile = profiles?.[0];
-
-    if (!profile?.email) {
-      return jsonResponse({ ok: true });
+  // deno-lint-ignore no-explicit-any
+  const sendResetLink = async (profiles: any[], redirectTo: string): Promise<{ sent_to?: string; reason?: string; detail?: string }> => {
+    // A phone can have several profiles (a historic patient, or a staff member
+    // with a separate patient account). The one that logs in by phone is the
+    // account with the internal email, so that's the one whose password changes.
+    const accounts: { email: string; profile: (typeof profiles)[number] }[] = [];
+    for (const profile of profiles) {
+      const { data } = await adminClient.auth.admin.getUserById(profile.id);
+      if (data?.user?.email) accounts.push({ email: data.user.email, profile });
     }
+    const account = accounts.find((a) => a.email.endsWith(PATIENT_LOGIN_DOMAIN)) ?? accounts[0];
+    if (!account) return { reason: "no_login" };
+    const deliverTo = String(account.profile.email || "").trim() || String(profiles.find((p) => p.email)?.email || "").trim();
+    if (!deliverTo) return { reason: "no_email" };
 
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: "recovery",
-      email: syntheticEmail(phoneDigits),
+      email: account.email,
       options: { redirectTo },
     });
-
     if (linkError || !linkData?.properties?.action_link) {
       console.error("generateLink error:", linkError?.message);
-      return jsonResponse({ ok: true });
+      return { reason: "link_failed", detail: linkError?.message };
     }
 
     const html = renderResetEmail({
-      firstName: profile.first_name || "",
+      firstName: account.profile.first_name || "",
       actionLink: linkData.properties.action_link,
       contactEmail,
     });
-
-    await fetch("https://api.resend.com/emails", {
+    const resp = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: fromEmail, to: [profile.email], subject: "Restablecer tu contraseña | Reset your password", html }),
+      body: JSON.stringify({ from: fromEmail, to: [deliverTo], subject: "Restablecer tu contraseña | Reset your password", html }),
     });
+    if (!resp.ok) {
+      const detail = await resp.text();
+      console.error("Resend error:", detail);
+      return { reason: "email_failed", detail };
+    }
+    return { sent_to: deliverTo };
+  };
 
+  try {
+    const body = await req.json();
+    const redirectTo = String(body?.redirect_to || "https://piel-spa.com/reset-password.html");
+
+    // An admin sending the link from the patient's menu sees exactly what happened.
+    if (body?.patient_id) {
+      const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+      const { data: authData } = await adminClient.auth.getUser(token);
+      if (!authData?.user) return jsonResponse({ error: "not_signed_in" }, 401);
+      const { data: role } = await adminClient.from("staff_roles").select("role").eq("user_id", authData.user.id).maybeSingle();
+      if (role?.role !== "admin") return jsonResponse({ error: "not_allowed" }, 403);
+      const { data: profile } = await adminClient.from("profiles").select("id, email, first_name").eq("id", String(body.patient_id)).maybeSingle();
+      if (!profile) return jsonResponse({ error: "not_found" }, 404);
+      const outcome = await sendResetLink([profile], redirectTo);
+      return jsonResponse(outcome.sent_to ? { ok: true, ...outcome } : { error: outcome.reason, detail: outcome.detail }, outcome.sent_to ? 200 : 502);
+    }
+
+    // Public form: always { ok: true }, found or not, so it can't be used to
+    // find out which phone numbers are registered.
+    const phoneDigits = onlyDigits(body?.phone);
+    if (!phoneDigits) return jsonResponse({ error: "Missing phone" }, 400);
+    if (phoneDigits.length < 7) return jsonResponse({ ok: true });
+
+    // profiles.phone may or may not carry the country code; so may what was typed.
+    const { data: profiles } = await adminClient
+      .from("profiles")
+      .select("id, email, first_name")
+      .ilike("phone", `%${phoneDigits.slice(-10)}`)
+      .limit(5);
+    if (profiles?.length) {
+      const outcome = await sendResetLink(profiles, redirectTo);
+      if (!outcome.sent_to) console.error("password reset not sent:", outcome.reason);
+    }
     return jsonResponse({ ok: true });
   } catch (error) {
     console.error(error);

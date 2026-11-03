@@ -96,6 +96,9 @@
                 <span><span>Citas</span><span class="nav-hint">Agenda y confirmaciones</span></span>
                 <span id="pending-badge" class="hidden bg-amber-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full leading-none">0</span>
             </a>
+            <a onclick="switchAdminView('payments-view', this)" class="admin-only nav-link block px-4 py-2.5 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">
+                <span>Cobros</span><span class="nav-hint">Pagos y cierre del día</span>
+            </a>
             <a onclick="switchAdminView('schedule-view', this)" class="admin-only nav-link block px-4 py-2.5 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">
                 <span>Horarios</span><span class="nav-hint">Días y horas de atención</span>
             </a>
@@ -395,6 +398,86 @@
                     <h3 class="text-xl italic">Horas libres · próximas 2 semanas</h3>
                     <p class="text-xs opacity-60 mb-4">Lo que verá quien agenda una cita de 1 hora (ya descontadas las citas tomadas).</p>
                     <div id="sched-preview" class="space-y-2 text-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payments ("Cobros") View -->
+        <div id="payments-view" class="flex-1 overflow-y-auto p-4 md:p-8 hidden">
+            <div class="max-w-6xl mx-auto space-y-8">
+                <!-- Checkout: left the visit, right what the patient sees -->
+                <div class="bg-white border border-[#EDE1E7] rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-2">
+                    <div class="p-5 md:p-8 space-y-5 border-b md:border-b-0 md:border-r border-[#EDE1E7]">
+                        <div class="relative">
+                            <label for="pay-patient" class="enc-label mb-1 block">Paciente</label>
+                            <input type="text" id="pay-patient" autocomplete="off" placeholder="Escribe nombre o teléfono…" oninput="renderPayPatientResults()" onfocus="renderPayPatientResults()">
+                            <div id="pay-patient-results" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white border border-[#EDE1E7] rounded-lg shadow-lg max-h-64 overflow-y-auto"></div>
+                        </div>
+                        <div>
+                            <label for="pay-encounter" class="enc-label mb-1 block">Encuentro</label>
+                            <select id="pay-encounter" onchange="onPayEncounterChange()" disabled><option value="">Primero elige un paciente</option></select>
+                            <p id="pay-encounter-note" class="text-xs mt-2 min-h-[1rem]"></p>
+                        </div>
+                        <div>
+                            <label for="pay-date" class="enc-label mb-1 block">Fecha del pago</label>
+                            <input type="date" id="pay-date" style="max-width: 12rem;">
+                        </div>
+                    </div>
+                    <div class="relative p-5 md:p-8 flex flex-col gap-4 bg-[#FDFBFC] rounded-b-2xl md:rounded-b-none md:rounded-r-2xl">
+                        <div>
+                            <label for="pay-amount" class="enc-label block">Monto</label>
+                            <div class="flex items-center gap-1">
+                                <span class="text-4xl font-semibold opacity-50">$</span>
+                                <input type="text" id="pay-amount" inputmode="decimal" placeholder="0.00" oninput="renderPayTotals()" style="font-size: 2.75rem; line-height: 1.1; font-weight: 600; padding: 4px 8px; background: transparent;">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="pay-method" class="enc-label mb-1 block">Método de pago</label>
+                            <select id="pay-method" onchange="renderPayTotals()" style="max-width: 16rem; font-size: 13px; padding: 7px 8px;">
+                                <option value="cash">Efectivo</option>
+                                <option value="transfer">Transferencia</option>
+                                <option value="debit">Tarjeta de débito</option>
+                                <option value="credit">Tarjeta de crédito</option>
+                                <option value="check">Cheque</option>
+                                <option value="other">Otro</option>
+                            </select>
+                        </div>
+                        <div id="pay-promo-row" class="hidden flex items-baseline justify-between gap-3 text-green-700">
+                            <span class="text-lg">Promoción</span>
+                            <span id="pay-promo" class="text-3xl font-semibold"></span>
+                        </div>
+                        <div id="pay-tax-row" class="hidden flex items-baseline justify-between gap-3">
+                            <span class="text-lg">Tax 4.5%</span>
+                            <span id="pay-tax" class="text-3xl font-semibold"></span>
+                        </div>
+                        <div class="flex items-baseline justify-between gap-3 border-t-2 border-[#2A2330] pt-3">
+                            <span class="text-2xl italic" style="font-family: 'Cormorant Garamond', serif;">Total</span>
+                            <span id="pay-total" class="text-5xl md:text-6xl font-bold text-[#B76E88]">$0.00</span>
+                        </div>
+                        <button type="button" id="pay-submit" onclick="submitPayment()" class="w-full bg-[#2A2330] text-white py-4 uppercase text-[11px] tracking-widest font-bold hover:bg-[#1D1822] transition shadow-md rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">✓ Marcar como pagado</button>
+                        <!-- Staff only, out of the patient's sight: the friends' discount -->
+                        <div class="flex justify-end -mb-2 -mt-1">
+                            <button type="button" onclick="togglePayExtras()" class="w-7 h-7 rounded-full text-base leading-none opacity-30 hover:opacity-100 hover:bg-[#FBF0F3]" aria-label="Más opciones" title="Más opciones">⋯</button>
+                        </div>
+                        <div id="pay-extras" class="hidden text-xs border border-[#EDE1E7] bg-white rounded-lg px-3 py-2">
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input type="checkbox" id="pay-friend" class="accent-[#B76E88]" onchange="renderPayTotals()">
+                                <span>Cupo de amigos (−$30) · <span id="pay-friend-left" class="opacity-60"></span></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Every payment, by day -->
+                <div>
+                    <div class="flex items-end justify-between gap-3 flex-wrap mb-3">
+                        <h3 class="text-2xl italic" style="font-family: 'Cormorant Garamond', serif;">Pagos registrados</h3>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <span id="pay-month-total" class="text-sm"></span>
+                            <input type="month" id="pay-month" onchange="loadPaymentsList()" style="width: auto; padding: 6px 8px; font-size: 13px;" aria-label="Mes">
+                        </div>
+                    </div>
+                    <div id="pay-list" class="space-y-6"></div>
                 </div>
             </div>
         </div>
@@ -962,11 +1045,12 @@
                         </div>
 
                         <div>
-                            <label for="enc-amount" class="enc-label mb-1 block">Monto a cobrar</label>
+                            <label for="enc-amount" class="enc-label mb-1 block">Total a cobrar</label>
                             <div class="relative max-w-[14rem]">
                                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm opacity-50 pointer-events-none">$</span>
-                                <input type="text" id="enc-amount" inputmode="decimal" placeholder="0.00" style="padding-left: 1.6rem;">
+                                <input type="text" id="enc-amount" inputmode="decimal" placeholder="0.00" style="padding-left: 1.6rem; font-weight: 600; font-size: 16px;">
                             </div>
+                            <p class="text-[10px] opacity-50 mt-1">Suma los montos de los tratamientos de arriba. Puedes ajustarlo a mano.</p>
                         </div>
 
                         <div>
@@ -1506,6 +1590,9 @@
         // Saved as clinical_history.procedures_detail, keyed by category:
         //   { neuromodulators: { qty: 40, items: [{ id }], other: { label } },
         //     biostimulators: { items: [{ id, qty }], other: { label, qty } } }
+        // Money: every checked treatment has its amount, summed into "Total a cobrar":
+        //   entry.amount / item.amount / other.amount (typed by hand). Botox is
+        //   the exception: units × price_per_unit (9 by default) = entry.amount.
         //   weight_loss  → medication, dose and the anthropometric measurements:
         //     { weight_loss: { medication, dose_mg, dilution, bmi, bmi_class,
         //                      measurements: { weight_kg, height_cm, waist_high_cm, … } } }
@@ -1514,7 +1601,7 @@
         const ENCOUNTER_CATEGORIES = [
             { id: 'consultation', title: 'Consulta estética', mode: 'check', itemId: 'general_consultation', intakeTrack: 'aesthetic' },
             { id: 'weight_loss', title: 'Consulta de pérdida de peso', mode: 'weight_loss', itemId: 'weight_loss_consultation', intakeTrack: 'weight_loss' },
-            { id: 'neuromodulators', title: 'Neuromoduladores (Botox)', short: 'Botox', mode: 'category_qty', qtyLabel: 'Unidades', unit: ['unidad', 'unidades'] },
+            { id: 'neuromodulators', title: 'Neuromoduladores (Botox)', short: 'Botox', mode: 'category_qty', qtyLabel: 'Unidades', unit: ['unidad', 'unidades'], unitPrice: 9 },
             { id: 'fillers', title: 'Rellenos dérmicos (ácido hialurónico)', short: 'Relleno', mode: 'category_qty', qtyLabel: 'Jeringas', unit: ['jeringa', 'jeringas'] },
             { id: 'filler_dissolution', title: 'Disolución de rellenos (filler removal)', mode: 'check', itemId: 'filler_dissolution' },
             { id: 'biostimulators', title: 'Bioestimuladores', mode: 'item_qty' },
@@ -1629,6 +1716,10 @@
                         <span class="w-full sm:w-52 text-xs">Dilución</span>
                         <input type="text" class="wl-dilution flex-1 min-w-[10rem]" placeholder="Ej: 10 mg en 2 mL" style="padding:6px 8px;font-size:12px;">
                     </div>
+                    <div class="flex items-center gap-x-2 gap-y-1 flex-wrap">
+                        <span class="w-full sm:w-52 text-xs">Monto</span>
+                        <input type="text" inputmode="decimal" class="enc-qty enc-cat-amount" placeholder="$ Monto">
+                    </div>
                 </div>
                 <div class="space-y-2 pt-3 border-t border-[#EDE1E7]">
                     <p class="enc-label">Medidas antropométricas <span class="normal-case tracking-normal font-normal opacity-60">(todas opcionales)</span></p>
@@ -1692,6 +1783,7 @@
                 medication,
                 dose_mg: parseQty(catEl.querySelector('.wl-dose').value),
                 dilution: catEl.querySelector('.wl-dilution').value.trim() || null,
+                amount: parseAmount(catEl.querySelector('.enc-cat-amount').value) || null,
                 bmi,
                 bmi_class: bmiClass(bmi),
                 measurements,
@@ -1708,6 +1800,7 @@
             other.value = known ? '' : med;
             catEl.querySelector('.wl-dose').value = entry.dose_mg ? formatMeasure(entry.dose_mg) : '';
             catEl.querySelector('.wl-dilution').value = entry.dilution || '';
+            catEl.querySelector('.enc-cat-amount').value = entry.amount ? Number(entry.amount).toFixed(2) : '';
             const m = entry.measurements || {};
             catEl.querySelectorAll('.wl-m').forEach(input => { input.value = m[input.dataset.key] ? formatMeasure(m[input.dataset.key]) : ''; });
             refreshWeightLossBlock();
@@ -1769,6 +1862,12 @@
                             <span class="text-sm font-semibold">${cat.title}</span>
                         </label>
                         ${intakeNotice(cat)}
+                        <div class="enc-cat-body hidden border-t border-[#EDE1E7] px-3 py-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs opacity-70">Monto:</span>
+                                <input type="text" inputmode="decimal" class="enc-qty enc-cat-amount" placeholder="$ Monto">
+                            </div>
+                        </div>
                     </div>`;
                 }
                 if (cat.mode === 'weight_loss') {
@@ -1789,7 +1888,8 @@
                             <input type="checkbox" class="enc-item-check accent-[#B76E88]">
                             <span class="text-sm font-light">${escapeHtml(item.es)}</span>
                         </label>
-                        ${cat.mode === 'item_qty' ? `<input type="text" inputmode="decimal" class="enc-qty enc-item-qty hidden" placeholder="${qtyPlaceholder(ENCOUNTER_ITEM_UNITS[item.id])}">` : ''}
+                        ${cat.mode === 'item_qty' ? `<input type="text" inputmode="decimal" class="enc-qty enc-item-qty hidden" placeholder="${qtyPlaceholder(ENCOUNTER_ITEM_UNITS[item.id])}">
+                        <input type="text" inputmode="decimal" class="enc-qty enc-item-amount hidden" placeholder="$ Monto">` : ''}
                     </div>`).join('');
                 return `
                     <div class="enc-cat border border-[#EDE1E7] rounded-lg bg-white" data-cat="${cat.id}">
@@ -1799,9 +1899,16 @@
                         </label>
                         <div class="enc-cat-body hidden border-t border-[#EDE1E7] px-3 py-3 space-y-2">
                             ${cat.mode === 'category_qty' ? `
-                            <div class="flex items-center gap-2 pb-1">
+                            <div class="flex items-center gap-2 pb-1 flex-wrap">
                                 <span class="text-xs opacity-70">${cat.qtyLabel}:</span>
                                 <input type="text" inputmode="decimal" class="enc-qty enc-cat-qty" placeholder="${cat.qtyLabel}">
+                                ${cat.unitPrice ? `
+                                <span class="text-xs opacity-70">×</span>
+                                <input type="text" inputmode="decimal" class="enc-qty enc-cat-price" style="width:4.5rem !important;" value="${cat.unitPrice}" data-default="${cat.unitPrice}" aria-label="Precio por unidad">
+                                <span class="text-xs opacity-70">USD =</span>
+                                <span class="enc-cat-total text-sm font-semibold">$0.00</span>` : `
+                                <span class="text-xs opacity-70 ml-2">Monto:</span>
+                                <input type="text" inputmode="decimal" class="enc-qty enc-cat-amount" placeholder="$ Monto">`}
                             </div>` : ''}
                             ${items}
                             <div class="enc-other flex items-center gap-3 flex-wrap">
@@ -1810,7 +1917,8 @@
                                     <span class="text-sm font-light">Otro</span>
                                 </label>
                                 <input type="text" class="enc-other-label hidden flex-1 min-w-[10rem]" placeholder="¿Cuál?" style="padding:6px 8px;font-size:12px;">
-                                ${cat.mode === 'item_qty' ? `<input type="text" inputmode="decimal" class="enc-qty enc-other-qty hidden" placeholder="Cantidad">` : ''}
+                                ${cat.mode === 'item_qty' ? `<input type="text" inputmode="decimal" class="enc-qty enc-other-qty hidden" placeholder="Cantidad">
+                                <input type="text" inputmode="decimal" class="enc-qty enc-other-amount hidden" placeholder="$ Monto">` : ''}
                             </div>
                         </div>
                     </div>`;
@@ -1832,9 +1940,10 @@
                     body.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
                     body.querySelectorAll('input[type="text"]').forEach(input => { input.value = ''; });
                     body.querySelectorAll('select').forEach(select => { select.value = ''; });
-                    body.querySelectorAll('.enc-item-qty, .enc-other-label, .enc-other-qty, .wl-medication-other').forEach(input => input.classList.add('hidden'));
+                    body.querySelectorAll('.enc-item-qty, .enc-item-amount, .enc-other-label, .enc-other-qty, .enc-other-amount, .wl-medication-other').forEach(input => input.classList.add('hidden'));
+                    body.querySelectorAll('.enc-cat-price').forEach(input => { input.value = input.dataset.default; });
                 }
-                if (el.checked && body) body.querySelector('.enc-cat-qty')?.focus();
+                if (el.checked && body) (body.querySelector('.enc-cat-qty') || body.querySelector('.enc-cat-amount'))?.focus();
                 if (catEl.dataset.cat === 'weight_loss') {
                     // Height rarely changes: start from the last one measured.
                     const height = body.querySelector('.wl-m[data-key="height_cm"]');
@@ -1847,20 +1956,52 @@
                 other.classList.toggle('hidden', el.value !== 'other');
                 if (el.value === 'other') other.focus(); else other.value = '';
             } else if (el.classList.contains('enc-item-check')) {
-                const qty = el.closest('.enc-item').querySelector('.enc-item-qty');
+                const row = el.closest('.enc-item');
+                const qty = row.querySelector('.enc-item-qty');
                 if (qty) {
-                    qty.classList.toggle('hidden', !el.checked);
-                    if (el.checked) qty.focus(); else qty.value = '';
+                    [qty, row.querySelector('.enc-item-amount')].forEach(input => {
+                        input.classList.toggle('hidden', !el.checked);
+                        if (!el.checked) input.value = '';
+                    });
+                    if (el.checked) qty.focus();
                 }
             } else if (el.classList.contains('enc-other-check')) {
                 const row = el.closest('.enc-other');
-                row.querySelectorAll('.enc-other-label, .enc-other-qty').forEach(input => {
+                row.querySelectorAll('.enc-other-label, .enc-other-qty, .enc-other-amount').forEach(input => {
                     input.classList.toggle('hidden', !el.checked);
                     if (!el.checked) input.value = '';
                 });
                 if (el.checked) row.querySelector('.enc-other-label').focus();
             }
             refreshEncounterSummary();
+            refreshEncounterTotal();
+        }
+
+        // Follows the amounts while they add up to it. If the total was typed by
+        // hand (or an old encounter has one with no amounts), it stays until an
+        // amount is touched again.
+        let encTotalAuto = true;
+
+        function encounterAmountsSum(detail) {
+            let sum = 0;
+            Object.values(detail).forEach(entry => {
+                sum += Number(entry.amount) || 0;
+                (entry.items || []).forEach(item => { sum += Number(item.amount) || 0; });
+                sum += Number(entry.other?.amount) || 0;
+            });
+            return roundTo(sum, 2);
+        }
+
+        function refreshEncounterTotal() {
+            document.querySelectorAll('#enc-procedures .enc-cat-total').forEach(total => {
+                const row = total.parentElement;
+                const units = parseQty(row.querySelector('.enc-cat-qty').value) || 0;
+                const price = parseAmount(row.querySelector('.enc-cat-price').value) || 0;
+                total.innerText = formatAmount(roundTo(units * price, 2));
+            });
+            if (!encTotalAuto) return;
+            const sum = encounterAmountsSum(getEncounterProcedures());
+            document.getElementById('enc-amount').value = sum > 0 ? sum.toFixed(2) : '';
         }
 
         function parseQty(value) {
@@ -1877,10 +2018,20 @@
                 const entry = {};
                 const catQty = catEl.querySelector('.enc-cat-qty');
                 if (catQty) entry.qty = parseQty(catQty.value);
+                const catAmount = catEl.querySelector('.enc-cat-amount');
+                if (catAmount) entry.amount = parseAmount(catAmount.value) || null;
+                const catPrice = catEl.querySelector('.enc-cat-price');
+                if (catPrice) {
+                    entry.price_per_unit = parseAmount(catPrice.value) ?? null;
+                    entry.amount = entry.qty && entry.price_per_unit ? roundTo(entry.qty * entry.price_per_unit, 2) : null;
+                }
                 entry.items = Array.from(catEl.querySelectorAll('.enc-item')).filter(row => row.querySelector('.enc-item-check').checked).map(row => {
                     const item = { id: row.dataset.item };
                     const qty = row.querySelector('.enc-item-qty');
-                    if (qty) item.qty = parseQty(qty.value);
+                    if (qty) {
+                        item.qty = parseQty(qty.value);
+                        item.amount = parseAmount(row.querySelector('.enc-item-amount').value) || null;
+                    }
                     return item;
                 });
                 const otherCheck = catEl.querySelector('.enc-other-check');
@@ -1888,7 +2039,10 @@
                 if (otherCheck?.checked && otherLabel) {
                     entry.other = { label: otherLabel };
                     const otherQty = catEl.querySelector('.enc-other-qty');
-                    if (otherQty) entry.other.qty = parseQty(otherQty.value);
+                    if (otherQty) {
+                        entry.other.qty = parseQty(otherQty.value);
+                        entry.other.amount = parseAmount(catEl.querySelector('.enc-other-amount').value) || null;
+                    }
                 }
                 detail[catId] = entry;
             });
@@ -1919,12 +2073,23 @@
                 if (catId === 'weight_loss') { setWeightLossDetail(catEl, entry); return; }
                 const catQty = catEl.querySelector('.enc-cat-qty');
                 if (catQty && entry.qty) catQty.value = entry.qty;
+                const catAmount = catEl.querySelector('.enc-cat-amount');
+                if (catAmount && entry.amount) catAmount.value = Number(entry.amount).toFixed(2);
+                // Older encounters have units but no price: left empty rather than assumed.
+                const catPrice = catEl.querySelector('.enc-cat-price');
+                if (catPrice) catPrice.value = entry.price_per_unit ?? (entry.qty ? '' : catPrice.dataset.default);
                 (entry.items || []).forEach(item => {
                     const row = catEl.querySelector(`.enc-item[data-item="${item.id}"]`);
                     if (!row) return;
                     row.querySelector('.enc-item-check').checked = true;
                     const qty = row.querySelector('.enc-item-qty');
-                    if (qty) { qty.classList.remove('hidden'); if (item.qty) qty.value = item.qty; }
+                    if (qty) {
+                        qty.classList.remove('hidden');
+                        if (item.qty) qty.value = item.qty;
+                        const amount = row.querySelector('.enc-item-amount');
+                        amount.classList.remove('hidden');
+                        if (item.amount) amount.value = Number(item.amount).toFixed(2);
+                    }
                 });
                 if (entry.other?.label) {
                     const row = catEl.querySelector('.enc-other');
@@ -1933,7 +2098,13 @@
                     label.classList.remove('hidden');
                     label.value = entry.other.label;
                     const qty = row.querySelector('.enc-other-qty');
-                    if (qty) { qty.classList.remove('hidden'); if (entry.other.qty) qty.value = entry.other.qty; }
+                    if (qty) {
+                        qty.classList.remove('hidden');
+                        if (entry.other.qty) qty.value = entry.other.qty;
+                        const amount = row.querySelector('.enc-other-amount');
+                        amount.classList.remove('hidden');
+                        if (entry.other.amount) amount.value = Number(entry.other.amount).toFixed(2);
+                    }
                 }
             });
             showWeightLossPrevious();
@@ -2160,7 +2331,12 @@
         document.getElementById('enc-procedures').addEventListener('input', (e) => {
             if (e.target.matches('.wl-m')) refreshWeightLossBlock();
             if (e.target.matches('.enc-qty, .enc-other-label, .wl-medication-other')) refreshEncounterSummary();
+            if (e.target.matches('.enc-cat-qty, .enc-cat-price, .enc-cat-amount, .enc-item-amount, .enc-other-amount')) {
+                encTotalAuto = true;
+                refreshEncounterTotal();
+            }
         });
+        document.getElementById('enc-amount').addEventListener('input', () => { encTotalAuto = false; });
         document.getElementById('enc-summary').addEventListener('input', () => {
             document.getElementById('enc-summary-regen').classList.toggle('hidden', document.getElementById('enc-summary').value === encSummaryAuto);
         });
@@ -2221,6 +2397,7 @@
             'recommendations-view': ['Recomendaciones', 'Textos de cuidados que se envían al paciente desde su historia.'],
             'messages-view': ['Mensajes', 'WhatsApp de la clínica. Los chats sin leer salen resaltados en verde.'],
             'schedule-view': ['Horarios', 'Días y horas en que se puede agendar en cada clínica.'],
+            'payments-view': ['Cobros', 'Elige paciente y encuentro, el método de pago y marca el pago. Abajo, todos los pagos por día.'],
         };
 
         function currentAdminView() {
@@ -2249,6 +2426,7 @@
             else if (viewId === 'recommendations-view') fetchRecommendationTemplates();
             else if (viewId === 'messages-view') loadConversations();
             else if (viewId === 'schedule-view') loadSchedule();
+            else if (viewId === 'payments-view') loadPaymentsView();
             else fetchPatients();
         }
 
@@ -2660,6 +2838,7 @@
                 { label: '📱 WhatsApp por la app', run: () => openWhatsAppApp(patientId) },
                 { label: '📅 Agregar cita', run: () => openAppointmentModal({ patientId }) },
                 { label: '✏️ Editar paciente', run: () => openEditPatient(patientId) },
+                { label: '🔑 Enviar enlace de contraseña', run: () => sendPasswordLink(patientId) },
                 { label: '🗑 Eliminar paciente', danger: true, run: () => deletePatient(patientId) },
             ];
         }
@@ -2672,8 +2851,38 @@
                 { label: '✏️ Modificar', run: () => openAppointmentModal({ appointment: current() }) },
                 { label: '✅ Confirmar', run: decide('confirmed') },
                 { label: '✖ Cancelar', run: decide('cancelled') },
+                { label: '🔔 Enviar recordatorio ahora', run: () => sendReminderNow(appt.id) },
                 { label: '🗑 Eliminar', danger: true, run: () => deleteAppointmentAdmin(appt.id) },
             ];
+        }
+
+        // Same reminder the hourly job sends, on the spot, reporting what happened.
+        async function sendReminderNow(appointmentId) {
+            if (!confirm('¿Enviar ahora al paciente el recordatorio por correo y WhatsApp? Solo funciona con citas de mañana.')) return;
+            const { data, error } = await _supabase.functions.invoke('send-appointment-reminders', { body: { appointment_id: appointmentId } });
+            if (error || data?.error) {
+                const problem = await functionError(error, data);
+                alert(problem === 'not_tomorrow' ? 'Solo se puede enviar para citas de mañana (el texto dice "tu cita de mañana").' : 'No se pudo enviar: ' + problem);
+                return;
+            }
+            alert([
+                data.sent ? '✓ Correo enviado.' : '— Sin correo.',
+                data.whatsapp ? '✓ WhatsApp enviado.' : '— Sin WhatsApp.',
+                ...(data.errors || []).map(e => '✗ ' + e),
+            ].join('\n'));
+            fetchAppointments();
+        }
+
+        async function sendPasswordLink(patientId) {
+            if (!confirm('¿Enviar a este paciente un enlace para cambiar su contraseña?')) return;
+            const { data, error } = await _supabase.functions.invoke('request-password-reset', { body: { patient_id: patientId } });
+            if (error || data?.error) {
+                const problem = await functionError(error, data);
+                const known = { no_login: 'Este paciente todavía no tiene acceso al portal.', no_email: 'Este paciente no tiene correo registrado.' };
+                alert(known[problem] || 'No se pudo enviar: ' + problem);
+                return;
+            }
+            alert('✓ Enlace enviado a ' + data.sent_to);
         }
 
         function openRowMenu(event, key) {
@@ -3043,7 +3252,7 @@
                     </div>
                     ${appts.map(a => {
                         const chips = [];
-                        if (a.patient_confirmed_at) chips.push('<span class="text-green-700">✅ Paciente confirmó</span>');
+                        if (a.patient_confirmed_at) chips.push(`<span class="text-green-700">✅ Paciente confirmó${confirmedViaText(a)}</span>`);
                         if (a.booked_via === 'web') chips.push('<span class="text-[#B76E88]">🌐 Agendó por la web</span>');
                         if (a.patient_id && d.intakeMissing.has(a.patient_id)) chips.push('<span class="text-amber-700">⚠️ Historia incompleta</span>');
                         return `
@@ -3423,6 +3632,31 @@
         // Same plain-text conventions as renderRecommendationBody ("- " bullets,
         // "1. " numbered), turned into WhatsApp formatting: each recommendation
         // under its *bold* title with • bullets, plus a greeting and signature.
+        // The treatment's name for the WhatsApp template ("…las recomendaciones de tu X del 3 de noviembre").
+        function encounterTreatmentName(detail) {
+            for (const cat of ENCOUNTER_CATEGORIES) {
+                const entry = detail[cat.id];
+                if (!entry) continue;
+                if (cat.short) return `aplicación de ${cat.short}`;
+                if (entry.items?.length) return shortTreatmentLabel(entry.items[0].id);
+                if (entry.other?.label) return entry.other.label;
+                return cat.title.toLowerCase();
+            }
+            return 'tratamiento';
+        }
+
+        // WhatsApp allows up to 4096 characters per message: longer text is split between paragraphs.
+        function splitWhatsAppText(text, limit = 4000) {
+            const parts = [];
+            let current = '';
+            text.split('\n\n').forEach(paragraph => {
+                if (current && (current + '\n\n' + paragraph).length > limit) { parts.push(current); current = ''; }
+                current = current ? current + '\n\n' + paragraph : paragraph;
+            });
+            if (current) parts.push(current);
+            return parts;
+        }
+
         function buildWhatsAppRecommendations(recs) {
             const firstName = String(currentPatientName || '').trim().split(/\s+/)[0] || '';
             const sections = recs.map(({ title, body }) => {
@@ -3566,6 +3800,7 @@
                 const libraryResult = await saveNewEncounterRecommendationsToLibrary();
                 if (libraryResult) results.push(libraryResult);
                 let sentIds = [];
+                let whatsappFallback = false;
                 const { data: inserted, error: insertError } = await _supabase.from('patient_messages').insert(recs.map(({ title, body }) => ({
                     patient_id: currentPatientId,
                     subject: title,
@@ -3593,7 +3828,29 @@
                         if (mailError) console.error('Send recommendation email error:', mailError.message);
                         results.push(mailError ? '✗ No se pudo enviar el correo: ' + mailError.message : '✓ Correo enviado.');
                     }
-                    if (wantWhatsApp) results.push('→ Ahora elige cómo abrir WhatsApp (app o web) para enviarlo.');
+                    if (wantWhatsApp) {
+                        // From the clinic number, without opening anything. The modal stays as the fallback.
+                        const { data: waData, error: waError } = await _supabase.functions.invoke('whatsapp-send', {
+                            body: {
+                                recommendation: {
+                                    patient_id: currentPatientId,
+                                    texts: splitWhatsAppText(buildWhatsAppRecommendations(recs)),
+                                    tratamiento: encounterTreatmentName(getEncounterProcedures()),
+                                    fecha: formatDayMonthEs(encounter.visit_date),
+                                },
+                            },
+                        });
+                        if (waError || waData?.error) {
+                            const problem = await functionError(waError, waData);
+                            console.error('Send recommendation WhatsApp error:', problem);
+                            whatsappFallback = true;
+                            results.push('✗ WhatsApp automático falló (' + problem + '). Ahora elige cómo abrir WhatsApp para enviarlo a mano.');
+                        } else {
+                            results.push(waData.delivered
+                                ? '✓ WhatsApp enviado.'
+                                : '✓ WhatsApp: le llegó un aviso. Al tocar "Ver recomendaciones" recibe el texto completo; mientras tanto queda pendiente en su chat de Mensajes.');
+                        }
+                    }
                 }
 
                 // 3) Done: close the encounter and show the updated history.
@@ -3601,8 +3858,8 @@
                 await toggleSoapForm(false);
                 await loadNotes();
                 alert(results.join('\n'));
-                // 4) WhatsApp: the admin opens it from the modal (app or web).
-                if (wantWhatsApp && !insertError) {
+                // 4) WhatsApp couldn't go by itself: the admin opens it from the modal (app or web).
+                if (whatsappFallback) {
                     openWhatsAppModal({ name: currentPatientName, phone: currentPatientPhone, text: buildWhatsAppRecommendations(recs), sentMessageIds: sentIds });
                 }
             } finally {
@@ -3612,14 +3869,293 @@
 
         // Reminder (sent the day before by send-appointment-reminders) and the
         // patient's answer from the reminder link (cita.html).
+        function confirmedViaText(appt) {
+            return { whatsapp: ' por WhatsApp', email: ' por correo' }[appt.patient_confirmed_via] || '';
+        }
+
         function appointmentReminderNote(appt) {
             const lines = [];
             if (appt.patient_cancelled_at) lines.push('<span class="text-red-600">❌ Canceló el paciente</span>');
-            else if (appt.patient_confirmed_at) lines.push('<span class="text-green-700">✅ Paciente confirmó</span>');
-            if (appt.reminder_channel === 'email') lines.push('<span class="opacity-50">📧 Recordatorio enviado</span>');
+            else if (appt.patient_confirmed_at) lines.push(`<span class="text-green-700">✅ Paciente confirmó${confirmedViaText(appt)}</span>`);
+            if (String(appt.reminder_channel || '').split('+').includes('email')) lines.push('<span class="opacity-50">📧 Recordatorio enviado</span>');
             if (appt.whatsapp_reminder_at) lines.push('<span class="text-[#128C7E]">💬 WhatsApp enviado</span>');
             else if (appt.reminder_channel === 'none') lines.push('<span class="text-amber-700">⚠️ Sin correo: recordar por teléfono</span>');
             return lines.length ? `<div class="mt-1 text-[9px] font-bold space-y-0.5">${lines.map(l => `<div>${l}</div>`).join('')}</div>` : '';
+        }
+
+        // --- COBROS ---
+        // The top is what the patient sees while paying; the amount comes from the
+        // encounter chosen and can be changed. Each payment is one row in payments.
+        const PAY_TAX_RATE = 4.5;                 // percent, on debit, credit and check
+        const PAY_TAXED_METHODS = ['debit', 'credit', 'check'];
+        const PAY_METHODS = { cash: 'Efectivo', transfer: 'Transferencia', debit: 'Tarjeta de débito', credit: 'Tarjeta de crédito', check: 'Cheque', other: 'Otro' };
+        // Each admin account has its own quota, per calendar month.
+        const FRIEND_COUPON_AMOUNT = 30;
+        const FRIEND_COUPONS_PER_MONTH = 5;
+        let payPatient = null;
+        let payEncounters = {};
+        let payPaidEncounters = {};
+        let payFriendLeft = 0;
+
+        async function loadPaymentsView() {
+            const date = document.getElementById('pay-date');
+            if (!date.value) date.value = clinicDateIso(0);
+            const month = document.getElementById('pay-month');
+            if (!month.value) month.value = clinicDateIso(0).slice(0, 7);
+            if (!allPatients.length) fetchPatients();
+            renderPayTotals();
+            await Promise.all([loadPaymentsList(), loadFriendCoupons()]);
+        }
+
+        function payPatientLabel(p) {
+            return `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Paciente';
+        }
+
+        function renderPayPatientResults() {
+            const box = document.getElementById('pay-patient-results');
+            const query = document.getElementById('pay-patient').value.trim().toLowerCase();
+            if (!query) { box.classList.add('hidden'); return; }
+            const digits = query.replace(/\D/g, '');
+            const matches = allPatients.filter(p => payPatientLabel(p).toLowerCase().includes(query)
+                || (digits.length >= 3 && String(p.phone || '').replace(/\D/g, '').includes(digits))).slice(0, 12);
+            box.innerHTML = matches.length
+                ? matches.map(p => `<button type="button" onclick="pickPayPatient('${p.id}')" class="w-full text-left px-3 py-2 text-sm hover:bg-[#FBF0F3]">${escapeHtml(payPatientLabel(p))} <span class="text-xs opacity-50">${escapeHtml(formatPhone(p.phone))}</span></button>`).join('')
+                : '<p class="px-3 py-2 text-xs opacity-50">Sin resultados</p>';
+            box.classList.remove('hidden');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#pay-patient, #pay-patient-results')) document.getElementById('pay-patient-results').classList.add('hidden');
+        });
+
+        async function pickPayPatient(patientId) {
+            payPatient = allPatients.find(p => p.id === patientId) || null;
+            if (!payPatient) return;
+            document.getElementById('pay-patient').value = payPatientLabel(payPatient);
+            document.getElementById('pay-patient-results').classList.add('hidden');
+
+            const [{ data: encounters, error }, { data: paid }] = await Promise.all([
+                _supabase.from('clinical_history').select('id, visit_date, visit_time, procedures_summary, procedures_detail, procedures_realized_ids, amount')
+                    .eq('patient_id', patientId).order('visit_date', { ascending: false }).order('visit_time', { ascending: false }),
+                _supabase.from('payments').select('encounter_id, total, paid_on').eq('patient_id', patientId).is('voided_at', null),
+            ]);
+            if (error) { alert('No se pudieron cargar los encuentros: ' + error.message); return; }
+            if (payPatient?.id !== patientId) return;
+            payEncounters = Object.fromEntries((encounters || []).map(n => [n.id, n]));
+            payPaidEncounters = {};
+            (paid || []).forEach(x => { if (x.encounter_id) payPaidEncounters[x.encounter_id] = x; });
+
+            const select = document.getElementById('pay-encounter');
+            select.disabled = false;
+            select.innerHTML = (encounters || []).map(n => {
+                const parts = [formatVisitDate(n.visit_date), encounterSummaryText(n), formatAmount(n.amount)].filter(Boolean);
+                const label = parts.join(' · ');
+                return `<option value="${n.id}">${escapeHtml(label.length > 90 ? label.slice(0, 90) + '…' : label)}${payPaidEncounters[n.id] ? ' (pagado)' : ''}</option>`;
+            }).join('') + '<option value="">Sin encuentro (monto a mano)</option>';
+            // Starts on the latest visit not paid yet.
+            select.value = (encounters || []).find(n => !payPaidEncounters[n.id])?.id || '';
+            onPayEncounterChange();
+        }
+
+        function onPayEncounterChange() {
+            const id = document.getElementById('pay-encounter').value;
+            const encounter = payEncounters[id];
+            const amount = document.getElementById('pay-amount');
+            amount.value = encounter && encounter.amount !== null && encounter.amount !== undefined ? Number(encounter.amount).toFixed(2) : '';
+            const paid = payPaidEncounters[id];
+            const note = document.getElementById('pay-encounter-note');
+            note.className = 'text-xs mt-2 min-h-[1rem] ' + (paid ? 'text-amber-700 font-semibold' : 'opacity-60');
+            note.innerText = paid
+                ? `⚠️ Este encuentro ya tiene un pago de ${formatAmount(paid.total)} del ${formatVisitDate(paid.paid_on)}.`
+                : (encounter ? encounterSummaryText(encounter) : '');
+            renderPayTotals();
+        }
+
+        function togglePayExtras() {
+            document.getElementById('pay-extras').classList.toggle('hidden');
+        }
+
+        // Base, discount, tax and total from what's on screen. amount is undefined when mistyped.
+        function payFigures() {
+            const amount = parseAmount(document.getElementById('pay-amount').value);
+            const method = document.getElementById('pay-method').value;
+            const friend = document.getElementById('pay-friend').checked;
+            const discount = friend ? Math.min(FRIEND_COUPON_AMOUNT, amount || 0) : 0;
+            const base = (amount || 0) - discount;
+            const taxRate = PAY_TAXED_METHODS.includes(method) ? PAY_TAX_RATE : 0;
+            const tax = roundTo(base * taxRate / 100, 2);
+            return { amount, method, friend, discount, taxRate, tax, total: roundTo(base + tax, 2) };
+        }
+
+        function renderPayTotals() {
+            const f = payFigures();
+            document.getElementById('pay-promo-row').classList.toggle('hidden', !f.friend);
+            document.getElementById('pay-promo').innerText = '−' + formatAmount(f.discount);
+            document.getElementById('pay-tax-row').classList.toggle('hidden', !f.taxRate);
+            document.getElementById('pay-tax').innerText = formatAmount(f.tax);
+            document.getElementById('pay-total').innerText = formatAmount(f.total);
+        }
+
+        async function loadFriendCoupons() {
+            const { data: { user } } = await _supabase.auth.getUser();
+            const { count, error } = await _supabase.from('payments').select('id', { count: 'exact', head: true })
+                .eq('friend_coupon', true).eq('created_by', user?.id).is('voided_at', null)
+                .gte('paid_on', clinicDateIso(0).slice(0, 7) + '-01');
+            const left = document.getElementById('pay-friend-left');
+            if (error) { left.innerText = ''; return; }
+            payFriendLeft = Math.max(0, FRIEND_COUPONS_PER_MONTH - (count || 0));
+            left.innerText = `te quedan ${payFriendLeft} de ${FRIEND_COUPONS_PER_MONTH} este mes`;
+            const check = document.getElementById('pay-friend');
+            check.disabled = !payFriendLeft;
+            if (!payFriendLeft) { check.checked = false; renderPayTotals(); }
+        }
+
+        function resetPayForm() {
+            payPatient = null;
+            payEncounters = {};
+            payPaidEncounters = {};
+            document.getElementById('pay-patient').value = '';
+            const select = document.getElementById('pay-encounter');
+            select.innerHTML = '<option value="">Primero elige un paciente</option>';
+            select.disabled = true;
+            document.getElementById('pay-encounter-note').innerText = '';
+            document.getElementById('pay-amount').value = '';
+            document.getElementById('pay-method').value = 'cash';
+            document.getElementById('pay-date').value = clinicDateIso(0);
+            document.getElementById('pay-friend').checked = false;
+            document.getElementById('pay-extras').classList.add('hidden');
+            renderPayTotals();
+        }
+
+        async function submitPayment() {
+            if (!payPatient) { alert('Elige primero el paciente.'); return; }
+            const f = payFigures();
+            if (f.amount === undefined || f.amount === null) { alert('Escribe el monto, por ejemplo 250 o 250.50.'); document.getElementById('pay-amount').focus(); return; }
+            const paidOn = document.getElementById('pay-date').value;
+            if (!paidOn) { alert('Elige la fecha del pago.'); return; }
+            if (f.friend && !payFriendLeft) { alert('Ya no quedan cupos este mes.'); return; }
+            const encounterId = document.getElementById('pay-encounter').value || null;
+            if (encounterId && payPaidEncounters[encounterId] && !confirm('Este encuentro ya tiene un pago. ¿Registrar otro?')) return;
+
+            const btn = document.getElementById('pay-submit');
+            btn.disabled = true;
+            try {
+                const { data: { user } } = await _supabase.auth.getUser();
+                const { error } = await _supabase.from('payments').insert({
+                    patient_id: payPatient.id,
+                    patient_name: payPatientLabel(payPatient),
+                    encounter_id: encounterId,
+                    visit_date: payEncounters[encounterId]?.visit_date || null,
+                    paid_on: paidOn,
+                    method: f.method,
+                    amount: f.amount,
+                    discount: f.discount,
+                    friend_coupon: f.friend,
+                    tax_rate: f.taxRate,
+                    tax: f.tax,
+                    total: f.total,
+                    created_by: user?.id || null,
+                });
+                if (error) { alert('No se pudo registrar el pago: ' + error.message); return; }
+                resetPayForm();
+                document.getElementById('pay-month').value = paidOn.slice(0, 7);
+                await Promise.all([loadPaymentsList(), loadFriendCoupons()]);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function loadPaymentsList() {
+            const box = document.getElementById('pay-list');
+            const totalEl = document.getElementById('pay-month-total');
+            const month = document.getElementById('pay-month').value || clinicDateIso(0).slice(0, 7);
+            const [y, m] = month.split('-').map(Number);
+            const nextMonth = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`;
+            const { data, error } = await _supabase.from('payments').select('*').is('voided_at', null)
+                .gte('paid_on', month + '-01').lt('paid_on', nextMonth)
+                .order('paid_on', { ascending: false }).order('created_at', { ascending: false });
+            if (error) {
+                const missing = /payments|schema cache/i.test(error.message || '');
+                box.innerHTML = `<p class="text-sm text-red-500 text-center py-8">${escapeHtml(missing ? 'Falta correr el SQL de supabase/migrations/20261103_reminder_fix_and_payments.sql en Supabase.' : 'No se pudieron cargar los pagos: ' + error.message)}</p>`;
+                totalEl.innerText = '';
+                return;
+            }
+            const rows = data || [];
+            totalEl.innerHTML = rows.length ? `Total del mes <span class="font-bold text-base">${escapeHtml(formatAmount(rows.reduce((sum, r) => sum + Number(r.total), 0)))}</span>` : '';
+            if (!rows.length) {
+                box.innerHTML = '<p class="text-sm opacity-40 italic text-center py-8">No hay pagos registrados este mes.</p>';
+                return;
+            }
+            const days = new Map();
+            rows.forEach(r => { if (!days.has(r.paid_on)) days.set(r.paid_on, []); days.get(r.paid_on).push(r); });
+            const th = 'px-4 py-2 text-left text-[9px] uppercase tracking-widest font-bold text-[#B76E88] whitespace-nowrap';
+            box.innerHTML = [...days.entries()].map(([day, list]) => `
+                <div class="bg-white border border-[#EDE1E7] rounded-xl overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <caption class="px-4 py-3 text-left font-semibold capitalize border-b border-[#EDE1E7]">${escapeHtml(formatDateLongEs(day))}</caption>
+                        <thead><tr>
+                            <th class="${th}">Paciente</th><th class="${th}">Encuentro</th><th class="${th}">Fecha de pago</th><th class="${th}">Método</th>
+                            <th class="${th} text-right">Impuesto</th><th class="${th} text-right">Promoción</th><th class="${th} text-right">Monto total</th><th class="${th}">Observaciones</th>
+                        </tr></thead>
+                        <tbody>${list.map(paymentRowHtml).join('')}</tbody>
+                        <tfoot><tr class="border-t border-[#EDE1E7] bg-[#FDFBFC]">
+                            <td colspan="6" class="px-4 py-3 text-right text-[10px] uppercase tracking-widest font-bold text-[#B76E88]">Total del día</td>
+                            <td class="px-4 py-3 text-right font-bold text-base whitespace-nowrap">${escapeHtml(formatAmount(list.reduce((sum, r) => sum + Number(r.total), 0)))}</td>
+                            <td></td>
+                        </tr></tfoot>
+                    </table>
+                </div>`).join('');
+            box.querySelectorAll('.pay-notes').forEach(textarea => {
+                textarea.dataset.saved = textarea.value;
+                textarea.addEventListener('blur', () => savePaymentNotes(textarea));
+            });
+        }
+
+        function formatDateLongEs(iso) {
+            return new Date(String(iso).slice(0, 10) + 'T12:00:00Z').toLocaleDateString('es-ES', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
+        function paymentRowHtml(r) {
+            const voidItem = { label: '🗑 Anular pago', danger: true, run: () => voidPayment(r.id) };
+            const name = r.patient_id
+                ? patientNameCell(r.patient_id, r.patient_name, [{ label: '📋 Ver ficha', run: () => openHistoryById(r.patient_id) }, voidItem])
+                : escapeHtml(r.patient_name);
+            return `
+                <tr class="border-t border-gray-100 align-top">
+                    <td class="px-4 py-3 whitespace-nowrap">${name}</td>
+                    <td class="px-4 py-3 text-xs whitespace-nowrap">${r.visit_date ? escapeHtml(formatVisitDate(r.visit_date)) : '—'}</td>
+                    <td class="px-4 py-3 text-xs whitespace-nowrap">${escapeHtml(formatVisitDate(r.paid_on))}</td>
+                    <td class="px-4 py-3 text-xs whitespace-nowrap">${escapeHtml(PAY_METHODS[r.method] || r.method)}</td>
+                    <td class="px-4 py-3 text-xs text-right whitespace-nowrap">${Number(r.tax) ? escapeHtml(formatAmount(r.tax)) + ` <span class="opacity-50">(${Number(r.tax_rate)}%)</span>` : '—'}</td>
+                    <td class="px-4 py-3 text-xs text-right whitespace-nowrap">${Number(r.discount) ? '−' + escapeHtml(formatAmount(r.discount)) : '—'}</td>
+                    <td class="px-4 py-3 text-right font-semibold whitespace-nowrap">${escapeHtml(formatAmount(r.total))}</td>
+                    <td class="px-4 py-3 min-w-[14rem]">
+                        <textarea class="pay-notes resize-y" rows="1" data-id="${r.id}" style="padding:6px 8px;font-size:12px;" placeholder="Nota">${escapeHtml(r.notes || '')}</textarea>
+                        <p class="text-[9px] uppercase tracking-widest font-bold mt-0.5 h-3"></p>
+                    </td>
+                </tr>`;
+        }
+
+        // Notes save on their own when the box loses focus.
+        async function savePaymentNotes(textarea) {
+            if (textarea.value === textarea.dataset.saved) return;
+            const status = textarea.nextElementSibling;
+            status.className = 'text-[9px] uppercase tracking-widest font-bold mt-0.5 h-3 opacity-50';
+            status.innerText = 'Guardando…';
+            const { error } = await _supabase.from('payments').update({ notes: textarea.value.trim() || null }).eq('id', textarea.dataset.id);
+            status.className = 'text-[9px] uppercase tracking-widest font-bold mt-0.5 h-3 ' + (error ? 'text-red-500' : 'text-[#3A8C5F]');
+            status.innerText = error ? 'No se guardó' : '✓ Guardado';
+            if (error) { console.error('Save payment notes error:', error.message); return; }
+            textarea.dataset.saved = textarea.value;
+            setTimeout(() => { if (status.innerText === '✓ Guardado') status.innerText = ''; }, 2000);
+        }
+
+        async function voidPayment(id) {
+            if (!confirm('¿Anular este pago? Deja de contar en los totales y, si usó un cupo de amigos, el cupo se libera.')) return;
+            const { data: { user } } = await _supabase.auth.getUser();
+            const { error } = await _supabase.from('payments').update({ voided_at: new Date().toISOString(), voided_by: user?.id || null }).eq('id', id);
+            if (error) { alert('No se pudo anular: ' + error.message); return; }
+            await Promise.all([loadPaymentsList(), loadFriendCoupons()]);
         }
 
         // --- WHATSAPP INBOX ("Mensajes") ---
@@ -4416,8 +4952,8 @@
                 const name = `${a.profiles?.first_name || ''} ${a.profiles?.last_name || ''}`.trim() || 'Paciente';
                 const services = Array.isArray(a.service_type_ids) && a.service_type_ids.length ? formatTreatmentIds(a.service_type_ids) : (a.service_type || '');
                 const chips = [];
-                if (a.patient_confirmed_at) chips.push('<span class="text-green-700">✅ Confirmó</span>');
-                if (a.reminder_channel === 'email') chips.push('<span class="opacity-50">📧 Correo enviado</span>');
+                if (a.patient_confirmed_at) chips.push(`<span class="text-green-700">✅ Confirmó${confirmedViaText(a)}</span>`);
+                if (String(a.reminder_channel || '').split('+').includes('email')) chips.push('<span class="opacity-50">📧 Correo enviado</span>');
                 if (a.reminder_channel === 'none') chips.push('<span class="text-amber-700">⚠️ Sin correo</span>');
                 if (a.whatsapp_reminder_at) chips.push('<span class="text-[#128C7E]">💬 WhatsApp enviado</span>');
                 const hasPhone = !!whatsappNumber(a.profiles?.phone);
@@ -4856,6 +5392,8 @@
                 document.getElementById('enc-summary-regen').classList.toggle('hidden', document.getElementById('enc-summary').value === encSummaryAuto);
 
                 document.getElementById('enc-amount').value = note.amount !== null && note.amount !== undefined ? Number(note.amount).toFixed(2) : '';
+                encTotalAuto = note.amount === null || note.amount === undefined || Number(note.amount) === encounterAmountsSum(getEncounterProcedures());
+                refreshEncounterTotal();
                 const existingNotes = String(note.notes || '').replace(/\s+$/, '');
                 notesEl.value = existingNotes ? `${existingNotes}\n\n${encNotesStamp}` : encNotesStamp;
 
@@ -4881,6 +5419,7 @@
                 document.getElementById('enc-summary').value = '';
                 document.getElementById('enc-summary-regen').classList.add('hidden');
                 document.getElementById('enc-amount').value = '';
+                encTotalAuto = true;
                 notesEl.value = encNotesStamp;
                 document.getElementById('enc-legacy-body').innerHTML = '';
                 legacyEl.classList.add('hidden');
