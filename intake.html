@@ -2600,6 +2600,18 @@
             document.getElementById('m1-account-email').addEventListener('input', scheduleEmailAvailabilityCheck);
             document.getElementById('m1-account-dob').addEventListener('change', (e) => updateAgeDisplay(e.target.value, 'm1-account-age-display'));
             updatePregnancyVisibility('');
+            // From the admin's "Completar historia" for a patient booked with just
+            // name and phone: both come in the link, so the login lands on that record.
+            if (ADMIN_MODE) {
+                const prefill = new URLSearchParams(window.location.hash.slice(1));
+                if (prefill.get('first')) document.getElementById('m1-firstname').value = prefill.get('first');
+                if (prefill.get('last')) document.getElementById('m1-lastname').value = prefill.get('last');
+                if (prefill.get('cc')) document.getElementById('m1-account-phone-country').value = prefill.get('cc');
+                if (prefill.get('phone')) {
+                    document.getElementById('m1-account-phone').value = prefill.get('phone');
+                    schedulePhoneAvailabilityCheck();
+                }
+            }
         } else {
             document.getElementById('m1-profile-summary').classList.remove('hidden');
             const timeEstimateEl = document.getElementById('m1-time-estimate');

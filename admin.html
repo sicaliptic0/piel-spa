@@ -693,6 +693,7 @@
                     <p class="text-[10px] uppercase tracking-widest opacity-40">Registro clínico del paciente</p>
                     <p id="history-patient-contact" class="text-xs opacity-70 mt-1"></p>
                     <button type="button" id="history-whatsapp-btn" onclick="openWhatsAppForCurrentPatient()" class="hidden mt-2 text-[10px] uppercase tracking-widest font-bold text-[#128C7E] border border-[#25D366] px-3 py-1.5 rounded-full hover:bg-[#25D366] hover:text-white transition">💬 Enviar WhatsApp</button>
+                    <button type="button" onclick="openEditPatient(currentPatientId)" class="admin-only mt-2 text-[10px] uppercase tracking-widest font-bold text-[#2A2330] border border-[#2A2330] px-3 py-1.5 rounded-full hover:bg-[#2A2330] hover:text-white transition">✏️ Editar datos</button>
                     <button type="button" onclick="openAppointmentModal({ patientId: currentPatientId })" class="admin-only mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] border border-[#B76E88] px-3 py-1.5 rounded-full hover:bg-[#B76E88] hover:text-white transition">📅 Agregar cita</button>
                     <div id="history-appts" class="admin-only hidden mt-2 text-xs space-y-1"></div>
                 </div>
@@ -1133,11 +1134,11 @@
     </div>
 
     <!-- ===== EDIT PATIENT MODAL ===== -->
-    <div id="edit-patient-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+    <div id="edit-patient-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-[75] p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-lg p-8 rounded-2xl shadow-2xl relative overflow-y-auto max-h-[95vh]">
             <button onclick="closeEditPatient()" class="absolute top-4 right-6 text-2xl opacity-30 hover:opacity-100 transition">&times;</button>
-            <h3 class="text-2xl italic mb-1">Edit Patient</h3>
-            <p class="text-[10px] uppercase tracking-widest opacity-40 mb-6">Update patient record</p>
+            <h3 class="text-2xl italic mb-1">Editar paciente</h3>
+            <p class="text-[10px] uppercase tracking-widest opacity-40 mb-6">Datos personales del paciente</p>
 
             <form id="edit-patient-form" class="space-y-4">
                 <input type="hidden" id="ep-id">
@@ -1177,6 +1178,7 @@
                 <div>
                     <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Phone</label>
                     <input type="tel" id="ep-phone" placeholder="Phone number">
+                    <p class="text-[10px] opacity-50 mt-1">Si el paciente ya entra al portal, su usuario sigue siendo el teléfono con el que se registró.</p>
                 </div>
                 <div>
                     <label class="text-[9px] uppercase font-bold opacity-40 mb-1 block">Email</label>
@@ -1269,6 +1271,19 @@
             <div id="appt-patient-search-wrap">
                 <input type="text" id="appt-patient-search" oninput="renderApptPatientResults()" placeholder="Buscar por nombre o teléfono…" class="w-full text-sm border border-[#EDE1E7] rounded-lg px-3 py-2" autocomplete="off">
                 <div id="appt-patient-results" class="mt-1 border border-[#EDE1E7] rounded-lg divide-y divide-[#EDE1E7] max-h-48 overflow-y-auto hidden"></div>
+                <button type="button" id="appt-new-patient-btn" onclick="toggleApptNewPatient(true)" class="mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline">+ Paciente nuevo (solo nombre y teléfono)</button>
+                <div id="appt-new-patient" class="hidden mt-2 border border-[#EDE1E7] bg-[#FDFBFC] rounded-lg p-3 space-y-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input type="text" id="appt-new-first" placeholder="Nombre" autocomplete="off" style="padding:8px;font-size:13px;">
+                        <input type="text" id="appt-new-last" placeholder="Apellido" autocomplete="off" style="padding:8px;font-size:13px;">
+                    </div>
+                    <input type="tel" id="appt-new-phone" placeholder="Teléfono, ej. 929 555 0000 (otro país: +58…)" autocomplete="off" style="padding:8px;font-size:13px;">
+                    <p class="text-[10px] opacity-60">Cuando venga a la consulta, en su historia toca "Completar con el paciente": con este teléfono se le crea su usuario y queda todo en la misma ficha.</p>
+                    <div class="flex gap-3">
+                        <button type="button" id="appt-new-save" onclick="createQuickPatient()" class="bg-[#2A2330] text-white px-4 py-2 rounded-lg text-[10px] uppercase tracking-widest font-bold hover:bg-[#1D1822] disabled:opacity-40">Crear y usar</button>
+                        <button type="button" onclick="toggleApptNewPatient(false)" class="text-[10px] uppercase tracking-widest font-bold opacity-50 hover:opacity-100">Cancelar</button>
+                    </div>
+                </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
@@ -5891,8 +5906,79 @@
             updateApptChosen();
         }
 
+        function toggleApptNewPatient(show) {
+            document.getElementById('appt-new-patient').classList.toggle('hidden', !show);
+            document.getElementById('appt-new-patient-btn').classList.toggle('hidden', show);
+            if (!show) return;
+            // Starts from what was typed in the search: digits are the phone, letters the name.
+            const typed = document.getElementById('appt-patient-search').value.trim();
+            const digits = typed.replace(/\D/g, '');
+            ['appt-new-first', 'appt-new-last', 'appt-new-phone'].forEach(id => { document.getElementById(id).value = ''; });
+            if (digits.length >= 7) document.getElementById('appt-new-phone').value = typed;
+            else if (typed) {
+                const [first, ...rest] = typed.split(/\s+/);
+                document.getElementById('appt-new-first').value = first;
+                document.getElementById('appt-new-last').value = rest.join(' ');
+            }
+            document.getElementById('appt-patient-results').classList.add('hidden');
+            setTimeout(() => document.getElementById(digits.length >= 7 ? 'appt-new-first' : 'appt-new-phone').focus(), 50);
+        }
+
+        // "+1" for 10-digit US numbers; anything typed with + keeps its country code.
+        function normalizedPatientPhone(raw) {
+            const digits = String(raw || '').replace(/\D/g, '');
+            if (String(raw || '').trim().startsWith('+')) return '+' + digits;
+            if (digits.length === 10) return '+1' + digits;
+            if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
+            return '+' + digits;
+        }
+
+        // A record with just name and phone, no portal login (is_manual_patient,
+        // like the imported historic patients). "Completar con el paciente" later
+        // creates the login on this same id, so the appointment and visits stay.
+        async function createQuickPatient() {
+            const first = document.getElementById('appt-new-first').value.trim();
+            const last = document.getElementById('appt-new-last').value.trim();
+            const rawPhone = document.getElementById('appt-new-phone').value.trim();
+            const digits = rawPhone.replace(/\D/g, '');
+            if (!first || !last) { alert('Escribe nombre y apellido.'); return; }
+            if (digits.length < 7 || digits.length > 15) { alert('Escribe un teléfono válido.'); return; }
+
+            if (!allPatients.length) await fetchPatients();
+            const last10 = digits.slice(-10);
+            const existing = allPatients.find(p => String(p.phone || '').replace(/\D/g, '').slice(-10) === last10);
+            if (existing) {
+                const name = `${existing.first_name || ''} ${existing.last_name || ''}`.trim();
+                if (confirm(`Ya hay un paciente con ese teléfono: ${name}. ¿Agendar a ese paciente?`)) {
+                    toggleApptNewPatient(false);
+                    await setApptPatient(existing.id);
+                }
+                return;
+            }
+
+            const btn = document.getElementById('appt-new-save');
+            btn.disabled = true;
+            try {
+                const profile = {
+                    id: crypto.randomUUID(),
+                    first_name: first,
+                    last_name: last,
+                    phone: normalizedPatientPhone(rawPhone),
+                    is_manual_patient: true,
+                };
+                const { error } = await _supabase.from('profiles').insert(profile);
+                if (error) { alert('No se pudo crear el paciente: ' + error.message); return; }
+                allPatients.push({ ...profile, email: null, dob: null, last_visit_date: null, do_not_contact: false });
+                toggleApptNewPatient(false);
+                await setApptPatient(profile.id);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         function clearApptPatient() {
             if (!apptState) return;
+            toggleApptNewPatient(false);
             apptState.patientId = null;
             document.getElementById('appt-patient-picked').classList.add('hidden');
             document.getElementById('appt-patient-search-wrap').classList.remove('hidden');
@@ -6409,11 +6495,23 @@
             oldFrame.replaceWith(freshFrame);
         }
 
-        function openNewPatientModal() {
+        // prefill: a patient booked with just name and phone (no login yet). The new-
+        // patient intake opens with their name and phone, so the account is created
+        // on that same record (create-patient-account claims it by phone and name).
+        function openNewPatientModal(prefill = null) {
             completingIntakeFor = null;
-            document.getElementById('new-patient-modal-title').innerText = 'Nuevo paciente';
+            const prefillName = prefill ? `${prefill.first_name || ''} ${prefill.last_name || ''}`.trim() : '';
+            document.getElementById('new-patient-modal-title').innerText = prefill ? `Completar historia y crear usuario · ${prefillName}` : 'Nuevo paciente';
             document.getElementById('new-patient-modal-subtitle').innerText = 'Al terminar se abre su historia clínica con el encuentro de hoy';
-            resetNewPatientFrame('intake.html#mode=new&by=admin');
+            let hash = 'mode=new&by=admin';
+            if (prefill) {
+                const digits = String(prefill.phone || '').replace(/\D/g, '');
+                const us = digits.length === 11 && digits.startsWith('1');
+                const params = new URLSearchParams({ first: prefill.first_name || '', last: prefill.last_name || '' });
+                if (digits) { params.set('phone', us ? digits.slice(1) : digits); if (us) params.set('cc', '+1'); }
+                hash += '&' + params.toString();
+            }
+            resetNewPatientFrame('intake.html#' + hash);
             newPatientInProgress = true;
             const modal = document.getElementById('new-patient-modal');
             modal.classList.remove('hidden');
@@ -6424,8 +6522,12 @@
         // intake isn't finished (e.g. booked online with only the basics). Step 1
         // comes pre-filled for review; the patient signs the consent on this device.
         let completingIntakeFor = null;
-        function openCompleteIntakeModal(patientId, name) {
+        async function openCompleteIntakeModal(patientId, name) {
             if (!patientId) return;
+            // No portal login yet (booked with name and phone, or imported): the
+            // full new-patient intake, which also creates their login.
+            const { data: manual } = await _supabase.from('profiles').select('first_name, last_name, phone, is_manual_patient').eq('id', patientId).maybeSingle();
+            if (manual?.is_manual_patient) { openNewPatientModal(manual); return; }
             completingIntakeFor = patientId;
             document.getElementById('new-patient-modal-title').innerText = `Completar historia · ${String(name || '').trim()}`;
             document.getElementById('new-patient-modal-subtitle').innerText = 'Revisa el paso 1 con el paciente y completa el resto · lo guardado no se pierde';
@@ -7482,6 +7584,20 @@
 
             closeEditPatient();
             fetchPatients();
+            // The history on screen shows the new name and contact right away.
+            if (id === currentPatientId && document.getElementById('history-modal').classList.contains('modal-open')) {
+                currentPatientName = `${firstName} ${lastName}`;
+                document.getElementById('history-patient-name').innerText = currentPatientName;
+                document.getElementById('history-patient-age').innerText = dob ? '· ' + calcAge(dob) : '';
+                currentPatientDob = dob;
+                currentPatientPhone = phone;
+                currentPatientEmail = email;
+                currentPatientSex = sex;
+                const sexLabel = sex === 'female' ? 'Femenino' : sex === 'male' ? 'Masculino' : sex;
+                const parts = [email ? `✉️ ${email}` : null, phone ? `📱 ${phone}` : null, sexLabel ? `Sexo: ${sexLabel}` : null].filter(Boolean);
+                document.getElementById('history-patient-contact').innerText = parts.join('   ·   ') || 'Sin correo/teléfono registrado.';
+                document.getElementById('history-whatsapp-btn').classList.toggle('hidden', !whatsappNumber(phone));
+            }
         });
 
         // --- DELETE PATIENT ---
