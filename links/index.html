@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Piel Spa | Links</title>
+    <meta name="description" content="Piel Spa — Aesthetic Clinic en Nueva York. Agenda tu cita, escríbenos por WhatsApp y síguenos en Instagram.">
+    <meta name="theme-color" content="#FDFBFC">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://piel-spa.com/links/">
+    <meta property="og:title" content="Piel Spa | Aesthetic Clinic">
+    <meta property="og:description" content="Agenda tu cita, escríbenos por WhatsApp y síguenos en Instagram.">
+    <meta property="og:image" content="https://piel-spa.com/images/og-image.png">
+
+    <link rel="icon" type="image/png" href="../images/icon-192.png">
+    <link rel="apple-touch-icon" href="../images/icon-180.png">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Outfit:wght@300;400;500&family=Montserrat:wght@600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --rose: #B76E88;
+            --rose-dark: #9C5570;
+            --ink: #2A2330;
+            --pearl: #FDFBFC;
+            --line: #EDE1E7;
+            --muted: #7A6E78;
+            --iris-gradient: linear-gradient(135deg, #F6D9E3 0%, #E7D6EE 50%, #DCE6F3 100%);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--pearl);
+            color: var(--ink);
+            min-height: 100vh;
+            min-height: 100dvh;
+        }
+        .wrap {
+            max-width: 440px; margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px max(32px, env(safe-area-inset-bottom));
+        }
+        .top { display: flex; justify-content: flex-end; }
+        .lang {
+            font: 600 10px 'Montserrat', sans-serif; letter-spacing: 0.15em;
+            color: var(--rose); background: none; border: 0; padding: 8px 4px; cursor: pointer;
+        }
+        .lang:hover { color: var(--ink); }
+
+        header { text-align: center; margin: 8px 0 28px; }
+        .logo { width: 210px; max-width: 70%; height: auto; display: block; margin: 0 auto; }
+        .tagline {
+            font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 19px;
+            color: var(--muted); margin-top: 14px;
+        }
+        .place { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+
+        .links { display: flex; flex-direction: column; gap: 12px; }
+        .btn {
+            display: flex; align-items: center; gap: 14px;
+            width: 100%; min-height: 60px; padding: 12px 18px;
+            background: #fff; border: 1px solid var(--line); border-radius: 14px;
+            color: var(--ink); text-decoration: none; text-align: left;
+            font: 500 15px 'Outfit', sans-serif; cursor: pointer;
+            box-shadow: 0 1px 2px rgba(42,35,48,0.04);
+            transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:hover { border-color: var(--rose); box-shadow: 0 4px 14px rgba(183,110,136,0.15); }
+        .btn:active { transform: scale(0.98); }
+        .btn .ic {
+            flex: 0 0 36px; width: 36px; height: 36px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            background: #F8EEF2; color: var(--rose);
+        }
+        .btn .ic svg { width: 19px; height: 19px; }
+        .btn .txt { flex: 1; min-width: 0; }
+        .btn .sub { display: block; font-size: 12px; font-weight: 300; color: var(--muted); margin-top: 1px; overflow-wrap: anywhere; }
+        .btn .arrow { color: #C9BAC2; flex: 0 0 auto; }
+
+        .btn.primary {
+            background-image: var(--iris-gradient); border-color: transparent;
+            min-height: 68px; font-size: 16px;
+        }
+        .btn.primary .ic { background: rgba(255,255,255,0.7); color: var(--rose-dark); }
+        .btn.primary:hover { box-shadow: 0 6px 18px rgba(183,110,136,0.25); }
+        .btn.wa .ic { background: #E7F8EE; color: #1DA851; }
+
+        .section-label {
+            font: 600 10px 'Montserrat', sans-serif; letter-spacing: 0.2em; text-transform: uppercase;
+            color: var(--muted); margin: 22px 0 2px 4px;
+        }
+
+        footer { text-align: center; margin-top: 34px; font-size: 11px; color: var(--muted); letter-spacing: 0.05em; }
+        footer a { color: var(--muted); }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="top">
+        <button class="lang" id="lang-toggle" type="button" aria-label="Change language / Cambiar idioma">EN / ES</button>
+    </div>
+
+    <header>
+        <img class="logo" src="../images/logo.png" alt="Piel Spa — Aesthetic Clinic" width="1080" height="498">
+        <p class="tagline" data-es="Rejuvenecimiento facial y estética avanzada" data-en="Facial rejuvenation &amp; advanced aesthetics">Rejuvenecimiento facial y estética avanzada</p>
+        <p class="place">New York · NY</p>
+    </header>
+
+    <nav class="links">
+        <a class="btn primary" href="../agendar.html">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4M9 15l2 2 4-4"/></svg></span>
+            <span class="txt"><span data-es="Agendar cita" data-en="Book an appointment">Agendar cita</span>
+                <span class="sub" data-es="Atención solo con cita previa" data-en="By appointment only">Atención solo con cita previa</span></span>
+            <span class="arrow">›</span>
+        </a>
+
+        <a class="btn wa" href="https://wa.me/19295613388?text=Hola%2C%20vi%20su%20tarjeta%20y%20me%20gustar%C3%ADa%20obtener%20m%C3%A1s%20informaci%C3%B3n." target="_blank" rel="noopener" id="wa-link">
+            <span class="ic"><svg viewBox="0 0 32 32" fill="currentColor"><path d="M16.004 3C9.377 3 4 8.373 4 15c0 2.386.703 4.612 1.912 6.487L4 29l7.75-1.887A11.94 11.94 0 0 0 16.004 27C22.63 27 28 21.627 28 15S22.63 3 16.004 3zm0 21.75c-1.99 0-3.85-.55-5.44-1.5l-.39-.23-4.6 1.12 1.14-4.48-.25-.4A9.7 9.7 0 0 1 5.25 15c0-5.93 4.82-10.75 10.75-10.75S26.75 9.07 26.75 15 21.93 24.75 16 24.75zm5.98-8.06c-.33-.16-1.94-.96-2.24-1.07-.3-.11-.52-.16-.74.16-.22.33-.85 1.06-1.04 1.28-.19.22-.38.24-.71.08-.33-.16-1.38-.51-2.63-1.63-.97-.87-1.63-1.94-1.82-2.27-.19-.33-.02-.5.14-.67.14-.15.33-.38.49-.57.16-.19.22-.33.33-.55.11-.22.05-.41-.03-.57-.08-.16-.74-1.78-1.01-2.44-.27-.64-.55-.55-.74-.56-.19-.01-.41-.01-.63-.01-.22 0-.57.08-.87.41-.3.33-1.14 1.11-1.14 2.71 0 1.6 1.17 3.14 1.33 3.36.16.22 2.3 3.51 5.57 4.92.78.34 1.39.54 1.86.69.78.25 1.49.21 2.05.13.63-.09 1.94-.79 2.21-1.55.27-.76.27-1.42.19-1.55-.08-.14-.3-.22-.63-.38z"/></svg></span>
+            <span class="txt">WhatsApp
+                <span class="sub">+1 (929) 561-3388</span></span>
+            <span class="arrow">›</span>
+        </a>
+
+        <a class="btn" href="../piel-spa.vcf" download="Piel Spa.vcf">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.5"/><path d="M3.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M19 8v6M16 11h6"/></svg></span>
+            <span class="txt"><span data-es="Guardar contacto" data-en="Save contact">Guardar contacto</span>
+                <span class="sub" data-es="Agréganos a tus contactos" data-en="Add us to your phone">Agréganos a tus contactos</span></span>
+            <span class="arrow">›</span>
+        </a>
+
+        <p class="section-label" data-es="Conócenos" data-en="Get to know us">Conócenos</p>
+
+        <a class="btn" href="https://www.instagram.com/pielspanyc/" target="_blank" rel="noopener">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="0.6" fill="currentColor"/></svg></span>
+            <span class="txt">Instagram
+                <span class="sub">@pielspanyc</span></span>
+            <span class="arrow">›</span>
+        </a>
+
+        <a class="btn" href="../index.html#services">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.9L19 9l-4 3.4 1.2 5.1L12 14.8 7.8 17.5 9 12.4 5 9l5.1-1.1z"/></svg></span>
+            <span class="txt"><span data-es="Nuestros servicios" data-en="Our services">Nuestros servicios</span>
+                <span class="sub">piel-spa.com</span></span>
+            <span class="arrow">›</span>
+        </a>
+
+        <a class="btn" href="https://www.google.com/maps/search/?api=1&amp;query=481%208th%20Ave%2C%20New%20York%2C%20NY%2010001" target="_blank" rel="noopener">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span>
+            <span class="txt"><span data-es="Cómo llegar" data-en="Directions">Cómo llegar</span>
+                <span class="sub">The New Yorker Hotel · Suite 1221<br>481 8th Ave, New York, NY 10001</span></span>
+            <span class="arrow">›</span>
+        </a>
+
+        <a class="btn" href="mailto:info@piel-spa.com">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg></span>
+            <span class="txt"><span data-es="Correo" data-en="Email">Correo</span>
+                <span class="sub">info@piel-spa.com</span></span>
+            <span class="arrow">›</span>
+        </a>
+    </nav>
+
+    <footer>
+        © Piel Spa LLC · <a href="../index.html">piel-spa.com</a>
+    </footer>
+</div>
+
+<script>
+    (function () {
+        var lang = 'es';
+        try { lang = localStorage.getItem('preferredLang') || 'es'; } catch (e) {}
+        var waEs = 'https://wa.me/19295613388?text=' + encodeURIComponent('Hola, vi su tarjeta y me gustaría obtener más información.');
+        var waEn = 'https://wa.me/19295613388?text=' + encodeURIComponent("Hi, I saw your card and I'd like more information.");
+
+        function apply(l) {
+            lang = l;
+            document.documentElement.lang = l;
+            document.querySelectorAll('[data-es]').forEach(function (el) {
+                el.innerHTML = el.getAttribute('data-' + l);
+            });
+            document.getElementById('wa-link').href = l === 'en' ? waEn : waEs;
+            try { localStorage.setItem('preferredLang', l); } catch (e) {}
+        }
+        document.getElementById('lang-toggle').addEventListener('click', function () {
+            apply(lang === 'en' ? 'es' : 'en');
+        });
+        if (lang !== 'es') apply(lang);
+    })();
+</script>
+</body>
+</html>
