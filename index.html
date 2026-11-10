@@ -55,8 +55,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Outfit:wght@300;400;500;600&family=Montserrat:wght@600&display=swap" rel="stylesheet">
-<link rel="preload" as="image" href="media/hero-pexels-poster.webp" media="(min-aspect-ratio: 1/1)">
-<link rel="preload" as="image" href="media/hero-pexels-m-poster.webp" media="(max-aspect-ratio: 1/1)">
+<link rel="preload" as="image" href="media/hero-pexels-cover.webp" media="(min-aspect-ratio: 1/1)">
+<link rel="preload" as="image" href="media/hero-pexels-m-cover.webp" media="(max-aspect-ratio: 1/1)">
 
 <style>
 /* ============================================================
@@ -196,8 +196,8 @@ ul,ol{list-style:none;margin:0;padding:0}
    HERO
    ============================================================ */
 .hero{scroll-snap-align:start;position:relative;overflow:hidden;min-height:100vh;min-height:100svh;margin-top:calc(var(--header) * -1);padding:140px 0 clamp(40px,7vh,84px);display:flex;align-items:flex-end;color:#fff;background:#2A2330}
-.hero-media{position:absolute;inset:0;z-index:0;background:#2A2330 url('media/hero-pexels-poster.webp') center/cover}
-@media (max-aspect-ratio:1/1){.hero-media{background-image:url('media/hero-pexels-m-poster.webp')}}
+.hero-media{position:absolute;inset:0;z-index:0;background:#2A2330 url('media/hero-pexels-cover.webp') center/cover}
+@media (max-aspect-ratio:1/1){.hero-media{background-image:url('media/hero-pexels-m-cover.webp')}}
 .hero-media video{width:100%;height:100%;object-fit:cover;animation:slowzoom 24s ease-out both}
 @keyframes slowzoom{from{transform:scale(1.08)}to{transform:scale(1)}}
 .hero-media::after{content:"";position:absolute;inset:0;background:
@@ -662,9 +662,9 @@ form.cform{display:grid;gap:14px;padding:clamp(24px,3vw,40px);background:var(--b
 <!-- ============ HERO ============ -->
 <section class="hero" aria-label="Piel Spa">
   <div class="hero-media" aria-hidden="true">
-    <video id="hero-video" muted loop playsinline preload="none">
-      <source type="video/webm">
+    <video id="hero-video" muted loop playsinline preload="none" disablepictureinpicture>
       <source type="video/mp4">
+      <source type="video/webm">
     </video>
   </div>
   <div class="grain" aria-hidden="true"></div>
@@ -1258,19 +1258,27 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const conn = navigator.connection || {};
   const portrait = matchMedia('(max-aspect-ratio: 1/1)');
   const base = () => portrait.matches ? set.m : set.d;
-  media.style.backgroundImage = `url('${base()}-poster.webp')`;
-  if (set !== HEROES.pexels && !portrait.matches) media.style.backgroundImage = `url('${set.d}-poster.webp')`;
+  media.style.backgroundImage = `url('${base()}-cover.webp')`;
+  if (set !== HEROES.pexels && !portrait.matches) media.style.backgroundImage = `url('${set.d}-cover.webp')`;
   if (reduceMotion || conn.saveData || /(^|-)2g$/.test(conn.effectiveType || '')) return;
+  v.muted = true; v.defaultMuted = true; v.playsInline = true;
+  // Si el navegador bloquea la reproducción automática (p. ej. iPhone en modo ahorro de batería),
+  // se reintenta con el primer toque o desplazamiento de la persona.
+  const tryPlay = () => v.play().then(() => v.classList.add('playing')).catch(() => {
+    const retry = () => { v.play().then(() => v.classList.add('playing')).catch(() => {}); };
+    ['touchstart', 'pointerdown', 'scroll', 'keydown'].forEach(ev => window.addEventListener(ev, retry, { once: true, passive: true }));
+  });
   const load = () => {
     const b = base();
-    const [w, m] = v.querySelectorAll('source');
-    if (w.getAttribute('src') === b + '.webm') return;
-    w.src = b + '.webm'; m.src = b + '.mp4';
-    v.poster = b + '-poster.webp';
-    v.load(); v.play().catch(() => {});
+    const [mp4, webm] = v.querySelectorAll('source');
+    if (mp4.getAttribute('src') === b + '.mp4') return;
+    mp4.src = b + '.mp4'; webm.src = b + '.webm';   // MP4 (H.264) primero: lo reproducen todos, incluido Safari/iPhone
+    v.poster = b + '-cover.webp';
+    v.setAttribute('autoplay', '');
+    v.load(); tryPlay();
   };
   portrait.addEventListener('change', load);
-  if (document.readyState === 'complete') setTimeout(load, 300); else window.addEventListener('load', () => setTimeout(load, 300));
+  if (document.readyState !== 'loading') setTimeout(load, 50); else document.addEventListener('DOMContentLoaded', () => setTimeout(load, 50));
 })();
 
 // Mapa interactivo (Leaflet + mapa base CARTO Positron sobre datos de OpenStreetMap).

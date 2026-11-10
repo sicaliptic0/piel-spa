@@ -45,7 +45,7 @@
 
         /* Split layout: editorial image left, steps right */
         .book{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);min-height:calc(100svh - 72px)}
-        .book-aside{position:sticky;top:72px;height:calc(100svh - 72px);overflow:hidden;color:#fff;display:flex;align-items:flex-end;padding:clamp(28px,4vw,56px);background:#2A2330 url('media/hero-pexels-poster.webp') center/cover}
+        .book-aside{position:sticky;top:72px;height:calc(100svh - 72px);overflow:hidden;color:#fff;display:flex;align-items:flex-end;padding:clamp(28px,4vw,56px);background:#2A2330 url('media/hero-pexels-cover.webp') center/cover}
         .book-aside::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,16,24,.15),rgba(22,16,24,.78))}
         .book-aside .grain{position:absolute;inset:-50%;opacity:.1;mix-blend-mode:overlay;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:grain 1.2s steps(6) infinite}
         @keyframes grain{0%{transform:translate(0,0)}25%{transform:translate(-3%,2%)}50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-1%)}100%{transform:translate(0,0)}}
