@@ -165,6 +165,17 @@
         }
         document.getElementById('lang-toggle').addEventListener('click', function () { apply(lang === 'en' ? 'es' : 'en'); });
         apply(lang);
+
+        // Medición (solo esta página de marketing): Google Analytics 4 + Meta Pixel
+        var GA4_ID = 'G-JWBGJ8ZY3P', PIXEL_ID = '1437146038079328';
+        var g = document.createElement('script'); g.async = true; g.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA4_ID; document.head.appendChild(g);
+        window.dataLayer = window.dataLayer || []; window.gtag = function () { dataLayer.push(arguments); };
+        gtag('js', new Date()); gtag('config', GA4_ID);
+        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', PIXEL_ID); fbq('track', 'PageView');
+        function track(ev, fb) { try { gtag('event', ev); fbq('track', fb); } catch (e) {} }
+        document.querySelector('.primary').addEventListener('click', function () { track('book_click', 'Lead'); });
+        document.getElementById('wa-link').addEventListener('click', function () { track('whatsapp_click', 'Contact'); });
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { var v = document.querySelector('.cover video'); if (v) { v.removeAttribute('autoplay'); v.pause(); } }
     })();
 </script>
