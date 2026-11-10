@@ -12,68 +12,153 @@
     <meta property="og:image" content="https://piel-spa.com/images/og-image.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;500&family=Outfit:wght@300;400;500&family=Montserrat:wght@600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Outfit:wght@300;400;500;600&family=Montserrat:wght@600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        :root {
-            --soft-gold: #B76E88;
-            --gold-hover: #9C5570;
-            --deep-bronze: #2A2330;
-            --cream-bg: #FDFBFC;
-            --line: #EDE1E7;
-            --iris-gradient: linear-gradient(135deg, #F6D9E3 0%, #E7D6EE 50%, #DCE6F3 100%);
-            --iris-gradient-text: linear-gradient(120deg, #D97CA0 0%, #B87CD1 50%, #7CA3D9 100%);
+        /* ===== Piel Spa design system (same as index) ===== */
+        :root{
+            --bg:#FBF9F8; --surface:#fff; --ink:#231D27; --muted:#6B6170; --plum:#7A3E5C; --rose:#B76E88; --rose-soft:#F4E6EC; --line:#ECE3E8;
+            --iris:linear-gradient(120deg,#F6D9E3,#E7D6EE 50%,#DCE6F3);
+            --iris-text:linear-gradient(120deg,#D97CA0 0%,#B87CD1 50%,#7CA3D9 100%);
+            --ease:cubic-bezier(.2,.7,.2,1); --serif:'Cormorant Garamond',Georgia,serif; --sans:'Outfit',system-ui,sans-serif;
+            /* legacy names still used by inline classes */
+            --soft-gold:#7A3E5C; --gold-hover:#231D27; --deep-bronze:#231D27; --cream-bg:#FBF9F8;
         }
-        body { font-family: 'Outfit', sans-serif; background-color: var(--cream-bg); color: var(--deep-bronze); }
-        h1, h2, h3 { font-family: 'Cormorant Garamond', serif; }
-        .brand-piel {
-            font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
-            background-image: var(--iris-gradient-text); -webkit-background-clip: text; background-clip: text; color: transparent;
+        body{font-family:var(--sans);background:var(--bg);color:var(--ink);font-weight:300;-webkit-font-smoothing:antialiased}
+        h1,h2,h3{font-family:var(--serif);font-weight:500;letter-spacing:-.01em}
+        .brand{display:inline-flex;align-items:baseline;gap:.35em;text-decoration:none;font-size:22px;white-space:nowrap}
+        .brand-piel{font-family:'Montserrat',sans-serif;font-weight:600;letter-spacing:.18em;text-transform:uppercase;background-image:var(--iris-text);-webkit-background-clip:text;background-clip:text;color:transparent}
+        .brand-spa{font-family:var(--serif);font-style:italic;font-weight:500;color:var(--ink)}
+
+        /* Header (glass) */
+        .bk-header{position:sticky;top:0;z-index:40;background:rgba(251,249,248,.78);backdrop-filter:saturate(1.6) blur(18px);-webkit-backdrop-filter:saturate(1.6) blur(18px);border-bottom:1px solid var(--line)}
+        .bk-header .in{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:72px;padding:0 clamp(18px,4vw,48px)}
+        .bk-header .back{justify-self:start;font-size:14px;color:var(--muted);text-decoration:none;display:inline-flex;gap:8px;align-items:center}
+        .bk-header .back:hover{color:var(--ink)}
+        .bk-header .acts{justify-self:end;display:flex;gap:6px;align-items:center}
+        #lang-toggle{font-size:13px;font-weight:500;letter-spacing:.08em;color:var(--muted);padding:8px 10px}
+        #lang-toggle:hover{color:var(--ink)}
+        #exit-btn{font-size:13px;color:var(--muted);padding:8px 14px;border:1px solid var(--line);border-radius:999px;transition:all .3s}
+        #exit-btn:hover{border-color:var(--ink);color:var(--ink)}
+
+        /* Split layout: editorial image left, steps right */
+        .book{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);min-height:calc(100svh - 72px)}
+        .book-aside{position:sticky;top:72px;height:calc(100svh - 72px);overflow:hidden;color:#fff;display:flex;align-items:flex-end;padding:clamp(28px,4vw,56px);background:#2A2330 url('media/hero-pexels-poster.webp') center/cover}
+        .book-aside::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,16,24,.15),rgba(22,16,24,.78))}
+        .book-aside .grain{position:absolute;inset:-50%;opacity:.1;mix-blend-mode:overlay;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:grain 1.2s steps(6) infinite}
+        @keyframes grain{0%{transform:translate(0,0)}25%{transform:translate(-3%,2%)}50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-1%)}100%{transform:translate(0,0)}}
+        .book-aside .txt{position:relative;max-width:460px}
+        .book-aside .eyebrow{font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:rgba(255,255,255,.8)}
+        .book-aside h1{font-size:clamp(44px,5vw,76px);line-height:.98;margin-top:16px;color:#fff}
+        .book-aside h1 em{font-style:italic;font-weight:400;background:linear-gradient(120deg,#F7CBDC,#DCC8F2 50%,#C9DBF5);-webkit-background-clip:text;background-clip:text;color:transparent}
+        .book-aside p{margin-top:14px;color:rgba(255,255,255,.8);font-size:16px}
+        .book-aside ul{margin-top:26px;border-top:1px solid rgba(255,255,255,.2);font-size:14px;color:rgba(255,255,255,.85)}
+        .book-aside li{display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.2)}
+        .book-aside li a{color:#fff;text-decoration:none}
+        .book-main{padding:clamp(28px,4vw,64px) clamp(18px,4vw,64px) 40px;max-width:720px;width:100%}
+        #booking-flow > h1, #booking-flow > h1 + p{display:none}
+
+        /* Stepper */
+        .stepper{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:34px}
+        .stepper .st{display:flex;flex-direction:column;gap:10px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+        .stepper .bar{height:2px;background:var(--line);position:relative;overflow:hidden}
+        .stepper .bar::after{content:"";position:absolute;inset:0;background:var(--iris-text);transform:scaleX(0);transform-origin:left;transition:transform .6s var(--ease)}
+        .stepper .st.on .bar::after,.stepper .st.done .bar::after{transform:scaleX(1)}
+        .stepper .st.on,.stepper .st.done{color:var(--ink)}
+        .step-dot{display:none}
+        .stepper .st{background:none;border:0;padding:0;text-align:left;cursor:pointer;font:inherit;font-size:12px;letter-spacing:.16em;text-transform:uppercase}
+        .stepper .st:hover{color:var(--plum)}
+        .nav-row{display:flex;gap:10px;align-items:center}
+        .nav-row #step2-next{flex:1}
+        .back-btn{display:inline-flex;align-items:center;gap:6px;min-height:52px;padding:0 22px;border:1px solid rgba(35,29,39,.2);border-radius:999px;background:#fff;font-size:14px;color:var(--ink);transition:border-color .3s}
+        .back-btn:hover{border-color:var(--ink)}
+        .back-solo{min-height:auto;padding:0;border:0;background:none;color:var(--muted);margin-bottom:4px}
+        .back-solo:hover{color:var(--ink)}
+        .stephead{font-family:var(--serif);font-size:clamp(30px,3vw,40px);line-height:1.05;margin:0 0 6px}
+        .stepsub{font-size:15px;color:var(--muted);margin-bottom:22px}
+
+        /* Components */
+        .label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.2em;font-weight:500;color:var(--plum);opacity:1;margin:0 0 10px}
+        .field{width:100%;padding:14px 16px;border:1px solid var(--line);background:#fff;border-radius:0;font-size:16px;outline:none;font-family:var(--sans);color:var(--ink);transition:border-color .3s}
+        .field:focus{border-color:var(--plum)}
+        .chip{position:relative;border:1px solid var(--line);background:#fff;border-radius:0;padding:14px 16px 14px 44px;text-align:left;font-size:15px;transition:border-color .3s,background .3s,color .3s;color:var(--ink)}
+        .chip::before{content:"";position:absolute;left:16px;top:50%;width:16px;height:16px;margin-top:-8px;border:1px solid #cdbfc7;transition:all .3s}
+        .chip:hover{border-color:var(--plum)}
+        .chip.selected{border-color:var(--ink);background:var(--ink);color:#fff;box-shadow:none}
+        .chip.selected::before{border-color:#fff;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='%23231D27' stroke-width='1.8'/%3E%3C/svg%3E") center/12px no-repeat}
+        .chip.text-center{padding-left:16px;text-align:center}
+        .chip.text-center::before,.day-chip::before{display:none}
+        .chip:disabled{opacity:.35;cursor:not-allowed}
+        .day-chip{min-width:78px;text-align:center;padding:12px 8px;flex-shrink:0}
+        .day-chip .text-xl{font-family:var(--serif);font-size:26px;font-weight:500}
+        .days-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+        .days-strip > *{scroll-snap-align:start}
+        .btn-gold{background:var(--ink)!important;background-image:none!important;color:#fff!important;border-radius:999px!important;letter-spacing:.06em!important;font-weight:500!important;font-size:14px!important;text-transform:none!important;box-shadow:none!important;transition:background .3s,transform .3s}
+        .btn-gold:hover:not(:disabled){background:var(--plum)!important;transform:translateY(-1px)}
+        .btn-gold:disabled{opacity:.3;cursor:not-allowed}
+        #summary{border:0!important;border-left:2px solid transparent!important;border-image:var(--iris-text) 1!important;border-radius:0!important;background:#fff;padding:16px 20px!important}
+        #summary button{color:var(--plum)}
+        #who-returning > div:first-child,#who-historic,#done-intake{border-radius:0!important;background:var(--rose-soft)!important;border:0!important}
+        #who-session,#done-new-account{border-radius:0!important}
+        .sticky.bottom-0{background:linear-gradient(to top,var(--bg) 60%,rgba(251,249,248,0))!important}
+        #done .done-ic{width:64px;height:64px;margin:0 auto 18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--iris)}
+        #done .done-ic svg{width:28px;height:28px;color:var(--plum)}
+        #done h1{font-family:var(--serif)}
+        #done a.border{border-radius:999px!important;border-color:var(--ink)!important;color:var(--ink)!important}
+        .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+
+        @media (max-width:900px){
+            .book{grid-template-columns:1fr}
+            .book-aside{position:relative;top:0;height:auto;min-height:240px;padding:28px 20px}
+            .book-aside h1{font-size:42px}
+            .book-aside ul{display:none}
+            .book-main{padding:28px 18px 40px}
         }
-        .brand-spa { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500; color: var(--deep-bronze); }
-        .btn-gold { background-image: var(--iris-gradient); background-color: var(--soft-gold); color: var(--deep-bronze); }
-        .btn-gold:hover:not(:disabled) { background-image: none; background-color: var(--gold-hover); color: white; }
-        .btn-gold:disabled { opacity: 0.45; cursor: not-allowed; }
-        .field { width: 100%; padding: 14px 16px; border: 1px solid var(--line); background: #fff; border-radius: 10px; font-size: 15px; outline: none; }
-        .field:focus { border-color: var(--soft-gold); }
-        .chip { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 12px 14px; text-align: left; font-size: 14px; transition: 0.15s; }
-        .chip:hover { border-color: var(--soft-gold); }
-        .chip.selected { border-color: var(--soft-gold); background: #FBF0F3; box-shadow: inset 0 0 0 1px var(--soft-gold); }
-        .chip:disabled { opacity: 0.35; cursor: not-allowed; }
-        .day-chip { min-width: 74px; text-align: center; padding: 10px 8px; flex-shrink: 0; }
-        .days-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
-        .days-strip > * { scroll-snap-align: start; }
-        .step-dot { width: 26px; height: 26px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; border: 2px solid var(--line); color: #C9BAC2; background: #fff; flex-shrink: 0; }
-        .step-dot.active { border-color: var(--soft-gold); color: var(--soft-gold); }
-        .step-dot.done { border-color: var(--soft-gold); background: var(--soft-gold); color: #fff; }
-        .label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600; opacity: 0.6; margin-bottom: 6px; }
-        .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+        @media (prefers-reduced-motion:reduce){.book-aside .grain{animation:none}}
     </style>
 </head>
 <body class="min-h-screen">
 
-    <header class="w-full py-4 px-4 md:px-12 flex justify-between items-center bg-white border-b border-[#EDE1E7] sticky top-0 z-40">
-        <a href="index.html" class="text-[15px] md:text-xl whitespace-nowrap"><span class="brand-piel">Piel</span> <span class="brand-spa">spa</span></a>
-        <div class="flex items-center gap-4">
-            <button id="lang-toggle" class="whitespace-nowrap text-[10px] tracking-widest text-[#B76E88] hover:text-[#2A2330] uppercase transition">EN / ES</button>
-            <button id="exit-btn" onclick="exitBooking()" class="whitespace-nowrap text-[10px] tracking-widest font-bold uppercase border border-[#EDE1E7] rounded-full px-3 py-1.5 hover:border-[#B76E88] hover:text-[#B76E88] transition" data-en="✕ Exit" data-es="✕ Salir">✕ Salir</button>
+    <header class="bk-header">
+        <div class="in">
+            <a href="index.html" class="back" onclick="exitBooking();return false"><span aria-hidden="true">←</span><span data-en="Back to site" data-es="Volver al sitio">Volver al sitio</span></a>
+            <a href="index.html" class="brand" aria-label="Piel Spa"><span class="brand-piel">Piel</span><span class="brand-spa">spa</span></a>
+            <div class="acts">
+                <button id="lang-toggle" type="button">EN</button>
+                <button id="exit-btn" type="button" onclick="exitBooking()" data-en="Exit" data-es="Salir">Salir</button>
+            </div>
         </div>
     </header>
 
-    <main class="max-w-2xl mx-auto px-4 py-8 md:py-12">
+    <div class="book">
+    <aside class="book-aside">
+        <div class="grain" aria-hidden="true"></div>
+        <div class="txt">
+            <span class="eyebrow">Piel Spa · Midtown Manhattan</span>
+            <h1><span data-en="Book your" data-es="Agenda tu">Agenda tu</span> <em data-en="appointment" data-es="cita">cita</em></h1>
+            <p data-en="Instant confirmation · Takes less than a minute" data-es="Confirmación inmediata · Toma menos de un minuto">Confirmación inmediata · Toma menos de un minuto</p>
+            <ul>
+                <li><span>The New Yorker Hotel</span><span>481 8th Ave</span></li>
+                <li><span data-en="By appointment only" data-es="Solo con cita">Solo con cita</span><span>English · Español</span></li>
+                <li><span data-en="Need help?" data-es="¿Necesitas ayuda?">¿Necesitas ayuda?</span><a href="https://wa.me/19295613388" target="_blank" rel="noopener">WhatsApp →</a></li>
+            </ul>
+        </div>
+    </aside>
+    <main class="book-main">
         <div id="booking-flow">
             <h1 class="text-4xl md:text-5xl text-center mb-2" data-en="Book your appointment" data-es="Agenda tu cita">Agenda tu cita</h1>
             <p class="text-center text-sm opacity-60 mb-8" data-en="Instant confirmation · Takes less than a minute" data-es="Confirmación inmediata · Toma menos de un minuto">Confirmación inmediata · Toma menos de un minuto</p>
 
             <!-- Stepper -->
-            <div class="flex items-center justify-center gap-2 mb-8 text-[10px] uppercase tracking-widest font-semibold">
-                <div class="step-dot" data-step-dot="1">1</div><span class="hidden sm:inline opacity-70" data-en="Treatment" data-es="Tratamiento">Tratamiento</span>
-                <div class="w-6 h-px bg-[#EDE1E7]"></div>
-                <div class="step-dot" data-step-dot="2">2</div><span class="hidden sm:inline opacity-70" data-en="Date & time" data-es="Fecha y hora">Fecha y hora</span>
-                <div class="w-6 h-px bg-[#EDE1E7]"></div>
-                <div class="step-dot" data-step-dot="3">3</div><span class="hidden sm:inline opacity-70" data-en="Your details" data-es="Tus datos">Tus datos</span>
+            <div class="stepper">
+                <button type="button" class="st" data-st="1" onclick="goToStep(1)"><span class="bar"></span><span><span class="step-dot" data-step-dot="1">1</span><span data-en="Treatment" data-es="Tratamiento">Tratamiento</span></span></button>
+                <button type="button" class="st" data-st="2" onclick="goToStep(2)"><span class="bar"></span><span><span class="step-dot" data-step-dot="2">2</span><span data-en="Date &amp; time" data-es="Fecha y hora">Fecha y hora</span></span></button>
+                <button type="button" class="st" data-st="3" onclick="goToStep(3)"><span class="bar"></span><span><span class="step-dot" data-step-dot="3">3</span><span data-en="Your details" data-es="Tus datos">Tus datos</span></span></button>
             </div>
+            <h2 class="stephead" id="stephead"></h2>
+            <p class="stepsub" id="stepsub"></p>
 
             <!-- Selection summary (steps 2–3) -->
             <div id="summary" class="hidden bg-white border border-[#EDE1E7] rounded-xl p-4 mb-6 text-sm space-y-1">
@@ -89,7 +174,6 @@
 
             <!-- STEP 1: Treatments -->
             <section id="step-1" class="hidden">
-                <p class="text-sm opacity-70 mb-4" data-en="Choose one or more. Not sure? Pick “General Consultation”." data-es="Elige uno o varios. ¿No estás seguro(a)? Elige “Consulta General”.">Elige uno o varios. ¿No estás seguro(a)? Elige “Consulta General”.</p>
                 <div id="treatment-groups" class="space-y-6"></div>
                 <div class="sticky bottom-0 bg-gradient-to-t from-[#FDFBFC] via-[#FDFBFC] pt-6 pb-4 mt-6">
                     <button id="step1-next" onclick="goToStep(2)" disabled class="btn-gold w-full py-4 uppercase text-xs tracking-widest font-bold rounded-xl shadow-md transition" data-en="Continue" data-es="Continuar">Continuar</button>
@@ -110,7 +194,7 @@
                     <div id="times-grid" class="grid grid-cols-3 sm:grid-cols-4 gap-2"></div>
                 </div>
                 <div class="sticky bottom-0 bg-gradient-to-t from-[#FDFBFC] via-[#FDFBFC] pt-6 pb-4 mt-6">
-                    <button id="step2-next" onclick="goToStep(3)" disabled class="btn-gold w-full py-4 uppercase text-xs tracking-widest font-bold rounded-xl shadow-md transition" data-en="Continue" data-es="Continuar">Continuar</button>
+                    <div class="nav-row"><button type="button" class="back-btn" onclick="goToStep(1)"><span aria-hidden="true">←</span> <span data-en="Back" data-es="Atrás">Atrás</span></button><button id="step2-next" onclick="goToStep(3)" disabled class="btn-gold w-full py-4 uppercase text-xs tracking-widest font-bold rounded-xl shadow-md transition" data-en="Continue" data-es="Continuar">Continuar</button></div>
                 </div>
             </section>
 
@@ -185,13 +269,14 @@
                     <p class="text-[11px] opacity-50" data-en="We'll create your Patient Portal account so you can see your appointments. Your phone number will be your username and password." data-es="Crearemos tu cuenta del Portal del Paciente para que veas tus citas. Tu teléfono será tu usuario y contraseña.">Crearemos tu cuenta del Portal del Paciente para que veas tus citas. Tu teléfono será tu usuario y contraseña.</p>
                 </div>
 
+                <button type="button" class="back-btn back-solo" onclick="goToStep(2)"><span aria-hidden="true">←</span> <span data-en="Back to date &amp; time" data-es="Volver a fecha y hora">Volver a fecha y hora</span></button>
                 <button id="confirm-btn" onclick="confirmBooking()" class="hidden btn-gold w-full py-4 uppercase text-xs tracking-widest font-bold rounded-xl shadow-md transition" data-en="Confirm appointment" data-es="Confirmar cita">Confirmar cita</button>
             </section>
         </div>
 
         <!-- DONE -->
         <section id="done" class="hidden text-center py-6">
-            <div class="text-5xl mb-4">✨</div>
+            <div class="done-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
             <h1 class="text-4xl md:text-5xl mb-3" data-en="Appointment confirmed!" data-es="¡Cita confirmada!">¡Cita confirmada!</h1>
             <p id="done-slot" class="text-lg mb-1"></p>
             <p id="done-treatments" class="text-sm opacity-60 mb-6"></p>
@@ -212,16 +297,21 @@
             </div>
         </section>
     </main>
+    </div>
 
     <script>
         // ---------- Language (shared with index/intake via localStorage) ----------
-        let currentLang = 'es';
-        try { currentLang = localStorage.getItem('preferredLang') || 'es'; } catch (_) {}
+        let currentLang = (() => {
+            try { const v = localStorage.getItem('preferredLang'); if (v === 'en' || v === 'es') return v; } catch (_) {}
+            for (const l of (navigator.languages || [navigator.language || 'en'])) { const c = String(l).slice(0, 2).toLowerCase(); if (c === 'en' || c === 'es') return c; }
+            return 'en';
+        })();
         const t = (en, es) => currentLang === 'en' ? en : es;
         function applyLanguage() {
             document.documentElement.lang = currentLang;
             document.querySelectorAll('[data-en]').forEach(el => { el.innerText = el.getAttribute(`data-${currentLang}`); });
-            document.getElementById('lang-toggle').innerText = currentLang === 'en' ? 'ES / EN' : 'EN / ES';
+            document.getElementById('lang-toggle').innerText = currentLang === 'en' ? 'ES' : 'EN';
+            renderStepHead();
             renderTreatments();
             renderMonths();
             if (slotsLoaded) renderDays();
@@ -327,12 +417,25 @@
                 dot.className = 'step-dot' + (n < step ? ' done' : n === step ? ' active' : '');
                 dot.innerText = n < step ? '✓' : n;
             });
+            document.querySelectorAll('.stepper .st').forEach(el => { const n = Number(el.dataset.st); el.classList.toggle('done', n < step); el.classList.toggle('on', n === step); });
+            renderStepHead();
             document.getElementById('summary').classList.toggle('hidden', step === 1);
             renderSummary();
             if (step === 2 && !slotsLoaded) loadSlots();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        const STEP_HEADS = {
+            1: [['What would you like to treat?', '¿Qué te gustaría tratar?'], ['Choose one or more. Not sure? Pick “General Consultation”.', 'Elige uno o varios. ¿No estás seguro(a)? Elige “Consulta General”.']],
+            2: [['Choose your day and time', 'Elige tu día y hora'], ['Times shown in New York time.', 'Horarios en hora de Nueva York.']],
+            3: [['Almost done', 'Ya casi terminamos'], ['Your phone is how we recognize you.', 'Con tu teléfono te reconocemos.']]
+        };
+        function renderStepHead() {
+            const h = STEP_HEADS[currentStep] || STEP_HEADS[1];
+            const el = document.getElementById('stephead'); if (!el) return;
+            el.innerText = t(h[0][0], h[0][1]);
+            document.getElementById('stepsub').innerText = t(h[1][0], h[1][1]);
+        }
         function renderSummary() {
             const labels = TREATMENT_OPTIONS.filter(o => selectedTreatments.has(o.id)).map(o => t(o.en, o.es));
             document.getElementById('summary-treatments').innerText = labels.join(', ');

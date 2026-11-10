@@ -1,0 +1,13 @@
+User-agent: *
+Disallow: /admin.html
+Disallow: /admin-login.html
+Disallow: /dashboard.html
+Disallow: /intake.html
+Disallow: /cita.html
+Disallow: /baja.html
+Disallow: /reset-password.html
+Disallow: /importar-chats.html
+Disallow: /tools/
+Disallow: /supabase/
+
+Sitemap: https://piel-spa.com/sitemap.xml

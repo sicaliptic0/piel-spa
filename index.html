@@ -1,689 +1,1645 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Piel Spa | Clinical Excellence</title>
-    <meta name="description" content="Piel Spa: rejuvenecimiento facial y tratamientos estéticos respaldados por la ciencia. Atención personalizada en consultorio y servicio concierge de élite en Nueva York.">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Piel Spa | Advanced Skin &amp; Aesthetics in Midtown Manhattan</title>
+<meta name="description" content="Piel Spa: evidence-based facials, pigmentation, acne and skin treatments for women and men in Midtown Manhattan (The New Yorker Hotel, by Penn Station). Founded by professionals with international medical training. Bilingual EN/ES.">
+<link rel="canonical" href="https://piel-spa.com/">
+<meta name="theme-color" content="#FBF9F8">
+<link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+<link rel="apple-touch-icon" href="images/icon-180.png">
 
-    <!-- Open Graph / WhatsApp, Facebook, iMessage link preview -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://piel-spa.com/">
-    <meta property="og:title" content="Piel Spa | Clinical Excellence">
-    <meta property="og:description" content="Rejuvenecimiento facial y tratamientos estéticos respaldados por la ciencia. Atención personalizada en consultorio y servicio concierge de élite en Nueva York.">
-    <meta property="og:image" content="https://piel-spa.com/images/og-image.png">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="1200">
+<!-- Open Graph / WhatsApp, Facebook, iMessage link preview -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://piel-spa.com/">
+<meta property="og:title" content="Piel Spa | Advanced Skin &amp; Aesthetics · Midtown Manhattan">
+<meta property="og:description" content="Evidence-based skin treatments for women and men in our private studio at The New Yorker Hotel — steps from Penn Station.">
+<meta property="og:image" content="https://piel-spa.com/images/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="1200">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="es_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Piel Spa | Advanced Skin &amp; Aesthetics · Midtown Manhattan">
+<meta name="twitter:description" content="Evidence-based skin treatments in our private studio at The New Yorker Hotel — steps from Penn Station.">
+<meta name="twitter:image" content="https://piel-spa.com/images/og-image.png">
 
-    <!-- Twitter Card (some link unfurlers fall back to this) -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Piel Spa | Clinical Excellence">
-    <meta name="twitter:description" content="Rejuvenecimiento facial y tratamientos estéticos respaldados por la ciencia. Atención personalizada en consultorio y servicio concierge de élite en Nueva York.">
-    <meta name="twitter:image" content="https://piel-spa.com/images/og-image.png">
+<!-- Google: business details (links the site to the Google Maps listing) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HealthAndBeautyBusiness",
+  "name": "Piel Spa",
+  "url": "https://piel-spa.com/",
+  "logo": "https://piel-spa.com/images/icon-512.png",
+  "image": "https://piel-spa.com/images/og-image.png",
+  "telephone": "+1-929-561-3388",
+  "email": "info@piel-spa.com",
+  "priceRange": "$$",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "481 8th Ave (The New Yorker Hotel)",
+    "addressLocality": "New York",
+    "addressRegion": "NY",
+    "postalCode": "10001",
+    "addressCountry": "US"
+  },
+  "geo": { "@type": "GeoCoordinates", "latitude": 40.7527, "longitude": -73.9934 },
+  "hasMap": "https://www.google.com/maps/search/?api=1&query=Piel+Spa+481+8th+Ave+New+York+NY+10001",
+  "knowsLanguage": ["en", "es"],
+  "sameAs": ["https://www.instagram.com/pielspanyc/"]
+}
+</script>
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;500&family=Outfit:wght@300;400;500&family=Montserrat:wght@600&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Outfit:wght@300;400;500;600&family=Montserrat:wght@600&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="media/hero-pexels-poster.webp" media="(min-aspect-ratio: 1/1)">
+<link rel="preload" as="image" href="media/hero-pexels-m-poster.webp" media="(max-aspect-ratio: 1/1)">
 
-    <style>
-        :root {
-            --soft-gold: #B76E88;      /* rosa mate (acento principal) */
-            --gold-hover: #9C5570;     /* rosa oscuro (hover/pressed) */
-            --deep-bronze: #2A2330;    /* ink ciruela casi negro (texto/títulos) */
-            --cream-bg: #FDFBFC;       /* blanco perla (fondo) */
-            --line: #EDE1E7;           /* borde/linea sutil */
-            --iris-1: #F6D9E3;         /* rosa pastel iridiscente */
-            --iris-2: #E7D6EE;         /* lila pastel iridiscente */
-            --iris-3: #DCE6F3;         /* azul pastel iridiscente */
-            --iris-gradient: linear-gradient(135deg, var(--iris-1) 0%, var(--iris-2) 50%, var(--iris-3) 100%);
-            --iris-gradient-text: linear-gradient(120deg, #D97CA0 0%, #B87CD1 50%, #7CA3D9 100%);
-        }
-        html { overflow-anchor: none; }
-        body { font-family: 'Outfit', sans-serif; background-color: var(--cream-bg); color: var(--deep-bronze); scroll-behavior: smooth; }
-        h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; }
-        .logo-font { font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; }
-        .btn-gold { background-image: var(--iris-gradient); background-color: var(--soft-gold); color: var(--deep-bronze); }
-        .btn-gold:hover { background-image: none; background-color: var(--gold-hover); color: white; }
-        .btn-outline { border: 1px solid var(--soft-gold); color: var(--soft-gold); }
-        details > summary::-webkit-details-marker { display: none; }
-        .no-spinner::-webkit-inner-spin-button, .no-spinner::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        .no-spinner { -moz-appearance: textfield; }
-        .brand-piel {
-            font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
-            background-image: var(--iris-gradient-text); -webkit-background-clip: text; background-clip: text; color: transparent;
-        }
-        .brand-spa {
-            font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500;
-            letter-spacing: 0; text-transform: none; color: var(--deep-bronze);
-        }
-        .whatsapp-float {
-            position: fixed;
-            right: max(18px, env(safe-area-inset-right));
-            bottom: max(18px, env(safe-area-inset-bottom));
-            z-index: 9999;
-            width: 58px;
-            height: 58px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            background: #25D366;
-            color: #fff;
-            box-shadow: 0 6px 16px rgba(0,0,0,0.22);
-            animation: wa-pulse 2.8s ease-in-out infinite;
-            transition: transform 0.25s ease, background-color 0.25s ease;
-            text-decoration: none;
-        }
-        .whatsapp-float:hover { transform: scale(1.08); background: #20BD5A; }
-        .whatsapp-float svg { width: 30px; height: 30px; }
-        @keyframes wa-pulse {
-            0%, 100% { box-shadow: 0 6px 16px rgba(0,0,0,0.22), 0 0 0 0 rgba(37,211,102,0.55); }
-            50%      { box-shadow: 0 6px 16px rgba(0,0,0,0.22), 0 0 0 16px rgba(37,211,102,0); }
-        }
-        @media (max-width: 640px) {
-            .whatsapp-float { width: 52px; height: 52px; right: 14px; bottom: 14px; }
-            .whatsapp-float svg { width: 27px; height: 27px; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-            .whatsapp-float { animation: none; }
-        }
+<style>
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+@property --a{syntax:'<angle>';inherits:false;initial-value:0deg}
+:root{
+  --bg:#FBF9F8;          /* perla cálido */
+  --surface:#FFFFFF;
+  --ink:#231D27;         /* ciruela casi negro */
+  --muted:#6B6170;       /* texto secundario (AA sobre bg) */
+  --plum:#7A3E5C;        /* acento para TEXTO (AA) */
+  --rose:#B76E88;        /* acento decorativo */
+  --rose-soft:#F4E6EC;
+  --line:#ECE3E8;
+  --iris-1:#F6D9E3; --iris-2:#E7D6EE; --iris-3:#DCE6F3;
+  --iris:linear-gradient(120deg,var(--iris-1),var(--iris-2) 50%,var(--iris-3));
+  --iris-text:linear-gradient(120deg,#D97CA0 0%,#B87CD1 50%,#7CA3D9 100%);
+  --shadow:0 1px 2px rgba(35,29,39,.04),0 20px 50px -24px rgba(35,29,39,.22);
+  --ease:cubic-bezier(.2,.7,.2,1);
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'Outfit',system-ui,-apple-system,sans-serif;
+  --gutter:clamp(18px,4vw,48px);
+  --header:76px;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;overflow-anchor:none;scroll-snap-type:y mandatory;scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.6;font-weight:300;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img,video,svg,iframe{display:block;max-width:100%}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;padding:0}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:500;line-height:1.05;margin:0;letter-spacing:-.01em;text-wrap:balance}
+p{margin:0;text-wrap:pretty}
+ul,ol{list-style:none;margin:0;padding:0}
+:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
+.wrap{max-width:1240px;margin:0 auto;padding:0 var(--gutter);width:100%}
+.hidden{display:none !important}
 
-        /* Patient Portal modal: compact for login, large wizard panel for the New Patient (intake) tab.
-           The panel is height-capped and laid out as a flex column so the iframe fills exactly the
-           remaining space — no outer scrolling, so the intake's own "Next" button (fixed to the
-           bottom of ITS OWN document) always lands inside the visible viewport instead of being
-           pushed below the fold by an oversized outer panel. */
-        #auth-modal-panel { transition: max-width 0.2s ease; }
-        #auth-modal.new-patient-mode #auth-modal-panel {
-            max-width: 1000px; width: 95vw; height: 90vh; max-height: 90vh;
-            display: flex; flex-direction: column; overflow: hidden;
-        }
-        #auth-modal.new-patient-mode #signup-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-        #intake-frame { width: 100%; border: 0; border-radius: 0.5rem; display: block; flex: 1; min-height: 0; }
-        @media (max-width: 767px) {
-            #auth-modal.new-patient-mode { padding: 0; align-items: stretch; }
-            #auth-modal.new-patient-mode #auth-modal-panel { max-width: 100%; width: 100%; max-height: 100dvh; height: 100dvh; border-radius: 0; margin: 0; }
-        }
-    </style>
+/* ---------- Full-screen "chapters" with snap ---------- */
+.snap{scroll-snap-align:start;min-height:100vh;min-height:100svh;display:flex;align-items:center;padding:calc(var(--header) + clamp(20px,4vh,48px)) 0 clamp(28px,5vh,56px);position:relative}
+.snap > .wrap{width:100%}
+@media (max-width:900px){
+  .snap{display:block;min-height:auto;padding:calc(var(--header) + 28px) 0 64px}
+  .snap-sub{scroll-snap-align:start;scroll-margin-top:calc(var(--header) + 12px)}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+/* ---------- Brand ---------- */
+.brand{display:inline-flex;align-items:baseline;gap:.35em;text-decoration:none;white-space:nowrap}
+.brand-piel{font-family:'Montserrat',sans-serif;font-weight:600;letter-spacing:.18em;text-transform:uppercase;background:var(--iris-text);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand-spa{font-family:var(--serif);font-style:italic;font-weight:500;color:var(--ink)}
+
+/* ---------- Buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.6em;min-height:52px;padding:0 28px;border-radius:999px;font-size:15px;font-weight:500;letter-spacing:.01em;text-decoration:none;transition:transform .35s var(--ease),background-color .35s var(--ease),color .35s var(--ease),box-shadow .35s var(--ease);white-space:nowrap}
+.btn-primary{background:var(--ink);color:#fff}
+.btn-primary:hover{background:var(--plum);transform:translateY(-2px)}
+.btn-ghost{border:1px solid rgba(35,29,39,.18);background:transparent}
+.btn-ghost:hover{border-color:var(--ink);background:#fff;transform:translateY(-2px)}
+.btn-sm{min-height:42px;padding:0 20px;font-size:14px}
+.btn .arrow{transition:transform .35s var(--ease)}
+.btn:hover .arrow{transform:translateX(4px)}
+.text-link{display:inline-flex;align-items:center;gap:8px;font-size:14.5px;color:var(--ink);text-decoration:none;position:relative;padding-bottom:4px}
+.text-link::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--iris-text);transform:scaleX(.35);transform-origin:left;transition:transform .5s var(--ease)}
+.text-link:hover::after{transform:scaleX(1)}
+
+/* ---------- Section heading ---------- */
+.eyebrow{display:inline-flex;align-items:center;gap:12px;font-size:12px;font-weight:500;letter-spacing:.24em;text-transform:uppercase;color:var(--plum)}
+.eyebrow .num{font-family:var(--serif);font-size:15px;letter-spacing:0;font-style:italic;color:var(--rose)}
+.eyebrow::after{content:"";width:36px;height:1px;background:currentColor;opacity:.35}
+.h2{font-size:clamp(38px,5vw,62px);margin-top:16px}
+.h2 em{font-style:italic;color:var(--plum)}
+.lead{font-size:clamp(16px,1.35vw,18px);color:var(--muted);max-width:560px;margin-top:16px}
+
+/* ---------- Reveal on scroll ---------- */
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
+.reveal.in{opacity:1;transform:none}
+.reveal[data-delay="1"]{transition-delay:.08s}.reveal[data-delay="2"]{transition-delay:.16s}.reveal[data-delay="3"]{transition-delay:.24s}
+@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+
+/* ---------- "Lux" card: square, borderless; an iridescent hairline traces the edge on hover ---------- */
+.lux{position:relative;background:var(--surface);isolation:isolate}
+.lux::before,.lux::after{content:"";position:absolute;inset:0;pointer-events:none;padding:1px;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.lux::before{background:linear-gradient(120deg,#E8B8CB,#CDB6E4,#B9CCEA);opacity:0;transition:opacity .6s var(--ease) .5s}
+.lux::after{background:conic-gradient(from calc(var(--s,0deg) + var(--a)),transparent 0deg,#D97CA0 30deg,#B87CD1 70deg,#7CA3D9 110deg,transparent 140deg 360deg);opacity:0}
+.lux:hover::before,.lux:focus-within::before,.lux.on::before{opacity:.55}
+.lux:hover::after,.lux:focus-within::after{opacity:1;animation:trace 1.1s var(--ease) forwards}
+@keyframes trace{0%{--a:0deg;opacity:1}85%{opacity:1}100%{--a:calc(360deg * var(--dir,1));opacity:0}}
+.lux:nth-of-type(3n+1){--s:0deg;--dir:1}
+.lux:nth-of-type(3n+2){--s:140deg;--dir:-1}
+.lux:nth-of-type(3n){--s:260deg;--dir:1}
+@media (prefers-reduced-motion:reduce){.lux:hover::after{animation:none;opacity:0}}
+
+/* ============================================================
+   HEADER (liquid glass)
+   ============================================================ */
+.header{position:sticky;top:0;z-index:50;transition:background-color .4s,border-color .4s;border-bottom:1px solid transparent}
+.header.scrolled{background:rgba(251,249,248,.74);backdrop-filter:saturate(1.6) blur(18px);-webkit-backdrop-filter:saturate(1.6) blur(18px);border-color:var(--line)}
+.header .wrap{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:var(--header);gap:16px}
+.header .nav{grid-column:1;grid-row:1;justify-self:start}
+.header .brand{grid-column:2;grid-row:1;font-size:24px}
+.header .header-actions{grid-column:3;grid-row:1;justify-self:end}
+.header:not(.scrolled){color:#fff}
+.header:not(.scrolled) .brand-spa{color:#fff}
+.header:not(.scrolled) .nav a,.header:not(.scrolled) .lang-btn{color:rgba(255,255,255,.82)}
+.header:not(.scrolled) .nav a:hover,.header:not(.scrolled) .lang-btn:hover{color:#fff;background:transparent}
+.header:not(.scrolled) .nav a::after{background:#fff}
+.header:not(.scrolled) .portal-btn{color:#fff;border-color:rgba(255,255,255,.45);background:rgba(255,255,255,.08)}
+.header:not(.scrolled) .portal-btn:hover{background:#fff;color:var(--ink)}
+.header:not(.scrolled) .menu-btn span,.header:not(.scrolled) .menu-btn span::before,.header:not(.scrolled) .menu-btn span::after{background:#fff}
+.nav{display:flex;gap:clamp(18px,2.4vw,32px);font-size:15px}
+.nav a{text-decoration:none;color:var(--muted);transition:color .3s;position:relative}
+.nav a:hover{color:var(--ink)}
+.nav a::after{content:"";position:absolute;left:0;right:0;bottom:-6px;height:1px;background:var(--ink);transform:scaleX(0);transform-origin:left;transition:transform .4s var(--ease)}
+.nav a:hover::after{transform:scaleX(1)}
+.header-actions{display:flex;align-items:center;gap:10px}
+.lang-btn{font-size:13px;font-weight:500;letter-spacing:.08em;color:var(--muted);padding:8px 10px;border-radius:999px;transition:color .3s,background .3s}
+.lang-btn:hover{color:var(--ink);background:rgba(35,29,39,.05)}
+.menu-btn{display:none;width:44px;height:44px;border-radius:999px;align-items:center;justify-content:center}
+.menu-btn span{display:block;width:20px;height:1.5px;background:var(--ink);position:relative}
+.menu-btn span::before,.menu-btn span::after{content:"";position:absolute;left:0;width:20px;height:1.5px;background:var(--ink)}
+.menu-btn span::before{top:-6px}.menu-btn span::after{top:6px}
+@media (max-width:900px){
+  .nav{display:none}
+  .menu-btn{display:inline-flex}
+  .header .portal-btn{display:none}
+}
+.mobile-menu{position:fixed;inset:0;z-index:90;background:rgba(251,249,248,.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;flex-direction:column;padding:24px var(--gutter);opacity:0;pointer-events:none;transition:opacity .4s var(--ease)}
+.mobile-menu.open{opacity:1;pointer-events:auto}
+.mobile-menu .top{display:flex;justify-content:space-between;align-items:center;height:48px}
+.mobile-menu nav{display:flex;flex-direction:column;gap:6px;margin-top:40px}
+.mobile-menu nav a{font-family:var(--serif);font-size:40px;text-decoration:none;padding:4px 0}
+.mobile-menu .bottom{margin-top:auto;display:grid;gap:12px;padding-bottom:env(safe-area-inset-bottom)}
+.close-x{width:44px;height:44px;border-radius:999px;font-size:28px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{scroll-snap-align:start;position:relative;overflow:hidden;min-height:100vh;min-height:100svh;margin-top:calc(var(--header) * -1);padding:140px 0 clamp(40px,7vh,84px);display:flex;align-items:flex-end;color:#fff;background:#2A2330}
+.hero-media{position:absolute;inset:0;z-index:0;background:#2A2330 url('media/hero-pexels-poster.webp') center/cover}
+@media (max-aspect-ratio:1/1){.hero-media{background-image:url('media/hero-pexels-m-poster.webp')}}
+.hero-media video{width:100%;height:100%;object-fit:cover;animation:slowzoom 24s ease-out both}
+@keyframes slowzoom{from{transform:scale(1.08)}to{transform:scale(1)}}
+.hero-media::after{content:"";position:absolute;inset:0;background:
+  linear-gradient(180deg,rgba(22,16,24,.62) 0%,rgba(22,16,24,0) 28%,rgba(22,16,24,0) 45%,rgba(22,16,24,.82) 100%),
+  linear-gradient(90deg,rgba(22,16,24,.6) 0%,rgba(22,16,24,0) 70%)}
+/* Grano sutil tipo película sobre el hero */
+.grain{position:absolute;inset:-50%;z-index:0;pointer-events:none;opacity:.11;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:grain 1.2s steps(6) infinite}
+@keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-3%,2%)}40%{transform:translate(2%,-3%)}60%{transform:translate(-2%,-1%)}80%{transform:translate(3%,3%)}100%{transform:translate(0,0)}}
+@media (prefers-reduced-motion:reduce){.grain{animation:none}}
+
+/* Cursor propio (solo computadora) */
+.cur-dot{position:fixed;left:0;top:0;pointer-events:none;z-index:9999;border-radius:50%;opacity:0;transition:opacity .3s,background-color .3s;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;background:var(--plum)}
+.has-cursor,.has-cursor a,.has-cursor button,.has-cursor summary,.has-cursor [role=tab],.has-cursor label,.has-cursor .leaflet-container{cursor:none}
+.has-cursor input,.has-cursor textarea,.has-cursor select{cursor:auto}
+.has-cursor .cur-dot{opacity:1}
+.cur-dot.on-dark{background:#fff}
+.hero .wrap{position:relative;z-index:1;display:grid;grid-template-columns:1fr auto;align-items:end;gap:40px}
+.hero-eyebrow{font-size:13px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:rgba(255,255,255,.82)}
+.dot{width:6px;height:6px;border-radius:50%;background:#F6C9DA;display:inline-block}
+.hero h1{font-size:clamp(50px,7.6vw,118px);margin-top:24px;line-height:.96;color:#fff;max-width:900px}
+.hero h1 em{font-style:italic;font-weight:400;padding-right:.06em;background:linear-gradient(120deg,#F7CBDC 0%,#DCC8F2 50%,#C9DBF5 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-sub{font-size:clamp(17px,1.5vw,20px);max-width:560px;margin-top:26px;color:rgba(255,255,255,.82)}
+.hero-ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:38px}
+.btn-light{background:#fff;color:var(--ink)}
+.btn-light:hover{background:var(--rose-soft);transform:translateY(-2px)}
+.btn-glass{color:#fff;border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.08);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.btn-glass:hover{background:#fff;color:var(--ink);transform:translateY(-2px)}
+.hero-aside{display:grid;gap:22px;justify-items:end;text-align:right;font-size:14px;color:rgba(255,255,255,.75);line-height:1.5}
+.hero-aside strong{color:#fff;font-weight:500;display:block}
+.scroll-cue{display:inline-flex;flex-direction:column;align-items:center;gap:10px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;text-decoration:none;color:rgba(255,255,255,.7)}
+.scroll-cue i{display:block;width:1px;height:46px;background:linear-gradient(rgba(255,255,255,.9),rgba(255,255,255,0));animation:cue 2.4s var(--ease) infinite;transform-origin:top}
+@keyframes cue{0%{transform:scaleY(0)}50%{transform:scaleY(1)}100%{transform:scaleY(1);opacity:0}}
+@media (max-width:900px){
+  .hero .wrap{grid-template-columns:1fr}
+  .hero-aside{display:none}
+  .hero h1 br{display:none}
+  .hero-ctas .btn{flex:1 1 100%}
+}
+
+/* ============================================================
+   MANIFESTO (quote + trust facts + brands)
+   ============================================================ */
+.manifesto{background:#fff;text-align:center;overflow:hidden}
+.manifesto .aura{position:absolute;width:900px;height:900px;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--iris-1),transparent 60%),radial-gradient(circle at 65% 45%,var(--iris-2),transparent 60%),radial-gradient(circle at 50% 70%,var(--iris-3),transparent 60%);filter:blur(80px);opacity:.45;pointer-events:none}
+.manifesto .wrap{position:relative}
+.manifesto blockquote{margin:22px auto 0;max-width:980px;font-family:var(--serif);font-size:clamp(30px,4.2vw,58px);line-height:1.12;font-weight:400}
+.manifesto blockquote em{color:var(--plum)}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:clamp(40px,7vh,72px) auto 0;max-width:1080px}
+.facts li{display:flex;flex-direction:column;align-items:center;gap:12px;font-size:15px;color:#4c4350;padding:0 18px;line-height:1.4}
+.facts li + li{border-left:1px solid var(--line)}
+.facts svg{width:24px;height:24px;color:var(--rose)}
+.brands{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:clamp(36px,6vh,60px)}
+.brands-label{font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
+.rotator{position:relative;height:50px;width:min(360px,86vw)}
+.rotator .brand-word{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;animation:brandfade 12s var(--ease) infinite}
+.rotator .brand-word:nth-child(2){animation-delay:3s}
+.rotator .brand-word:nth-child(3){animation-delay:6s}
+.rotator .brand-word:nth-child(4){animation-delay:9s}
+@keyframes brandfade{0%{opacity:0;filter:blur(8px);transform:translateY(8px)}6%,20%{opacity:1;filter:blur(0);transform:none}26%,100%{opacity:0;filter:blur(8px);transform:translateY(-8px)}}
+.bw-gal{font-family:var(--sans);font-weight:400;letter-spacing:.32em;font-size:clamp(16px,1.7vw,20px)}
+.brand-word{font-size:clamp(24px,2.6vw,30px);color:var(--ink)}
+.bw-meso{font-family:var(--sans);font-weight:300;letter-spacing:.02em;text-transform:lowercase}
+.bw-lrp{font-family:var(--sans);font-weight:500;letter-spacing:.16em;text-transform:uppercase;font-size:clamp(17px,1.8vw,21px)}
+.bw-cs{font-family:var(--serif);font-style:italic;font-weight:500}
+@media (prefers-reduced-motion:reduce){
+  .rotator{height:auto;width:auto;display:flex;gap:28px;flex-wrap:wrap;justify-content:center}
+  .rotator .brand-word{position:static;opacity:1;animation:none}
+}
+@media (max-width:900px){
+  .manifesto{display:flex;min-height:100svh;align-items:center}
+  .facts{grid-template-columns:1fr 1fr;gap:26px 0}
+  .facts li{font-size:14.5px}
+  .facts li:nth-child(3){border-left:0}
+}
+
+/* ============================================================
+   01 · TREATMENTS — editorial index + panel
+   ============================================================ */
+.t-grid{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.15fr);grid-template-rows:auto 1fr;gap:28px clamp(40px,6vw,96px)}
+.t-head{grid-column:1;grid-row:1}
+.t-list{grid-column:1;grid-row:2;align-self:start;border-top:1px solid var(--line)}
+.t-list button{width:100%;display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:8px;padding:clamp(11px,1.7vh,16px) 0;border-bottom:1px solid var(--line);text-align:left;font-family:var(--serif);font-size:clamp(22px,2.1vw,30px);color:#9a8f9e;position:relative;transition:color .4s var(--ease),padding .45s var(--ease)}
+.t-list button .n{font-family:var(--sans);font-size:12px;letter-spacing:.14em;color:var(--rose)}
+.t-list button .go{font-family:var(--sans);font-size:18px;opacity:0;transform:translateX(-8px);transition:all .4s var(--ease);color:var(--plum)}
+.t-list button::after{content:"";position:absolute;left:0;bottom:-1px;height:1px;width:100%;background:var(--iris-text);transform:scaleX(0);transform-origin:left;transition:transform .6s var(--ease)}
+.t-list button:hover{color:var(--ink);padding-left:8px}
+.t-list button[aria-selected="true"]{color:var(--ink);padding-left:8px}
+.t-list button[aria-selected="true"]::after{transform:scaleX(1)}
+.t-list button[aria-selected="true"] .go{opacity:1;transform:none}
+.t-panels{grid-column:2;grid-row:1 / span 2;align-self:center}
+.t-panel{display:none;padding:clamp(28px,3.5vw,48px)}
+.t-panel.active{display:block;animation:fadeUp .6s var(--ease)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.kicker{font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--plum)}
+.t-panel h3{font-size:clamp(32px,3.3vw,46px);margin-top:12px}
+.t-panel > p{margin-top:14px;color:var(--muted);max-width:520px}
+.t-protocols{margin-top:26px;border-top:1px solid var(--line)}
+.t-protocols li{display:grid;grid-template-columns:28px 1fr;gap:4px 12px;padding:16px 0;border-bottom:1px solid var(--line)}
+.t-protocols .i{font-family:var(--serif);font-style:italic;color:var(--rose);font-size:18px;line-height:1.4}
+.t-protocols h4{font-family:var(--sans);font-size:16.5px;font-weight:500;line-height:1.4}
+.t-protocols p{grid-column:2;font-size:15px;color:var(--muted)}
+.t-note{font-size:13.5px;color:var(--muted);margin-top:14px}
+.t-actions{display:flex;flex-wrap:wrap;align-items:center;gap:14px 26px;margin-top:26px}
+.price-link{display:inline-flex;align-items:center;gap:10px;font-size:14.5px;color:var(--ink);text-decoration:none;position:relative;padding-bottom:4px}
+.price-link svg{width:17px;height:17px;color:#25D366}
+.price-link::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--iris-text);transform:scaleX(.3);transform-origin:left;transition:transform .5s var(--ease)}
+.price-link:hover::after{transform:scaleX(1)}
+.menu-open{margin-top:22px}
+@media (max-width:900px){
+  .t-grid{grid-template-columns:1fr;grid-template-rows:none}
+  .t-head,.t-list,.t-panels{grid-column:1;grid-row:auto}
+  .t-list{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;border:0;margin:0 calc(var(--gutter) * -1);padding:0 var(--gutter)}
+  .t-list::-webkit-scrollbar{display:none}
+  .t-list li{flex:none}
+  .t-list button{display:block;width:auto;padding:10px 16px;font-family:var(--sans);font-size:14.5px;border:1px solid var(--line);color:var(--muted);background:#fff}
+  .t-list button .n,.t-list button .go,.t-list button::after{display:none}
+  .t-list button:hover,.t-list button[aria-selected="true"]{padding-left:16px}
+  .t-list button[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+  .t-panel{padding:26px 22px}
+}
+
+/* Full menu dialog */
+dialog.menu-dialog{border:0;padding:0;max-width:min(920px,94vw);width:100%;background:#fff;color:var(--ink);box-shadow:0 40px 100px -30px rgba(0,0,0,.45)}
+dialog.menu-dialog::backdrop{background:rgba(35,29,39,.5);backdrop-filter:blur(6px)}
+.menu-dialog .inner{padding:clamp(28px,4vw,52px);position:relative}
+.menu-dialog .close-x{position:absolute;top:14px;right:14px}
+.menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px 40px;margin-top:28px}
+.menu-grid h5{margin:0 0 12px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--plum);font-weight:500}
+.menu-grid ul{display:grid;gap:8px;font-size:15.5px;color:var(--muted)}
+@media (max-width:700px){.menu-grid{grid-template-columns:1fr}}
+
+/* ============================================================
+   02 · ADVISORY (dark)
+   ============================================================ */
+.advisory{background:var(--ink);color:#F3EEF1;overflow:hidden}
+.advisory .aura{position:absolute;width:780px;height:780px;border-radius:50%;bottom:-420px;left:-260px;background:radial-gradient(circle at 30% 30%,var(--iris-1),transparent 60%),radial-gradient(circle at 70% 40%,var(--iris-2),transparent 62%),radial-gradient(circle at 50% 75%,var(--iris-3),transparent 60%);filter:blur(60px);opacity:.22;pointer-events:none}
+.advisory .wrap{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:clamp(40px,7vw,100px);align-items:center}
+.advisory .eyebrow{color:#E7BFD0}
+.advisory .h2 em{color:#E7BFD0}
+.advisory .lead{color:rgba(243,238,241,.72)}
+.goal-list{border-top:1px solid rgba(255,255,255,.12)}
+.goal-list li{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:clamp(14px,2.4vh,22px) 4px;border-bottom:1px solid rgba(255,255,255,.12);font-family:var(--serif);font-size:clamp(28px,3.2vw,40px);transition:padding .45s var(--ease),color .3s;position:relative}
+.goal-list li::after{content:"";position:absolute;left:0;bottom:-1px;height:1px;width:100%;background:linear-gradient(90deg,#F7CBDC,#DCC8F2,#C9DBF5);transform:scaleX(0);transform-origin:left;transition:transform .6s var(--ease)}
+.goal-list li:hover{padding-left:16px;color:#fff}
+.goal-list li:hover::after{transform:scaleX(1)}
+.goal-list li small{font-family:var(--sans);font-size:13px;letter-spacing:.14em;color:rgba(243,238,241,.5)}
+.advisory .btn-primary{background:#fff;color:var(--ink);margin-top:34px}
+.advisory .btn-primary:hover{background:#F4E6EC}
+.fineprint{font-size:13px;color:rgba(243,238,241,.5);margin-top:16px;max-width:460px}
+@media (max-width:900px){.advisory .wrap{grid-template-columns:1fr}}
+
+/* ============================================================
+   03 · RESULTS (before / after carousel)
+   ============================================================ */
+#results{background:#fff}
+.results-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.car-nav{display:flex;gap:10px}
+.car-nav{gap:18px}
+.car-nav button{width:56px;height:40px;display:inline-flex;align-items:center;justify-content:center;transition:transform .4s var(--ease),opacity .3s;opacity:.85}
+.car-nav button svg{width:56px;height:20px;overflow:visible}
+.car-nav button:hover{opacity:1}
+.car-nav button.prev:hover{transform:translateX(-5px)}
+.car-nav button.next:hover{transform:translateX(5px)}
+.carousel{display:flex;gap:28px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin-top:clamp(24px,4vh,44px);padding:4px var(--gutter) 10px;margin-left:calc(var(--gutter) * -1);margin-right:calc(var(--gutter) * -1)}
+.carousel::-webkit-scrollbar{display:none}
+.ba-card{flex:0 0 auto;width:min(calc(46svh * .8),80vw);scroll-snap-align:start;display:flex;flex-direction:column}
+.ba{position:relative;aspect-ratio:4/5;overflow:hidden;background:#fff;--pos:50%;touch-action:pan-y;user-select:none}
+.ba img,.ba .ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ba .after{clip-path:inset(0 0 0 var(--pos))}
+.ba .handle{position:absolute;top:8%;bottom:8%;left:var(--pos);width:1px;background:linear-gradient(transparent,rgba(122,62,92,.45) 15%,rgba(122,62,92,.45) 85%,transparent);transform:translateX(-.5px);pointer-events:none}
+.ba .handle::after{content:"‹ ›";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:50%;background:#fff;border:1px solid rgba(122,62,92,.25);display:flex;align-items:center;justify-content:center;font-size:15px;letter-spacing:3px;color:var(--plum);box-shadow:0 6px 20px -6px rgba(35,29,39,.25)}
+.ba input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:ew-resize;margin:0}
+.ba .tag{position:absolute;bottom:6px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);pointer-events:none}
+.ba .tag.l{left:4px}.ba .tag.r{right:4px}
+.ba .ph svg{width:100%;height:100%}
+.ba-caption{padding:16px 4px 0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
+.ba-caption .k{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--plum)}
+.ba-caption h3{font-size:24px}
+.results-foot{margin-top:18px;font-size:13px;color:var(--muted)}
+.demo-flag{display:inline-block;margin-left:10px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;background:#FFF3CD;color:#7a5b00;padding:4px 10px;vertical-align:middle}
+
+/* ============================================================
+   04 · TEAM — editorial portraits
+   ============================================================ */
+.team{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,3vw,44px);align-items:start}
+.person{display:flex;flex-direction:column}
+.portrait{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--iris);display:flex;align-items:flex-end;justify-content:flex-start;padding:22px}
+.portrait::before{content:"";position:absolute;width:70%;aspect-ratio:1;border-radius:50%;right:-15%;top:-25%;background:radial-gradient(circle,rgba(255,255,255,.85),transparent 70%)}
+.portrait .mono{position:absolute;right:22px;bottom:6px;font-family:var(--serif);font-style:italic;font-size:clamp(80px,9vw,128px);line-height:1;color:rgba(122,62,92,.18)}
+.portrait img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.p-body{padding:clamp(20px,2.4vw,28px) clamp(20px,2.4vw,28px) 26px}
+.person h3{font-size:clamp(28px,2.6vw,34px)}
+.person .role{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--plum);margin-top:6px}
+.person .bio{margin-top:12px;font-size:15px;color:#4c4350}
+.creds{margin-top:16px;border-top:1px solid var(--line)}
+.creds li{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;padding:8px 0;border-bottom:1px solid var(--line);color:#4c4350}
+.creds li span:last-child{color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.person .li{display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:14px;text-decoration:none;color:var(--muted)}
+.person .li:hover{color:var(--ink)}
+.person .li svg{width:16px;height:16px}
+@media (max-width:900px){.team{grid-template-columns:1fr 1fr}.team-intro{grid-column:1 / -1}}
+@media (max-width:640px){.team{grid-template-columns:1fr}}
+
+/* ---------- Compact chapters for shorter laptop screens (e.g. 1366×768) ---------- */
+@media (min-width:901px) and (max-height:820px){
+  .snap{padding-top:calc(var(--header) + 14px);padding-bottom:18px}
+  .h2{font-size:clamp(32px,3.8vw,46px);margin-top:10px}
+  .lead{font-size:15.5px;margin-top:10px}
+  .manifesto blockquote{font-size:clamp(28px,3.4vw,44px)}
+  .facts{margin-top:32px}.brands{margin-top:26px}
+  .t-grid{row-gap:16px}
+  .t-list button{padding:8px 0;font-size:clamp(20px,1.8vw,25px)}
+  .t-panel{padding:24px 30px}
+  .t-panel h3{font-size:clamp(26px,2.6vw,34px)}
+  .t-panel > p{font-size:15.5px;margin-top:8px}
+  .t-protocols{margin-top:14px}
+  .t-protocols li{padding:9px 0}
+  .t-protocols p{font-size:14px}
+  .t-note{margin-top:8px}
+  .t-actions{margin-top:14px}
+  .t-actions .btn{min-height:44px}
+  .menu-open{margin-top:12px}
+  .goal-list li{padding:11px 4px;font-size:clamp(24px,2.6vw,32px)}
+  .advisory .btn-primary{margin-top:22px}
+  .ba-card{width:min(calc(38svh * .8),80vw)}
+  .carousel{margin-top:16px}
+  .ba-caption{padding-top:10px;gap:4px}
+  .ba-caption h3{font-size:20px}
+  .results-foot{margin-top:8px}
+  .portrait{aspect-ratio:16/8;padding:16px}
+  .portrait .mono{font-size:88px}
+  .p-body{padding:16px 20px 18px}
+  .person .bio{font-size:14px;margin-top:8px}
+  .creds{margin-top:10px}
+  .creds li{padding:5px 0;font-size:13px}
+  .person .li{margin-top:8px}
+  .map{min-height:min(52svh,440px)}
+  .loc{margin-top:16px}
+  .addr-big{font-size:28px}
+  .mode-tabs{margin-top:16px}
+  .route{padding:9px 0}
+  .loc-actions{padding-top:14px}
+  .faq summary{padding:12px 0;font-size:16.5px}
+  .contact-ways{margin-top:16px}
+  .cway{padding:12px 18px}
+  form.cform{padding:22px 28px;gap:8px}
+  .field input{padding:8px 0}
+  .field textarea{min-height:60px}
+  .footer{margin-top:16px;padding-top:24px}
+  .footer .bottom{margin-top:14px;padding-top:12px}
+}
+
+/* ============================================================
+   05 · LOCATION — real map, quiet panel
+   ============================================================ */
+.loc{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:clamp(24px,3vw,44px);align-items:stretch;margin-top:clamp(22px,4vh,40px)}
+.map{min-height:min(56svh,520px);overflow:hidden;background:#EEE9EC}
+#leaflet-map{position:absolute;inset:0;background:#F4F1F2;z-index:0}
+.leaflet-container{font-family:var(--sans)}
+.leaflet-tile-pane{filter:grayscale(1) contrast(.9) brightness(1.08)}
+#leaflet-map.esri .leaflet-tile-pane{filter:none}
+.leaflet-control-attribution{font-size:10px;background:rgba(255,255,255,.75)!important}
+.leaflet-control-zoom a{border-radius:0!important;color:var(--ink)!important}
+.route-anim{stroke-dasharray:.1 7;stroke-linecap:round;animation:routeflow 1.6s linear infinite}
+@keyframes routeflow{to{stroke-dashoffset:-7.1}}
+.mk{display:flex;align-items:center;gap:2px;transform:translate(-12px,-50%);width:max-content;filter:drop-shadow(0 2px 5px rgba(35,29,39,.22));cursor:pointer;transition:transform .3s var(--ease),opacity .3s}
+.mk.sel{transform:translate(-12px,-50%) scale(1.12)}
+.mk .b{width:17px;height:17px;font-size:9.5px;border:1.5px solid #fff}
+.mk-ic{width:26px;height:26px;border-radius:50%;background:#fff;color:var(--plum);display:flex;align-items:center;justify-content:center;border:1px solid rgba(122,62,92,.25)}
+.mk-ic svg{width:15px;height:15px}
+.mk-lbl{background:#fff;font-size:11px;font-weight:500;padding:3px 7px;margin-left:4px;white-space:nowrap;color:var(--ink)}
+.mk-home{position:relative;transform:translate(-8px,-8px)}
+.mk-home .dot{width:16px;height:16px;border-radius:50%;display:block;border:2px solid #fff;background:conic-gradient(from 0deg,#D97CA0,#B87CD1,#7CA3D9,#D97CA0);box-shadow:0 2px 8px rgba(35,29,39,.3);animation:homepulse 2.6s infinite,homespin 6s linear infinite}
+@keyframes homepulse{0%{box-shadow:0 0 0 0 rgba(184,124,209,.5),0 2px 8px rgba(35,29,39,.3)}70%{box-shadow:0 0 0 14px rgba(184,124,209,0),0 2px 8px rgba(35,29,39,.3)}100%{box-shadow:0 0 0 0 rgba(184,124,209,0),0 2px 8px rgba(35,29,39,.3)}}
+@keyframes homespin{to{filter:hue-rotate(40deg)}}
+.mk-home .card{position:absolute;left:24px;top:-12px;background:#fff;padding:7px 11px;white-space:nowrap;box-shadow:var(--shadow)}
+.mk-home .card strong{font-family:var(--serif);font-style:italic;font-weight:500;font-size:17px;display:block;line-height:1.1}
+.mk-home .card span{font-size:10.5px;color:var(--muted)}
+.route.pickable{cursor:pointer;transition:background .3s,padding .35s var(--ease);position:relative}
+.route.pickable:hover{background:rgba(246,217,227,.25)}
+.route.pickable::before{content:"";position:absolute;left:0;top:-1px;bottom:-1px;width:2px;background:var(--iris-text);transform:scaleY(0);transition:transform .4s var(--ease)}
+.route.sel{padding-left:12px}
+.route.sel::before{transform:scaleY(1)}
+
+.loc-info{display:flex;flex-direction:column}
+.addr-big{font-family:var(--serif);font-size:clamp(28px,2.8vw,38px);line-height:1.1}
+.addr-sub{font-size:14.5px;color:var(--muted);margin-top:6px}
+.hours{display:flex;gap:10px;align-items:center;font-size:14.5px;margin-top:14px;color:#4c4350}
+.hours i{width:7px;height:7px;border-radius:50%;background:var(--rose);display:inline-block}
+.mode-tabs{display:flex;gap:22px;margin-top:clamp(20px,3.5vh,32px);border-bottom:1px solid var(--line)}
+.mode-tabs button{padding:0 0 10px;font-size:14px;color:var(--muted);position:relative;transition:color .3s;display:inline-flex;align-items:center;gap:7px}
+.ico{width:17px;height:17px;flex:none}
+.walk{display:inline-flex;align-items:center;gap:5px}
+.walk .ico{width:14px;height:14px;opacity:.8}
+@media (max-width:520px){.mode-tabs{gap:0;justify-content:space-between}.mode-tabs button span{display:none}.mode-tabs .ico{width:21px;height:21px}}
+.mode-tabs button::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:var(--iris-text);transform:scaleX(0);transition:transform .45s var(--ease)}
+.mode-tabs button[aria-selected="true"]{color:var(--ink)}
+.mode-tabs button[aria-selected="true"]::after{transform:scaleX(1)}
+.mode-panel{display:none}
+.mode-panel.active{display:block;animation:fadeUp .45s var(--ease)}
+.route{display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;padding:13px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.bullets{display:flex;gap:3px;flex-wrap:wrap}
+.b{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:Helvetica,Arial,sans-serif;font-weight:700;font-size:11px;color:#fff}
+.b.ace{background:#0039A6}.b.r123{background:#EE352E}.b.bdfm{background:#FF6319}.b.nqrw{background:#FCCC0A;color:#000}
+.tag-s{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--plum);font-weight:500}
+.route strong{font-weight:500}
+.route .sub{display:block;font-size:13px;color:var(--muted)}
+.walk{font-size:13px;color:var(--plum);white-space:nowrap;text-decoration:none}
+.loc-actions{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;margin-top:auto;padding-top:22px}
+@media (max-width:900px){
+  .loc{grid-template-columns:1fr}
+  .map{min-height:300px;position:relative}
+  .route{grid-template-columns:84px 1fr auto}
+}
+
+/* ============================================================
+   06 · FAQ
+   ============================================================ */
+.faq-grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:clamp(32px,6vw,90px);align-items:center}
+.faq details{border-bottom:1px solid var(--line);position:relative}
+.faq details:first-child{border-top:1px solid var(--line)}
+.faq details::after{content:"";position:absolute;left:0;bottom:-1px;height:1px;width:100%;background:var(--iris-text);transform:scaleX(0);transform-origin:left;transition:transform .6s var(--ease)}
+.faq details[open]::after{transform:scaleX(1)}
+.faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:clamp(14px,2.2vh,22px) 0;font-size:17.5px;font-weight:400}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary .plus{flex:none;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;transition:transform .4s var(--ease);color:var(--plum);font-size:20px}
+.faq details[open] summary .plus{transform:rotate(45deg)}
+.faq details p{padding:0 48px 20px 0;color:var(--muted);font-size:15.5px}
+@media (max-width:900px){.faq-grid{grid-template-columns:1fr}}
+
+/* ============================================================
+   07 · CONTACT + FOOTER (one chapter)
+   ============================================================ */
+.contact{background:#fff;flex-direction:column;align-items:stretch;justify-content:space-between;padding-bottom:0}
+.contact .wrap.top{flex:1;display:flex;align-items:center}
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(32px,6vw,90px);align-items:center;width:100%}
+.contact-ways{margin-top:28px}
+.cway{display:flex;align-items:center;gap:16px;padding:18px 22px;text-decoration:none}
+.cway + .cway{margin-top:8px}
+.cway .ic{width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;color:var(--plum);flex:none}
+.cway .ic svg{width:22px;height:22px}
+.cway.wa .ic{color:#1a9e52}
+.cway strong{display:block;font-weight:500}
+.cway span{font-size:14px;color:var(--muted)}
+form.cform{display:grid;gap:14px;padding:clamp(24px,3vw,40px);background:var(--bg)}
+.field{display:grid;gap:4px}
+.field label{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.field input,.field textarea{width:100%;font:inherit;font-size:16px;font-weight:400;color:var(--ink);padding:12px 0;border:0;border-bottom:1px solid #d9cdd4;background:transparent;outline:none;transition:border-color .3s;border-radius:0}
+.field input:focus,.field textarea:focus{border-bottom-color:var(--plum)}
+.field textarea{resize:vertical;min-height:84px}
+.form-status{font-size:14.5px;min-height:1.4em}
+.form-status.ok{color:#1a7a45}.form-status.err{color:#b3261e}
+.footer{background:var(--ink);color:#EDE6EA;padding:40px 0 calc(28px + env(safe-area-inset-bottom));margin-top:clamp(28px,5vh,56px)}
+.footer .row{display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap}
+.footer .brand{font-size:24px}.footer .brand-spa{color:#fff}
+.footer nav{display:flex;flex-wrap:wrap;gap:8px 24px;font-size:14px}
+.footer a{text-decoration:none;color:rgba(237,230,234,.78);transition:color .3s}
+.footer a:hover{color:#fff}
+.socials{display:flex;gap:8px}
+.socials a{width:40px;height:40px;border:1px solid rgba(255,255,255,.18);display:inline-flex;align-items:center;justify-content:center}
+.socials a:hover{border-color:#fff}
+.socials svg{width:17px;height:17px}
+.footer .bottom{margin-top:26px;padding-top:18px;border-top:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:12.5px;color:rgba(237,230,234,.45)}
+.footer .bottom a{color:rgba(237,230,234,.45)}
+@media (max-width:900px){.contact-grid{grid-template-columns:1fr}.contact{display:block}}
+
+/* ============================================================
+   FLOATING: WhatsApp (desktop) + bottom bar (mobile)
+   ============================================================ */
+.wa-float{position:fixed;right:max(22px,env(safe-area-inset-right));bottom:max(22px,env(safe-area-inset-bottom));z-index:60;width:58px;height:58px;border-radius:50%;background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 26px -6px rgba(0,0,0,.3);transition:transform .3s var(--ease)}
+.wa-float:hover{transform:scale(1.07)}
+.wa-float svg{width:30px;height:30px}
+.mbar{display:none}
+@media (max-width:900px){
+  .wa-float{display:none}
+  .mbar{position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:60;display:grid;grid-template-columns:1fr auto;gap:8px;padding:8px;border-radius:999px;background:rgba(255,255,255,.8);backdrop-filter:blur(18px) saturate(1.6);-webkit-backdrop-filter:blur(18px) saturate(1.6);border:1px solid rgba(255,255,255,.7);box-shadow:0 12px 40px -10px rgba(35,29,39,.3);transform:translateY(140%);transition:transform .5s var(--ease)}
+  .mbar.show{transform:none}
+  .mbar .btn{min-height:48px}
+  .mbar .wa{width:48px;height:48px;border-radius:50%;background:#25D366;color:#fff;display:inline-flex;align-items:center;justify-content:center}
+  .mbar .wa svg{width:24px;height:24px}
+  .footer{padding-bottom:calc(100px + env(safe-area-inset-bottom))}
+}
+
+/* ============================================================
+   AUTH MODAL (Portal / New patient intake)
+   ============================================================ */
+.modal{position:fixed;inset:0;z-index:100;background:rgba(35,29,39,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+#auth-modal-panel{position:relative;background:#fff;border-radius:24px;box-shadow:0 30px 80px -20px rgba(0,0,0,.4);width:100%;max-width:440px;padding:28px;margin:auto;transition:max-width .2s ease}
+.modal-top{display:flex;justify-content:flex-end;align-items:center;gap:8px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:999px;background:var(--bg);border:1px solid var(--line);margin:14px 0 22px}
+.seg button{min-height:42px;border-radius:999px;font-size:14px;font-weight:500;color:var(--muted);transition:all .3s}
+.seg button.on{background:var(--ink);color:#fff}
+.seg button.on.np{background:var(--plum)}
+.login-title{font-size:30px;margin-bottom:6px}
+.login-sub{font-size:14.5px;color:var(--muted);margin-bottom:20px}
+#login-view .field input{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:#fff}
+#login-view .field input:focus{border-color:var(--rose)}
+#login-view .field label{text-transform:none;letter-spacing:0;font-size:13px}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:48px !important}
+.pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;opacity:.5}
+.pw-eye:hover{opacity:.9}
+.forgot{font-size:13.5px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;justify-self:end}
+.forgot:hover{color:var(--plum)}
+#do-auth{width:100%;margin-top:6px}
+#spinner{width:18px;height:18px;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#auth-modal.new-patient-mode #auth-modal-panel{max-width:1000px;width:95vw;height:90vh;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
+#auth-modal.new-patient-mode #signup-view{flex:1;min-height:0;display:flex;flex-direction:column}
+#intake-frame{width:100%;border:0;border-radius:12px;display:block;flex:1;min-height:0}
+@media (max-width:767px){
+  #auth-modal.new-patient-mode{padding:0;align-items:stretch}
+  #auth-modal.new-patient-mode #auth-modal-panel{max-width:100%;width:100%;max-height:100dvh;height:100dvh;border-radius:0;margin:0}
+}
+</style>
 </head>
 <body>
 
-    <!-- Boton flotante de WhatsApp -->
-    <a href="https://wa.me/19295613388?text=Hola%2C%20me%20gustar%C3%ADa%20obtener%20m%C3%A1s%20informaci%C3%B3n."
-       target="_blank" rel="noopener noreferrer"
-       class="whatsapp-float"
-       aria-label="Chatea con nosotros por WhatsApp"
-       title="Chatea con nosotros por WhatsApp">
-        <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true">
-            <path d="M16.004 3C9.377 3 4 8.373 4 15c0 2.386.703 4.612 1.912 6.487L4 29l7.75-1.887A11.94 11.94 0 0 0 16.004 27C22.63 27 28 21.627 28 15S22.63 3 16.004 3zm0 21.75c-1.99 0-3.85-.55-5.44-1.5l-.39-.23-4.6 1.12 1.14-4.48-.25-.4A9.7 9.7 0 0 1 5.25 15c0-5.93 4.82-10.75 10.75-10.75S26.75 9.07 26.75 15 21.93 24.75 16 24.75zm5.98-8.06c-.33-.16-1.94-.96-2.24-1.07-.3-.11-.52-.16-.74.16-.22.33-.85 1.06-1.04 1.28-.19.22-.38.24-.71.08-.33-.16-1.38-.51-2.63-1.63-.97-.87-1.63-1.94-1.82-2.27-.19-.33-.02-.5.14-.67.14-.15.33-.38.49-.57.16-.19.22-.33.33-.55.11-.22.05-.41-.03-.57-.08-.16-.74-1.78-1.01-2.44-.27-.64-.55-.55-.74-.56-.19-.01-.41-.01-.63-.01-.22 0-.57.08-.87.41-.3.33-1.14 1.11-1.14 2.71 0 1.6 1.17 3.14 1.33 3.36.16.22 2.3 3.51 5.57 4.92.78.34 1.39.54 1.86.69.78.25 1.49.21 2.05.13.63-.09 1.94-.79 2.21-1.55.27-.76.27-1.42.19-1.55-.08-.14-.3-.22-.63-.38z"/>
-        </svg>
-    </a>
-
-    <!-- Header Optimizado para Móviles -->
-    <header class="w-full py-4 px-4 md:px-12 flex justify-between items-center bg-white border-b border-[#EDE1E7] sticky top-0 z-50">
-        <!-- Logo: Reducido en móvil, tamaño normal en desktop -->
-        <div class="text-[13px] md:text-xl whitespace-nowrap mr-2">
-            <span class="brand-piel">Piel</span> <span class="brand-spa">spa</span>
-        </div>
-        
-        <!-- Botones: Redujimos el gap (espacio) en móviles a gap-3 -->
-        <div class="flex gap-3 md:gap-4 items-center">
-            <!-- Idioma: Agregamos whitespace-nowrap para que ES / EN nunca salte de línea -->
-            <button id="lang-toggle" class="whitespace-nowrap text-[9px] md:text-[10px] tracking-widest text-[#B76E88] hover:text-[#2A2330] uppercase transition">
-                EN / ES
-            </button>
-            
-            <a href="agendar.html" class="btn-gold whitespace-nowrap px-3 md:px-5 py-1.5 md:py-2 uppercase text-[8px] md:text-[9px] tracking-[0.1em] font-semibold transition" data-en="Book" data-es="Agendar">Book</a>
-
-            <!-- Botón Portal: Menos padding lateral (px-2) y letra más pequeña (text-[8px]) solo en móviles -->
-            <button onclick="openAuthModal('login')" class="btn-outline whitespace-nowrap px-2 md:px-4 py-1.5 md:py-2 uppercase text-[8px] md:text-[9px] tracking-[0.1em] hover:bg-[#B76E88] hover:text-white transition" data-en="Patient Portal" data-es="Portal del Paciente">
-                Patient Portal
-            </button>
-        </div>
-    </header>
-
-    <!-- Hero Section con Video de Fondo -->
-    <section class="relative py-24 md:py-40 px-6 text-center flex items-center justify-center min-h-[80vh] overflow-hidden">
-        
-        <!-- INICIO: Background Video -->
-        <div class="absolute inset-0 w-full h-full z-0 bg-[#EDE1E7]">
-            <video 
-                muted 
-                autoplay 
-                loop 
-                playsinline 
-                webkit-playsinline 
-                preload="auto"
-                class="object-cover w-full h-full pointer-events-none"
-            >
-                <source src="Aesthetic_Clinic_Video_Generation.mp4" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-            <div class="absolute inset-0 backdrop-blur-[1px]" style="background: linear-gradient(135deg, rgba(246,217,227,0.88) 0%, rgba(231,214,238,0.88) 50%, rgba(220,230,243,0.88) 100%);"></div>
-        </div>
-        <!-- FIN: Background Video -->
-
-        <!-- Contenido del Hero (z-10 para que esté sobre el video) -->
-        <div class="relative z-10 w-full px-4">
-            <span class="block text-[10px] md:text-xs uppercase tracking-[0.3em] mb-6 opacity-80 text-[#B76E88] font-medium"
-                  data-en="Founded by Health & Aesthetics Specialists • Premium Mobile Concierge Service"
-                  data-es="Fundada por Especialistas en Salud y Estética • Servicio Concierge Móvil Premium">
-                  Founded by Health &amp; Aesthetics Specialists • Premium Mobile Concierge Service
-            </span>
-            
-            <h1 class="text-4xl md:text-7xl lg:text-8xl mb-8 max-w-5xl mx-auto leading-tight text-[#2A2330]">
-                <span data-en="Aesthetics Rooted in" data-es="Estética Basada en">Aesthetics Rooted in</span> <br class="hidden md:block"> 
-                <span class="italic text-[#B76E88]" data-en="Clinical Evidence" data-es="Evidencia Clínica">Clinical Evidence</span>
-            </h1>
-            
-            <p class="text-base md:text-xl max-w-2xl mx-auto opacity-90 font-light text-[#2A2330] mb-12"
-               data-en="Founded by health and personal care specialists with deep experience in facial rejuvenation and treatments that truly work, backed by real science — with personalized care at our office and an elite concierge service in New York."
-               data-es="Fundada por especialistas en salud y cuidado personal, con amplia experiencia en rejuvenecimiento facial y tratamientos que realmente funcionan, respaldados por la ciencia — con atención personalizada en nuestro consultorio y un servicio concierge de élite en Nueva York.">
-               Founded by health and personal care specialists with deep experience in facial rejuvenation and treatments that truly work, backed by real science — with personalized care at our office and an elite concierge service in New York.
-            </p>
-
-            <div class="flex flex-col md:flex-row justify-center gap-5">
-                <a href="agendar.html" class="btn-gold px-12 py-4 uppercase text-[10px] md:text-xs tracking-[0.2em] font-semibold hover:bg-[#9C5570] transition shadow-lg" data-en="Book an Appointment" data-es="Agendar Cita">Book an Appointment</a>
-                <button onclick="openAuthModal('signup')" class="btn-outline bg-white/60 px-12 py-4 uppercase text-[10px] md:text-xs tracking-[0.2em] hover:bg-[#B76E88] hover:text-white transition shadow-lg" data-en="New Patient Registration" data-es="Registro de Nuevo Paciente">New Patient Registration</button>
-                <button onclick="openAuthModal('login')" class="btn-outline px-12 py-4 uppercase text-[10px] md:text-xs tracking-[0.2em] hover:bg-[#B76E88] hover:text-white transition shadow-lg" data-en="Patient Portal" data-es="Portal del Paciente">Patient Portal</button>
-            </div>
-        </div>
-    </section>
-
-    <!-- Services Section -->
-    <section id="services" class="py-20 md:py-32 bg-white px-6 md:px-12 relative z-10">
-        <div class="max-w-5xl mx-auto">
-            <div class="text-center mb-16">
-                <span class="block text-[10px] md:text-xs uppercase tracking-[0.3em] mb-4 text-[#B76E88]" data-en="Clinical Portfolio" data-es="Portafolio Clínico">Clinical Portfolio</span>
-                <h2 class="text-4xl md:text-5xl text-[#2A2330]" data-en="Our Services" data-es="Nuestros Servicios">Our Services</h2>
-            </div>
-
-            <div class="border-t border-[#EDE1E7]">
-
-                <!-- ── PROCEDIMIENTOS ── -->
-                <div class="py-6 px-2 bg-[#FDFBFC] border-b border-[#B76E88]/30">
-                    <span class="block text-[10px] uppercase tracking-[0.35em] text-[#B76E88] mb-1" data-en="Procedures" data-es="Procedimientos">Procedures</span>
-                    <p class="text-xs font-light opacity-55" data-en="Services performed by our licensed aestheticians." data-es="Servicios realizados por nuestras esteticistas certificadas.">Services performed by our licensed aestheticians.</p>
-                </div>
-
-                <!-- Tratamientos Faciales y de la Piel -->
-                <details class="group border-b border-[#EDE1E7]">
-                    <summary class="flex justify-between items-center py-8 md:py-10 cursor-pointer list-none hover:pl-4 transition-all duration-300">
-                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#2A2330] group-hover:text-[#B76E88] transition-colors" data-en="Facial &amp; Skin Treatments" data-es="Tratamientos Faciales y de la Piel">Facial &amp; Skin Treatments</span>
-                        <span class="text-xl md:text-2xl text-[#B76E88] group-open:rotate-45 transition-transform duration-300">+</span>
-                    </summary>
-                    <div class="pb-10 pt-2 pl-4 border-l border-[#B76E88] space-y-5">
-                        <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Facials" data-es="Faciales">Facials</h4>
-                            <p class="text-sm font-light opacity-80" data-en="Cleansing, exfoliation, hydration and application of facial masks." data-es="Limpieza, exfoliación, hidratación y aplicación de mascarillas faciales.">Cleansing, exfoliation, hydration and application of facial masks.</p>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Extractions" data-es="Extracciones">Extractions</h4>
-                            <p class="text-sm font-light opacity-80" data-en="Manual removal of blackheads (comedones) and whiteheads." data-es="Eliminación manual de puntos negros (comedones) y puntos blancos.">Manual removal of blackheads (comedones) and whiteheads.</p>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Advanced" data-es="Avanzada">Advanced</h4>
-                            <p class="text-sm font-light opacity-80" data-en="Microdermabrasion and dermaplaning (to remove fine hair and dead skin cells)." data-es="Microdermoabrasión y dermaplaning (para remover vello fino y células muertas).">Microdermabrasion and dermaplaning (to remove fine hair and dead skin cells).</p>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Chemical Peels" data-es="Peels Químicos">Chemical Peels</h4>
-                            <p class="text-sm font-light opacity-80" data-en="Superficial chemical exfoliation." data-es="Exfoliación química superficial.">Superficial chemical exfoliation.</p>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Device-Based Treatments" data-es="Tratamientos con Aparatología">Device-Based Treatments</h4>
-                            <p class="text-sm font-light opacity-80" data-en="Galvanic and faradic currents, LED light therapy, and high-frequency currents." data-es="Uso de corrientes galvánicas y farádicas, tratamientos LED (terapia de luz) y corrientes de alta frecuencia.">Galvanic and faradic currents, LED light therapy, and high-frequency currents.</p>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Massage" data-es="Masajes">Massage</h4>
-                            <p class="text-sm font-light opacity-80" data-en="Facial, neck and shoulder massage, and manual lymphatic drainage." data-es="Masaje facial, de cuello y hombros, y drenaje linfático manual.">Facial, neck and shoulder massage, and manual lymphatic drainage.</p>
-                        </div>
-                    </div>
-                </details>
-
-                <!-- Depilación y Vello -->
-                <details class="group border-b border-[#EDE1E7]">
-                    <summary class="flex justify-between items-center py-8 md:py-10 cursor-pointer list-none hover:pl-4 transition-all duration-300">
-                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#2A2330] group-hover:text-[#B76E88] transition-colors" data-en="Hair Removal" data-es="Depilación y Vello">Hair Removal</span>
-                        <span class="text-xl md:text-2xl text-[#B76E88] group-open:rotate-45 transition-transform duration-300">+</span>
-                    </summary>
-                    <div class="pb-10 pt-2 pl-4 border-l border-[#B76E88] space-y-5">
-                        <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Waxing" data-es="Depilación con Cera (Waxing)">Waxing</h4>
-                            <p class="text-sm font-light opacity-80" data-en="Hot or cold wax for face and body (including bikini area)." data-es="Cera caliente o fría para rostro y cuerpo (incluyendo bikini, según capacitación).">Hot or cold wax for face and body (including bikini area).</p>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold uppercase text-[10px] tracking-widest text-[#B76E88] mb-1" data-en="Laser Hair Removal" data-es="Depilación Láser">Laser Hair Removal</h4>
-                            <p class="text-sm font-light opacity-80" data-en="Advanced laser hair reduction treatments." data-es="Tratamientos avanzados de reducción de vello con láser.">Advanced laser hair reduction treatments.</p>
-                        </div>
-                    </div>
-                </details>
-
-                <!-- ── CONSEJERÍA EN ── -->
-                <div class="py-6 px-2 bg-[#FDFBFC] border-b border-[#B76E88]/30 mt-8">
-                    <span class="block text-[10px] uppercase tracking-[0.35em] text-[#B76E88] mb-1" data-en="Advisory" data-es="Consejería">Advisory</span>
-                    <h3 class="text-2xl md:text-3xl font-light text-[#2A2330] mb-2" data-en="Counseling In" data-es="Consejería en">Counseling In</h3>
-                    <p class="text-xs font-light opacity-55 max-w-xl" data-en="Drawing on our extensive expertise and specialized knowledge, we offer professional advisory in:" data-es="Dada nuestra amplia experiencia y conocimientos especializados, ofrecemos consejería profesional en:">Drawing on our extensive expertise and specialized knowledge, we offer professional advisory in:</p>
-                </div>
-
-                <!-- Neuromodulators (Botox) -->
-                <details class="group border-b border-[#EDE1E7]">
-                    <summary class="flex justify-between items-center py-8 md:py-10 cursor-pointer list-none hover:pl-4 transition-all duration-300">
-                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#2A2330] group-hover:text-[#B76E88] transition-colors" data-en="Neuromodulators (Botox)" data-es="Neuromoduladores (Botox)">Neuromodulators (Botox)</span>
-                        <span class="text-xl md:text-2xl text-[#B76E88] group-open:rotate-45 transition-transform duration-300">+</span>
-                    </summary>
-                    <div class="pb-10 pt-2 pl-4 border-l border-[#B76E88]">
-                        <p class="text-sm opacity-80 leading-relaxed font-light mb-4" data-en="Dynamic muscle relaxation and therapeutic contouring." data-es="Relajación muscular dinámica y contorno terapéutico.">Dynamic muscle relaxation and therapeutic contouring.</p>
-                        <ul class="space-y-2 text-sm font-light opacity-70">
-                            <li data-en="• Upper Face Rejuvenation" data-es="• Rejuvenecimiento de la Parte Superior del Rostro">• Upper Face Rejuvenation</li>
-                            <li data-en="• Masseter Reduction (Bruxism)" data-es="• Reducción del Masetero (Bruxismo)">• Masseter Reduction (Bruxism)</li>
-                            <li data-en="• Gummy Smile Correction" data-es="• Corrección de Sonrisa Gingival">• Gummy Smile Correction</li>
-                            <li data-en="• Nasal Profiling" data-es="• Perfilado Nasal">• Nasal Profiling</li>
-                            <li data-en="• Hyperhidrosis Treatment" data-es="• Tratamiento de Hiperhidrosis">• Hyperhidrosis Treatment</li>
-                        </ul>
-                    </div>
-                </details>
-
-                <!-- Dermal Fillers (Hyaluronic Acid) -->
-                <details class="group border-b border-[#EDE1E7]">
-                    <summary class="flex justify-between items-center py-8 md:py-10 cursor-pointer list-none hover:pl-4 transition-all duration-300">
-                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#2A2330] group-hover:text-[#B76E88] transition-colors" data-en="Dermal Fillers (Hyaluronic Acid)" data-es="Rellenos Dérmicos (Ácido Hialurónico)">Dermal Fillers (Hyaluronic Acid)</span>
-                        <span class="text-xl md:text-2xl text-[#B76E88] group-open:rotate-45 transition-transform duration-300">+</span>
-                    </summary>
-                    <div class="pb-10 pt-2 pl-4 border-l border-[#B76E88]">
-                        <p class="text-sm opacity-80 leading-relaxed font-light mb-4" data-en="Structural restoration, projection, and volumetric balance." data-es="Restauración estructural, proyección y equilibrio volumétrico.">Structural restoration, projection, and volumetric balance.</p>
-                        <ul class="space-y-2 text-sm font-light opacity-70">
-                            <li data-en="• Lip Augmentation" data-es="• Aumento de Labios">• Lip Augmentation</li>
-                            <li data-en="• Facial Harmonization" data-es="• Armonización Facial">• Facial Harmonization</li>
-                            <li data-en="• Jawline Masculinization" data-es="• Masculinización de la Mandíbula">• Jawline Masculinization</li>
-                            <li data-en="• Facial Feminization" data-es="• Feminización Facial">• Facial Feminization</li>
-                        </ul>
-                    </div>
-                </details>
-
-                <!-- Biostimulators (Collagen Inducers) -->
-                <details class="group border-b border-[#EDE1E7]">
-                    <summary class="flex justify-between items-center py-8 md:py-10 cursor-pointer list-none hover:pl-4 transition-all duration-300">
-                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#2A2330] group-hover:text-[#B76E88] transition-colors" data-en="Biostimulators (Collagen Inducers)" data-es="Bioestimuladores (Inductores de Colágeno)">Biostimulators (Collagen Inducers)</span>
-                        <span class="text-xl md:text-2xl text-[#B76E88] group-open:rotate-45 transition-transform duration-300">+</span>
-                    </summary>
-                    <div class="pb-10 pt-2 pl-4 border-l border-[#B76E88]">
-                        <p class="text-sm opacity-80 leading-relaxed font-light mb-4" data-en="Deep, long-term rejuvenation through neocollagenesis." data-es="Rejuvenecimiento profundo a largo plazo mediante neocolagénesis.">Deep, long-term rejuvenation through neocollagenesis.</p>
-                        <ul class="space-y-2 text-sm font-light opacity-70">
-                            <li data-en="• Sculptra (Poly-L-Lactic Acid)" data-es="• Sculptra (Ácido Poliláctico)">• Sculptra (Poly-L-Lactic Acid)</li>
-                            <li data-en="• Radiesse (Calcium Hydroxylapatite)" data-es="• Radiesse (Hidroxiapatita de Calcio)">• Radiesse (Calcium Hydroxylapatite)</li>
-                        </ul>
-                    </div>
-                </details>
-
-                <!-- Regenerative Aesthetics & Lasers -->
-                <details class="group border-b border-[#EDE1E7]">
-                    <summary class="flex justify-between items-center py-8 md:py-10 cursor-pointer list-none hover:pl-4 transition-all duration-300">
-                        <span class="text-xl md:text-3xl uppercase tracking-widest font-light text-[#2A2330] group-hover:text-[#B76E88] transition-colors" data-en="Regenerative Aesthetics &amp; Lasers" data-es="Estética Regenerativa y Láseres">Regenerative Aesthetics &amp; Lasers</span>
-                        <span class="text-xl md:text-2xl text-[#B76E88] group-open:rotate-45 transition-transform duration-300">+</span>
-                    </summary>
-                    <div class="pb-10 pt-2 pl-4 border-l border-[#B76E88]">
-                        <p class="text-sm opacity-80 leading-relaxed font-light mb-4" data-en="Improving skin quality, texture, and cellular healing." data-es="Mejora de la calidad, textura y curación de la piel a nivel celular.">Improving skin quality, texture, and cellular healing.</p>
-                        <ul class="space-y-2 text-sm font-light opacity-70">
-                            <li data-en="• Exosomes Therapy" data-es="• Terapia con Exosomas">• Exosomes Therapy</li>
-                            <li data-en="• Microneedling + Exosomes" data-es="• Microneedling + Exosomas">• Microneedling + Exosomes</li>
-                            <li data-en="• Salmon PDRN" data-es="• Salmon PDRN">• Salmon PDRN</li>
-                            <li data-en="• Microneedling + Salmon PDRN" data-es="• Microneedling + Salmon PDRN">• Microneedling + Salmon PDRN</li>
-                            <li data-en="• NCTF Skin Boosting" data-es="• Impulso de la Piel con NCTF">• NCTF Skin Boosting</li>
-                            <li data-en="• Fractional CO2 Laser Resurfacing" data-es="• Resurfacing con Láser CO2 Fraccionado">• Fractional CO2 Laser Resurfacing</li>
-                        </ul>
-                    </div>
-                </details>
-            </div>
-        </div>
-    </section>
-
-    <!-- Philosophy Section -->
-    <section class="py-24 px-6 md:px-12 bg-white text-center border-t border-[#EDE1E7]">
-        <div class="max-w-4xl mx-auto">
-            <h2 class="text-3xl md:text-4xl mb-8 text-[#2A2330] italic" data-en="Our Clinical Philosophy" data-es="Nuestra Filosofía Clínica">Our Clinical Philosophy</h2>
-            <p class="text-base md:text-lg font-light opacity-80 leading-relaxed mb-12"
-               data-en="Our philosophy is rooted in applying our deep expertise in health, aesthetics, and skin science to provide strictly evidence-based treatments. We reject unproven trends and unfounded practices; our goal is to guide our clients to invest wisely in real results, optimizing their natural beauty without losing their unique essence."
-               data-es="Nuestra filosofía se basa en aplicar nuestro profundo conocimiento en salud, estética y ciencia de la piel para ofrecer tratamientos fundamentados estrictamente en la evidencia. Rechazamos las modas sin respaldo científico; nuestro objetivo es guiar a nuestros clientes para que inviertan sabiamente en resultados reales, optimizando su naturalidad sin perder su esencia.">
-               Our philosophy is rooted in applying our deep expertise in health, aesthetics, and skin science to provide strictly evidence-based treatments. We reject unproven trends and unfounded practices; our goal is to guide our clients to invest wisely in real results, optimizing their natural beauty without losing their unique essence.
-            </p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-[#B76E88] text-sm uppercase tracking-widest font-semibold">
-                <div><span>✓</span> <span data-en="Specialized Expertise" data-es="Experiencia Especializada">Specialized Expertise</span></div>
-                <div><span>✓</span> <span data-en="Evidence-Based" data-es="Basado en Evidencia">Evidence-Based</span></div>
-                <div><span>✓</span> <span data-en="Personalized Care" data-es="Atención Personalizada">Personalized Care</span></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="bg-[#2A2330] text-[#FDFBFC] pt-20 pb-10 px-6 md:px-12">
-        <div class="max-w-6xl mx-auto grid md:grid-cols-3 gap-12 mb-16">
-            <div>
-                <div class="text-2xl mb-6"><span class="brand-piel">Piel</span> <span class="brand-spa" style="color:white">spa</span></div>
-                <p class="font-light opacity-70 text-sm leading-relaxed" data-en="Clinical excellence in natural rejuvenation. Safe, ethical, and evidence-based aesthetic treatments." data-es="Excelencia clínica en rejuvenecimiento natural. Tratamientos estéticos seguros, éticos y basados en evidencia.">Clinical excellence in natural rejuvenation. Safe, ethical, and evidence-based aesthetic treatments.</p>
-            </div>
-            <div>
-                <h4 class="text-xl mb-6 italic text-[#B76E88]" data-en="Contact Us" data-es="Contáctanos">Contact Us</h4>
-                <p class="font-light opacity-70 text-sm mb-4">info@piel-spa.com</p>
-                <button onclick="document.getElementById('contact-modal').classList.remove('hidden')" class="border border-[#B76E88] text-[#B76E88] px-6 py-2 uppercase text-[10px] tracking-widest hover:bg-[#B76E88] hover:text-white transition" data-en="Send Message" data-es="Enviar Mensaje">Send Message</button>
-            </div>
-            <div>
-                <h4 class="text-xl mb-6 italic text-[#B76E88]" data-en="Patient Portal" data-es="Portal del Paciente">Patient Portal</h4>
-                <p class="font-light opacity-70 text-sm mb-4" data-en="Manage your appointments and clinical gallery securely." data-es="Gestione sus citas y galería clínica de forma segura.">Manage your appointments and clinical gallery securely.</p>
-                <div class="flex flex-wrap gap-2">
-                    <a href="agendar.html" class="bg-[#B76E88] text-white px-6 py-2 uppercase text-[10px] tracking-widest hover:bg-white hover:text-[#2A2330] transition" data-en="Book" data-es="Agendar">Book</a>
-                    <button onclick="openAuthModal('login')" class="border border-[#B76E88] text-[#B76E88] px-6 py-2 uppercase text-[10px] tracking-widest hover:bg-[#B76E88] hover:text-white transition" data-en="Login" data-es="Ingresar">Login</button>
-                </div>
-            </div>
-        </div>
-        <div class="border-t border-white/10 pt-8 flex flex-col items-center gap-4">
-            <div class="text-[10px] uppercase tracking-widest opacity-40">
-                &copy; 2026 Piel Spa LLC. All Rights Reserved.
-            </div>
-
-            <a href="privacidad.html"
-               class="text-[9px] uppercase tracking-widest opacity-50 hover:opacity-100 hover:text-[#B76E88] transition"
-               data-en="Privacy Policy"
-               data-es="Política de Privacidad">
-                Privacy Policy
-            </a>
-
-            <a href="admin-login.html" 
-               class="text-[9px] uppercase tracking-widest opacity-20 hover:opacity-100 hover:text-[#B76E88] transition duration-500"
-               data-en="Provider & Staff Access" 
-               data-es="Acceso para Personal y Proveedores">
-                Provider & Staff Access
-            </a>
-        </div>
-    </footer>
-
-    <!-- MODAL DE CONTACTO -->
-    <div id="contact-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-[100] p-6 backdrop-blur-sm">
-        <div class="bg-white p-8 md:p-12 max-w-md w-full rounded-xl shadow-2xl relative">
-            <button onclick="document.getElementById('contact-modal').classList.add('hidden')" class="absolute top-4 right-6 text-2xl text-gray-400 hover:text-[#B76E88] transition">&times;</button>
-            <h2 class="text-3xl font-light mb-2 text-[#2A2330] text-center uppercase tracking-widest" data-en="Contact Us" data-es="Contáctanos">Contact Us</h2>
-            <p class="text-center text-[10px] uppercase tracking-widest opacity-40 mb-8" data-en="Send us a message" data-es="Envíenos un mensaje">Send us a message</p>
-            
-            <form id="contact-form" class="space-y-4">
-                <input type="text" id="contact-name" placeholder="Name" required class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm">
-                <input type="email" id="contact-email" placeholder="Email" required class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm">
-                <textarea id="contact-message" placeholder="Message" rows="4" required class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm"></textarea>
-                <button id="contact-submit" type="submit" class="btn-gold w-full py-4 uppercase text-xs tracking-widest transition hover:opacity-90" data-en="Send Message" data-es="Enviar Mensaje">Send Message</button>
-            </form>
-        </div>
+<!-- ============ HEADER ============ -->
+<header class="header" id="header">
+  <div class="wrap">
+    <a href="#top" class="brand" aria-label="Piel Spa"><span class="brand-piel">Piel</span><span class="brand-spa">spa</span></a>
+    <nav class="nav" aria-label="Main">
+      <a href="#treatments" data-en="Treatments" data-es="Tratamientos">Treatments</a>
+      <a href="#results" data-en="Results" data-es="Resultados">Results</a>
+      <a href="#about" data-en="About us" data-es="Nosotros">About us</a>
+      <a href="#location" data-en="Location" data-es="Ubicación">Location</a>
+    </nav>
+    <div class="header-actions">
+      <button class="lang-btn js-lang" type="button" aria-label="Change language / Cambiar idioma"></button>
+      <button class="btn btn-ghost btn-sm portal-btn" type="button" onclick="openAuthModal('login')" data-en="Patient Portal" data-es="Portal del Paciente">Patient Portal</button>
+      <button class="menu-btn" type="button" aria-label="Menu" onclick="toggleMenu(true)"><span></span></button>
     </div>
+  </div>
+</header>
 
-  <!-- MODAL DE AUTH (LOGIN / PORTAL DEL PACIENTE) -->
-  <div id="auth-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-[100] p-6 backdrop-blur-sm overflow-y-auto">
-    <div id="auth-modal-panel" class="bg-white p-8 md:p-10 max-w-md w-full rounded-xl shadow-2xl relative my-auto">
-        <div class="absolute top-4 right-6 flex items-center gap-4 z-10">
-            <button id="modal-lang-toggle" class="whitespace-nowrap text-[9px] tracking-widest text-[#B76E88] hover:text-[#2A2330] uppercase transition">EN / ES</button>
-            <button onclick="closeAuthModal()" class="text-2xl text-gray-400 hover:text-[#B76E88] transition leading-none">&times;</button>
-        </div>
-        <!-- TAB TOGGLE: Sign In / New Patient -->
-        <div class="flex rounded-xl border border-[#EDE1E7] mb-6 mt-8 overflow-hidden">
-            <button id="tab-signin" onclick="setAuthTab('login')"
-                class="flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-[#2A2330] text-white">
-                <span data-en="Sign In" data-es="Iniciar Sesión">Sign In</span>
-            </button>
-            <button id="tab-signup" onclick="setAuthTab('signup')"
-                class="flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-white text-[#2A2330] opacity-50 hover:opacity-100">
-                <span data-en="✦ New Patient" data-es="✦ Nuevo Paciente">✦ New Patient</span>
-            </button>
-        </div>
-
-        <!-- LOGIN VIEW -->
-        <div id="login-view" class="space-y-4">
-            <input type="tel" id="auth-phone-login" placeholder="Phone / Teléfono" inputmode="tel" class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm">
-            <div class="relative">
-                <input type="password" id="auth-password" placeholder="Password" class="w-full p-4 border border-[#EDE1E7] outline-none focus:border-[#B76E88] bg-[#FDFBFC] text-sm pr-12">
-                <button type="button" onclick="togglePassword('auth-password','eye-password')" tabindex="-1" class="absolute right-4 top-1/2 -translate-y-1/2 text-[#2A2330] opacity-40 hover:opacity-80 transition">
-                    <span id="eye-password"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></span>
-                </button>
-            </div>
-
-            <div class="text-right">
-                <button onclick="handleForgotPassword()" class="text-[10px] uppercase tracking-widest opacity-60 hover:text-[#B76E88]" data-en="Forgot Password?" data-es="¿Olvidó su contraseña?">Forgot Password?</button>
-            </div>
-
-            <button id="do-auth" class="btn-gold w-full py-4 mt-4 uppercase text-xs tracking-widest transition hover:opacity-90 flex justify-center items-center gap-2 shadow-md">
-                <span id="btn-text" data-en="Sign In" data-es="Iniciar Sesión">Sign In</span>
-                <svg id="spinner" class="animate-spin h-4 w-4 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            </button>
-        </div>
-
-        <!-- NEW PATIENT VIEW: the full intake (which creates the account at the end) loads here -->
-        <div id="signup-view" class="hidden">
-            <iframe id="intake-frame" title="New Patient Intake"></iframe>
-        </div>
-    </div>
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobile-menu" aria-hidden="true">
+  <div class="top">
+    <a href="#top" class="brand" style="font-size:20px" onclick="toggleMenu(false)"><span class="brand-piel">Piel</span><span class="brand-spa">spa</span></a>
+    <button class="close-x" type="button" aria-label="Close" onclick="toggleMenu(false)">&times;</button>
+  </div>
+  <nav>
+    <a href="#treatments" onclick="toggleMenu(false)" data-en="Treatments" data-es="Tratamientos">Treatments</a>
+    <a href="#results" onclick="toggleMenu(false)" data-en="Results" data-es="Resultados">Results</a>
+    <a href="#about" onclick="toggleMenu(false)" data-en="About us" data-es="Nosotros">About us</a>
+    <a href="#location" onclick="toggleMenu(false)" data-en="Location" data-es="Ubicación">Location</a>
+    <a href="#faq" onclick="toggleMenu(false)" data-en="FAQ" data-es="Preguntas">FAQ</a>
+    <a href="#contact" onclick="toggleMenu(false)" data-en="Contact" data-es="Contacto">Contact</a>
+  </nav>
+  <div class="bottom">
+    <button class="lang-btn js-lang" type="button" style="justify-self:start"></button>
+    <button class="btn btn-ghost" type="button" onclick="toggleMenu(false);openAuthModal('login')" data-en="Patient Portal" data-es="Portal del Paciente">Patient Portal</button>
+    <a class="btn btn-primary js-book" href="agendar.html" data-en="Book an appointment" data-es="Agendar cita">Book an appointment</a>
+  </div>
 </div>
 
-    <!-- SCRIPTS -->
-    <script>
-        // -1. FIX: evita que el navegador restaure/salte el scroll al recargar en móvil
-        // (algunos navegadores móviles conservan la posición de scroll de la sesión anterior
-        // y "saltan" directo al hero, ocultando el header sticky)
-        if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }
-        window.scrollTo(0, 0);
-        window.addEventListener('pageshow', () => window.scrollTo(0, 0));
+<main id="top">
 
-        // 0. UTILIDADES UI
-        const EYE_OPEN = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>`;
-        const EYE_OFF  = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>`;
+<!-- ============ HERO ============ -->
+<section class="hero" aria-label="Piel Spa">
+  <div class="hero-media" aria-hidden="true">
+    <video id="hero-video" muted loop playsinline preload="none">
+      <source type="video/webm">
+      <source type="video/mp4">
+    </video>
+  </div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="wrap">
+    <div>
+      <div class="hero-eyebrow reveal">
+        <span data-en="Advanced Skin &amp; Aesthetics" data-es="Estética clínica avanzada">Advanced Skin &amp; Aesthetics</span>
+        <span class="dot"></span>
+        <span>Midtown Manhattan</span>
+      </div>
+      <h1 class="reveal" data-delay="1">
+        <span data-en="Aesthetics rooted in" data-es="Estética basada en">Aesthetics rooted in</span><br>
+        <em data-en="clinical evidence" data-es="evidencia clínica">clinical evidence</em>
+      </h1>
+      <p class="hero-sub reveal" data-delay="2"
+         data-en="Founded by professionals with international medical training. Visit our private studio at The New Yorker Hotel — steps from Penn Station."
+         data-es="Fundado por profesionales con formación médica internacional. Te esperamos en nuestro estudio privado en The New Yorker Hotel, a pasos de Penn Station.">Founded by professionals with international medical training. Visit our private studio at The New Yorker Hotel — steps from Penn Station.</p>
+      <div class="hero-ctas reveal" data-delay="3">
+        <a href="agendar.html" class="btn btn-light js-book"><span data-en="Book an appointment" data-es="Agendar cita">Book an appointment</span><span class="arrow" aria-hidden="true">→</span></a>
+        <button type="button" class="btn btn-glass" onclick="openAuthModal('signup')" data-en="New patient registration" data-es="Registro de nuevo paciente">New patient registration</button>
+      </div>
+    </div>
+    <div class="hero-aside reveal" data-delay="3">
+      <div><strong>The New Yorker Hotel</strong>481 8th Ave · <span data-en="By appointment" data-es="Solo con cita">By appointment</span></div>
+      <a href="#manifesto" class="scroll-cue"><span data-en="Discover" data-es="Descubrir">Discover</span><i></i></a>
+    </div>
+  </div>
+</section>
 
-        function togglePassword(inputId, iconId) {
-            const input = document.getElementById(inputId);
-            const icon  = document.getElementById(iconId);
-            if (input.type === 'password') { input.type = 'text';     icon.innerHTML = EYE_OFF;  }
-            else                           { input.type = 'password'; icon.innerHTML = EYE_OPEN; }
-        }
+<!-- ============ MANIFESTO (quote + trust + brands) ============ -->
+<section class="snap manifesto" id="manifesto" aria-label="Why Piel Spa">
+  <div class="aura" aria-hidden="true"></div>
+  <div class="wrap">
+    <span class="eyebrow reveal" style="justify-content:center"><span data-en="Our philosophy" data-es="Nuestra filosofía">Our philosophy</span></span>
+    <blockquote class="reveal" data-delay="1">
+      <span data-en="We reject trends without evidence. We help you invest wisely in" data-es="Rechazamos las modas sin evidencia. Te ayudamos a invertir con inteligencia en">We reject trends without evidence. We help you invest wisely in</span>
+      <em data-en="real results — without losing your essence." data-es="resultados reales, sin perder tu esencia.">real results — without losing your essence.</em>
+    </blockquote>
+    <ul class="facts">
+      <li class="reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M12 3 4 6v6c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg><span data-en="International medical training" data-es="Formación médica internacional">International medical training</span></li>
+      <li class="reveal" data-delay="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span data-en="NY State–licensed estheticians" data-es="Esteticistas licenciados en NY">NY State–licensed estheticians</span></li>
+      <li class="reveal" data-delay="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M9 3h6M10 3v6L5 18a2 2 0 0 0 1.7 3h10.6A2 2 0 0 0 19 18l-5-9V3"/><path d="M7.5 15h9"/></svg><span data-en="Evidence-based protocols" data-es="Protocolos basados en evidencia">Evidence-based protocols</span></li>
+      <li class="reveal" data-delay="3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="9" cy="8" r="3.2"/><circle cx="16.5" cy="9" r="2.6"/><path d="M3 20c1-3.5 3.4-5.5 6-5.5s5 2 6 5.5M14 15c2.6-.4 5 1.2 6.5 5"/></svg><span data-en="For women and men" data-es="Para mujeres y hombres">For women and men</span></li>
+    </ul>
+    <div class="brands reveal">
+      <span class="brands-label" data-en="Professional skincare we use" data-es="Productos profesionales que utilizamos">Professional skincare we use</span>
+      <div class="rotator" aria-label="mesoestetic, Galderma, La Roche-Posay, Colorescience">
+        <span class="brand-word bw-meso">mesoestetic</span>
+        <span class="brand-word bw-gal">GALDERMA</span>
+        <span class="brand-word bw-lrp">La Roche-Posay</span>
+        <span class="brand-word bw-cs">Colorescience</span>
+      </div>
+    </div>
+  </div>
+</section>
 
-        // 1. LÓGICA DE IDIOMA (Español por defecto, compartido con intake.html vía localStorage)
-        const btn = document.getElementById('lang-toggle');
-        const modalLangBtn = document.getElementById('modal-lang-toggle');
-        let currentLang = localStorage.getItem('preferredLang') || 'es';
-        function applyLanguage() {
-            document.querySelectorAll('[data-en]').forEach(el => {
-                el.innerText = el.getAttribute(`data-${currentLang}`);
-            });
-            const label = currentLang === 'en' ? 'ES / EN' : 'EN / ES';
-            btn.innerText = label;
-            if (modalLangBtn) modalLangBtn.innerText = label;
-        }
-        applyLanguage();
-        function setLanguage(lang) {
-            currentLang = lang;
-            localStorage.setItem('preferredLang', currentLang);
-            applyLanguage();
-            const frame = document.getElementById('intake-frame');
-            if (frame && frame.contentWindow) {
-                frame.contentWindow.postMessage({ type: 'set-lang', lang: currentLang }, window.location.origin);
-            }
-        }
-        btn.addEventListener('click', () => setLanguage(currentLang === 'en' ? 'es' : 'en'));
-        if (modalLangBtn) modalLangBtn.addEventListener('click', () => setLanguage(currentLang === 'en' ? 'es' : 'en'));
+<!-- ============ 01 · TREATMENTS ============ -->
+<section class="snap" id="treatments">
+  <div class="wrap t-grid">
+    <div class="t-head">
+      <span class="eyebrow reveal"><span class="num">01</span><span data-en="Treatments" data-es="Tratamientos">Treatments</span></span>
+      <h2 class="h2 reveal" data-delay="1"><span data-en="What would you like" data-es="¿Qué te gustaría">What would you like</span> <em data-en="to improve?" data-es="mejorar?">to improve?</em></h2>
+    </div>
 
-        // 2. CONFIGURACIÓN SUPABASE
-        const SUPABASE_URL = 'https://qkjmrnqkoipdltauweub.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFram1ybnFrb2lwZGx0YXV3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTkyMjgsImV4cCI6MjA4OTA5NTIyOH0.EGqgJ9RNY9vYfuVeeEcGoMu_cIaygRq0hnyT-iE7zTw';
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    <ol class="t-list reveal" data-delay="2" role="tablist" aria-label="Concerns" id="concern-tabs">
+      <li><button role="tab" aria-selected="true" data-panel="c-spots"><span class="n">01</span><span data-en="Dark spots &amp; melasma" data-es="Manchas y melasma">Dark spots &amp; melasma</span><span class="go">→</span></button></li>
+      <li><button role="tab" aria-selected="false" data-panel="c-acne"><span class="n">02</span><span data-en="Acne &amp; breakouts" data-es="Acné y brotes">Acne &amp; breakouts</span><span class="go">→</span></button></li>
+      <li><button role="tab" aria-selected="false" data-panel="c-texture"><span class="n">03</span><span data-en="Texture &amp; pores" data-es="Textura y poros">Texture &amp; pores</span><span class="go">→</span></button></li>
+      <li><button role="tab" aria-selected="false" data-panel="c-glow"><span class="n">04</span><span data-en="Dull, dehydrated skin" data-es="Piel opaca y deshidratada">Dull, dehydrated skin</span><span class="go">→</span></button></li>
+      <li><button role="tab" aria-selected="false" data-panel="c-hair"><span class="n">05</span><span data-en="Unwanted hair" data-es="Vello no deseado">Unwanted hair</span><span class="go">→</span></button></li>
+      <li><button role="tab" aria-selected="false" data-panel="c-relax"><span class="n">06</span><span data-en="Relax &amp; detox" data-es="Relajación y drenaje">Relax &amp; detox</span><span class="go">→</span></button></li>
+    </ol>
 
-        let isSignUp = false;
+    <div class="t-panels snap-sub">
+      <article class="t-panel lux active" id="c-spots" role="tabpanel">
+        <span class="kicker" data-en="Hyperpigmentation" data-es="Hiperpigmentación">Hyperpigmentation</span>
+        <h3 data-en="A more even, luminous tone" data-es="Un tono más uniforme y luminoso">A more even, luminous tone</h3>
+        <p data-en="We treat pigment at its source — not just cover it — and build a plan that keeps it from coming back." data-es="Tratamos la pigmentación desde su origen, no solo la cubrimos, y armamos un plan para que no regrese.">We treat pigment at its source — not just cover it — and build a plan that keeps it from coming back.</p>
+        <ul class="t-protocols">
+          <li><span class="i">i.</span><h4 data-en="Cosmelan depigmentation protocol" data-es="Protocolo despigmentante Cosmelan">Cosmelan depigmentation protocol</h4><p data-en="Professional depigmenting mask in studio, followed by a guided at-home maintenance phase." data-es="Mascarilla despigmentante profesional en cabina, seguida de una fase de mantenimiento guiada en casa.">Professional depigmenting mask in studio, followed by a guided at-home maintenance phase.</p></li>
+          <li><span class="i">ii.</span><h4 data-en="Depigmenting peels" data-es="Peels despigmentantes">Depigmenting peels</h4><p data-en="Superficial chemical exfoliation to fade sun spots and post-acne marks." data-es="Exfoliación química superficial para atenuar manchas solares y marcas post-acné.">Superficial chemical exfoliation to fade sun spots and post-acne marks.</p></li>
+        </ul>
+        <p class="t-note" data-en="Daily sun protection is part of every pigmentation plan." data-es="La protección solar diaria es parte de todo plan para manchas.">Daily sun protection is part of every pigmentation plan.</p>
+        <div class="t-actions"><a href="agendar.html" class="btn btn-primary js-book"><span data-en="Book this treatment" data-es="Agendar este tratamiento">Book this treatment</span><span class="arrow">→</span></a></div>
+      </article>
 
-        // Must match create-patient-account's syntheticEmail() — the actual auth.users
-        // identifier behind phone-based login (avoids depending on Supabase's Phone
-        // provider, which requires a configured SMS gateway like Twilio just to enable).
-        function syntheticEmail(phoneDigits) {
-            return `${phoneDigits}@patients.piel-spa.internal`;
-        }
+      <article class="t-panel lux" id="c-acne" role="tabpanel">
+        <span class="kicker" data-en="Acne-prone skin" data-es="Piel con tendencia acneica">Acne-prone skin</span>
+        <h3 data-en="Calmer, clearer skin" data-es="Una piel más limpia y en calma">Calmer, clearer skin</h3>
+        <p data-en="Fewer breakouts, less marking, and a routine that finally makes sense for your skin." data-es="Menos brotes, menos marcas y una rutina que por fin tiene sentido para tu piel.">Fewer breakouts, less marking, and a routine that finally makes sense for your skin.</p>
+        <ul class="t-protocols">
+          <li><span class="i">i.</span><h4 data-en="Deep cleansing facial for acne" data-es="Limpieza facial profunda para acné">Deep cleansing facial for acne</h4><p data-en="Cleansing, exfoliation and professional extraction of blackheads and whiteheads." data-es="Limpieza, exfoliación y extracción profesional de puntos negros y blancos.">Cleansing, exfoliation and professional extraction of blackheads and whiteheads.</p></li>
+          <li><span class="i">ii.</span><h4 data-en="Salicylic peel" data-es="Peel salicílico">Salicylic peel</h4><p data-en="Unclogs pores and helps control oil." data-es="Destapa los poros y ayuda a controlar la grasa.">Unclogs pores and helps control oil.</p></li>
+          <li><span class="i">iii.</span><h4 data-en="LED light therapy" data-es="Terapia de luz LED">LED light therapy</h4><p data-en="Blue light to support acne-prone skin; red light to calm it." data-es="Luz azul para apoyar la piel con acné; luz roja para calmarla.">Blue light to support acne-prone skin; red light to calm it.</p></li>
+        </ul>
+        <div class="t-actions"><a href="agendar.html" class="btn btn-primary js-book"><span data-en="Book this treatment" data-es="Agendar este tratamiento">Book this treatment</span><span class="arrow">→</span></a></div>
+      </article>
 
-        function closeAuthModal() {
-            const confirmed = isSignUp
-                ? confirm(currentLang === 'en'
-                    ? 'If you leave now, any unsaved progress on the intake form will be lost. Do you want to continue?'
-                    : 'Si sales ahora, el progreso no guardado del formulario se perderá. ¿Deseas continuar?')
-                : true;
-            if (!confirmed) return;
-            document.getElementById('auth-modal').classList.add('hidden');
-            resetIntakeFrame();
-        }
+      <article class="t-panel lux" id="c-texture" role="tabpanel">
+        <span class="kicker" data-en="Resurfacing" data-es="Renovación">Resurfacing</span>
+        <h3 data-en="Smoother skin you can feel" data-es="Una piel más suave al tacto">Smoother skin you can feel</h3>
+        <p data-en="Refine pores, soften rough texture and let your skincare actually absorb." data-es="Afina los poros, suaviza la textura áspera y permite que tus productos realmente se absorban.">Refine pores, soften rough texture and let your skincare actually absorb.</p>
+        <ul class="t-protocols">
+          <li><span class="i">i.</span><h4 data-en="Microdermabrasion" data-es="Microdermoabrasión">Microdermabrasion</h4><p data-en="Mechanical exfoliation that polishes the skin's surface." data-es="Exfoliación mecánica que pule la superficie de la piel.">Mechanical exfoliation that polishes the skin's surface.</p></li>
+          <li><span class="i">ii.</span><h4>Dermaplaning</h4><p data-en="Removes fine hair and dead cells for an instantly smoother finish." data-es="Remueve el vello fino y las células muertas para un acabado suave al instante.">Removes fine hair and dead cells for an instantly smoother finish.</p></li>
+          <li><span class="i">iii.</span><h4 data-en="Chemical peels" data-es="Peels químicos">Chemical peels</h4><p data-en="Superficial peels tailored to your skin type." data-es="Peels superficiales adaptados a tu tipo de piel.">Superficial peels tailored to your skin type.</p></li>
+        </ul>
+        <div class="t-actions"><a href="agendar.html" class="btn btn-primary js-book"><span data-en="Book this treatment" data-es="Agendar este tratamiento">Book this treatment</span><span class="arrow">→</span></a></div>
+      </article>
 
-        // Swap in a blank iframe so the next "New Patient" starts from an empty
-        // form instead of the previous patient's answers or Thank-You screen.
-        // Replacing the element (rather than re-navigating it) also skips the
-        // intake's own "unsaved changes" prompt, which was already confirmed.
-        function resetIntakeFrame() {
-            const oldFrame = document.getElementById('intake-frame');
-            const freshFrame = document.createElement('iframe');
-            freshFrame.id = 'intake-frame';
-            freshFrame.title = oldFrame.title;
-            oldFrame.replaceWith(freshFrame);
-        }
+      <article class="t-panel lux" id="c-glow" role="tabpanel">
+        <span class="kicker" data-en="Radiance" data-es="Luminosidad">Radiance</span>
+        <h3 data-en="Glow now, hydration that lasts" data-es="Luminosidad hoy, hidratación que dura">Glow now, hydration that lasts</h3>
+        <p data-en="For skin that looks tired, tight or flat — before an event or as your monthly ritual." data-es="Para la piel que se ve cansada, tirante o apagada, antes de un evento o como tu ritual mensual.">For skin that looks tired, tight or flat — before an event or as your monthly ritual.</p>
+        <ul class="t-protocols">
+          <li><span class="i">i.</span><h4 data-en="Deep hydration facial" data-es="Facial de hidratación profunda">Deep hydration facial</h4><p data-en="Cleansing, exfoliation, hydration and a professional mask." data-es="Limpieza, exfoliación, hidratación y mascarilla profesional.">Cleansing, exfoliation, hydration and a professional mask.</p></li>
+          <li><span class="i">ii.</span><h4 data-en="LED &amp; high-frequency" data-es="LED y alta frecuencia">LED &amp; high-frequency</h4><p data-en="Light and current-based technology to revitalize the skin." data-es="Tecnología de luz y corrientes para revitalizar la piel.">Light and current-based technology to revitalize the skin.</p></li>
+          <li><span class="i">iii.</span><h4 data-en="Galvanic &amp; faradic currents" data-es="Corrientes galvánicas y farádicas">Galvanic &amp; faradic currents</h4><p data-en="Help active ingredients penetrate and tone the skin." data-es="Ayudan a la penetración de activos y a tonificar la piel.">Help active ingredients penetrate and tone the skin.</p></li>
+        </ul>
+        <div class="t-actions"><a href="agendar.html" class="btn btn-primary js-book"><span data-en="Book this treatment" data-es="Agendar este tratamiento">Book this treatment</span><span class="arrow">→</span></a></div>
+      </article>
 
-        function ensureIntakeFrameLoaded() {
-            const frame = document.getElementById('intake-frame');
-            if (!frame.getAttribute('src')) frame.src = 'intake.html#mode=new';
-        }
+      <article class="t-panel lux" id="c-hair" role="tabpanel">
+        <span class="kicker" data-en="Hair removal" data-es="Depilación">Hair removal</span>
+        <h3 data-en="Smooth, for longer" data-es="Suave por más tiempo">Smooth, for longer</h3>
+        <p data-en="From a quick wax to a long-term laser reduction plan, for face and body." data-es="Desde una depilación con cera hasta un plan de reducción láser a largo plazo, para rostro y cuerpo.">From a quick wax to a long-term laser reduction plan, for face and body.</p>
+        <ul class="t-protocols">
+          <li><span class="i">i.</span><h4 data-en="Waxing" data-es="Depilación con cera">Waxing</h4><p data-en="Hot or cold wax for face and body, including bikini." data-es="Cera caliente o fría para rostro y cuerpo, incluyendo bikini.">Hot or cold wax for face and body, including bikini.</p></li>
+          <li><span class="i">ii.</span><h4 data-en="Laser hair reduction" data-es="Depilación láser">Laser hair reduction</h4><p data-en="Progressive, long-lasting reduction across a series of sessions." data-es="Reducción progresiva y duradera a lo largo de varias sesiones.">Progressive, long-lasting reduction across a series of sessions.</p></li>
+        </ul>
+        <div class="t-actions"><a href="agendar.html" class="btn btn-primary js-book"><span data-en="Book this treatment" data-es="Agendar este tratamiento">Book this treatment</span><span class="arrow">→</span></a></div>
+      </article>
 
-        // The intake iframe (inside the "New Patient" tab) messages the parent window
-        // when the patient clicks its own X (close-intake-modal) or logs out from its
-        // own "Thank You" confirmation screen after finishing signup (intake-complete)
-        // — it can't navigate/close the parent modal directly since it's cross-document.
-        // Both just close the modal: intake-complete fires only after the patient has
-        // already logged out on the confirmation screen, so there's no session left to
-        // send them into a dashboard with — they land back on this marketing page.
-        window.addEventListener('message', (event) => {
-            if (event.origin !== window.location.origin) return;
-            if (event.data?.type === 'close-intake-modal' || event.data?.type === 'intake-complete') {
-                document.getElementById('auth-modal').classList.add('hidden');
-                resetIntakeFrame();
-            }
-        });
+      <article class="t-panel lux" id="c-relax" role="tabpanel">
+        <span class="kicker" data-en="Wellbeing" data-es="Bienestar">Wellbeing</span>
+        <h3 data-en="Release tension, reduce puffiness" data-es="Libera tensión, reduce la inflamación">Release tension, reduce puffiness</h3>
+        <p data-en="Hands-on techniques that leave your face lighter and your shoulders looser." data-es="Técnicas manuales que dejan el rostro más ligero y los hombros más relajados.">Hands-on techniques that leave your face lighter and your shoulders looser.</p>
+        <ul class="t-protocols">
+          <li><span class="i">i.</span><h4 data-en="Facial, neck &amp; shoulder massage" data-es="Masaje facial, de cuello y hombros">Facial, neck &amp; shoulder massage</h4><p data-en="Relaxing massage that releases accumulated tension." data-es="Masaje relajante que libera la tensión acumulada.">Relaxing massage that releases accumulated tension.</p></li>
+          <li><span class="i">ii.</span><h4 data-en="Manual lymphatic drainage" data-es="Drenaje linfático manual">Manual lymphatic drainage</h4><p data-en="Gentle technique to reduce facial puffiness." data-es="Técnica suave para reducir la inflamación del rostro.">Gentle technique to reduce facial puffiness.</p></li>
+        </ul>
+        <div class="t-actions"><a href="agendar.html" class="btn btn-primary js-book"><span data-en="Book this treatment" data-es="Agendar este tratamiento">Book this treatment</span><span class="arrow">→</span></a></div>
+      </article>
 
-        // 2.5 CONTACT FORM (Edge Function, no page redirect)
-        document.getElementById('contact-form').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const submitBtn = document.getElementById('contact-submit');
-            const originalText = submitBtn.innerText;
+      <button type="button" class="text-link menu-open" onclick="document.getElementById('menu-dialog').showModal()"><span data-en="See the full service menu" data-es="Ver el menú completo de servicios">See the full service menu</span> <span aria-hidden="true">↗</span></button>
+    </div>
+  </div>
+</section>
 
-            const name = document.getElementById('contact-name').value.trim();
-            const email = document.getElementById('contact-email').value.trim();
-            const message = document.getElementById('contact-message').value.trim();
+<dialog class="menu-dialog" id="menu-dialog" aria-label="Service menu">
+  <div class="inner">
+    <button class="close-x" type="button" aria-label="Close" onclick="this.closest('dialog').close()">&times;</button>
+    <span class="eyebrow" data-en="Service menu" data-es="Menú de servicios">Service menu</span>
+    <div class="menu-grid">
+      <div><h5 data-en="Facials" data-es="Faciales">Facials</h5><ul>
+        <li data-en="Deep cleansing facial" data-es="Limpieza facial profunda">Deep cleansing facial</li>
+        <li data-en="Extractions" data-es="Extracciones">Extractions</li>
+        <li data-en="Hydration facial with mask" data-es="Facial de hidratación con mascarilla">Hydration facial with mask</li>
+        <li data-en="Microdermabrasion" data-es="Microdermoabrasión">Microdermabrasion</li>
+        <li>Dermaplaning</li>
+        <li data-en="Superficial chemical peels" data-es="Peels químicos superficiales">Superficial chemical peels</li>
+        <li data-en="Cosmelan protocol" data-es="Protocolo Cosmelan">Cosmelan protocol</li></ul></div>
+      <div><h5 data-en="Technology" data-es="Aparatología">Technology</h5><ul>
+        <li data-en="LED light therapy" data-es="Terapia de luz LED">LED light therapy</li>
+        <li data-en="High-frequency" data-es="Alta frecuencia">High-frequency</li>
+        <li data-en="Galvanic &amp; faradic currents" data-es="Corrientes galvánicas y farádicas">Galvanic &amp; faradic currents</li>
+        <li data-en="Laser hair reduction" data-es="Depilación láser">Laser hair reduction</li></ul></div>
+      <div><h5 data-en="Body &amp; wellbeing" data-es="Cuerpo y bienestar">Body &amp; wellbeing</h5><ul>
+        <li data-en="Waxing (face &amp; body)" data-es="Depilación con cera (rostro y cuerpo)">Waxing (face &amp; body)</li>
+        <li data-en="Facial, neck &amp; shoulder massage" data-es="Masaje facial, cuello y hombros">Facial, neck &amp; shoulder massage</li>
+        <li data-en="Manual lymphatic drainage" data-es="Drenaje linfático manual">Manual lymphatic drainage</li></ul></div>
+    </div>
+  </div>
+</dialog>
 
-            if (!name || !email || !message) {
-                alert(currentLang === 'en' ? "Please complete all contact fields." : "Por favor completa todos los campos de contacto.");
-                return;
-            }
+<!-- ============ 02 · ADVISORY ============ -->
+<section class="snap advisory" id="advisory">
+  <div class="aura" aria-hidden="true"></div>
+  <div class="wrap">
+    <div>
+      <span class="eyebrow reveal"><span class="num">02</span><span data-en="Expert guidance" data-es="Asesoría experta">Expert guidance</span></span>
+      <h2 class="h2 reveal" data-delay="1"><span data-en="Guidance for what" data-es="Asesoría según lo que">Guidance for what</span> <em data-en="you're looking for" data-es="estás buscando">you're looking for</em></h2>
+      <p class="lead reveal" data-delay="2" data-en="Drawing on our international medical training, we help you understand which evidence-based options fit your goal. No pressure, and no trends without evidence." data-es="Con nuestra formación médica internacional te ayudamos a entender qué opciones con respaldo científico se ajustan a tu objetivo. Sin presión y sin modas sin evidencia.">Drawing on our international medical training, we help you understand which evidence-based options fit your goal. No pressure, and no trends without evidence.</p>
+      <a href="agendar.html" class="btn btn-primary js-book reveal" data-delay="3"><span data-en="Book a skin evaluation" data-es="Agendar evaluación de piel">Book a skin evaluation</span><span class="arrow">→</span></a>
+    </div>
+    <ul class="goal-list reveal snap-sub" data-delay="2">
+      <li><span data-en="Wrinkles" data-es="Arrugas">Wrinkles</span><small>01</small></li>
+      <li><span data-en="Sagging" data-es="Flacidez">Sagging</span><small>02</small></li>
+      <li><span data-en="Dull skin" data-es="Piel opaca">Dull skin</span><small>03</small></li>
+      <li><span data-en="Dry skin" data-es="Piel seca">Dry skin</span><small>04</small></li>
+      <li><span data-en="Under-eye circles" data-es="Ojeras">Under-eye circles</span><small>05</small></li>
+    </ul>
+  </div>
+</section>
 
-            submitBtn.disabled = true;
-            submitBtn.innerText = currentLang === 'en' ? "Sending..." : "Enviando...";
+<!-- ============ 03 · RESULTS ============
+     Siluetas de ejemplo hasta tener 3+ casos reales con consentimiento (ver RESULTS en el script). -->
+<section class="snap" id="results">
+  <div class="wrap">
+    <div class="results-head">
+      <div>
+        <span class="eyebrow reveal"><span class="num">03</span><span data-en="Results" data-es="Resultados">Results</span></span><span class="demo-flag hidden" id="demo-flag">Demo</span>
+        <h2 class="h2 reveal" data-delay="1"><span data-en="Subtle, perceptible," data-es="Cambios sutiles, perceptibles">Subtle, perceptible,</span> <em data-en="natural" data-es="y naturales">natural</em></h2>
+      </div>
+      <div class="car-nav reveal">
+        <button type="button" class="prev" aria-label="Previous" onclick="scrollCarousel(-1)"><svg viewBox="0 0 56 20" fill="none" stroke="url(#irisStroke)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M55 10H2M10 2 2 10l8 8"/></svg></button>
+        <button type="button" class="next" aria-label="Next" onclick="scrollCarousel(1)"><svg viewBox="0 0 56 20" fill="none" stroke="url(#irisStroke)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 10h53M46 2l8 8-8 8"/></svg></button>
+        <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="irisStroke" x1="0" y1="0" x2="56" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#D97CA0"/><stop offset=".5" stop-color="#B87CD1"/><stop offset="1" stop-color="#7CA3D9"/></linearGradient></defs></svg>
+      </div>
+    </div>
+    <div class="carousel" id="carousel"></div>
+    <p class="results-foot" data-en="Real patients, shared with their written consent. Individual results vary." data-es="Pacientes reales, publicados con su consentimiento por escrito. Los resultados varían en cada persona.">Real patients, shared with their written consent. Individual results vary.</p>
+  </div>
+</section>
 
-            try {
-                const { error } = await _supabase.functions.invoke('send-contact-message', {
-                    body: {
-                        name,
-                        email,
-                        message,
-                        source: 'index_contact_modal'
-                    }
-                });
+<!-- ============ 04 · TEAM ============ -->
+<section class="snap" id="about">
+  <div class="wrap team">
+    <div class="team-intro">
+      <span class="eyebrow reveal"><span class="num">04</span><span data-en="About us" data-es="Nosotros">About us</span></span>
+      <h2 class="h2 reveal" data-delay="1"><span data-en="The people" data-es="Las personas">The people</span> <em data-en="behind your skin" data-es="detrás de tu piel">behind your skin</em></h2>
+      <p class="lead reveal" data-delay="2" data-en="Two founders with medical training abroad and years of clinical experience — now focused entirely on skin, for women and men." data-es="Dos fundadores con formación médica en el extranjero y años de experiencia clínica, hoy dedicados por completo a la piel de mujeres y hombres.">Two founders with medical training abroad and years of clinical experience — now focused entirely on skin, for women and men.</p>
+    </div>
 
-                if (error) {
-                    alert((currentLang === 'en' ? "Could not send message: " : "No se pudo enviar el mensaje: ") + error.message);
-                    return;
-                }
+    <article class="person lux reveal snap-sub" data-delay="1">
+      <div class="portrait"><span class="mono" aria-hidden="true">FV</span></div>
+      <div class="p-body">
+        <h3>Freddy Vivas</h3>
+        <div class="role" data-en="Co-founder" data-es="Cofundador">Co-founder</div>
+        <p class="bio" data-en="Internationally trained physician (Venezuela) with a Master's in Clinical Dermatology. Brings a clinical eye to every skin evaluation and treatment plan." data-es="Médico con formación internacional (Venezuela) y Máster en Dermatología Clínica. Aporta una mirada clínica a cada evaluación de piel y plan de tratamiento.">Internationally trained physician (Venezuela) with a Master's in Clinical Dermatology. Brings a clinical eye to every skin evaluation and treatment plan.</p>
+        <ul class="creds">
+          <li><span data-en="Master's in Clinical Dermatology" data-es="Máster en Dermatología Clínica">Master's in Clinical Dermatology</span><span>MSc</span></li>
+          <li><span data-en="Licensed Esthetician" data-es="Esteticista licenciado">Licensed Esthetician</span><span>NYS</span></li>
+          <li><span>Medical Assistant</span><span>MA</span></li>
+          <li><span data-en="International Medical Graduate" data-es="Médico graduado en el extranjero">International Medical Graduate</span><span>IMG</span></li>
+        </ul>
+        <a class="li js-linkedin" data-person="freddy" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.75h4V21H3zM9.5 9.75h3.8v1.6h.06c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.77 2.65 4.77 6.1V21h-4v-4.95c0-1.18-.02-2.7-1.65-2.7-1.65 0-1.9 1.29-1.9 2.62V21h-4z"/></svg>LinkedIn</a>
+      </div>
+    </article>
 
-                alert(currentLang === 'en' ? "Message sent successfully. We will reply soon." : "Mensaje enviado correctamente. Te responderemos pronto.");
-                event.target.reset();
-                document.getElementById('contact-modal').classList.add('hidden');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerText = originalText;
-            }
-        });
+    <article class="person lux reveal snap-sub" data-delay="2">
+      <div class="portrait"><span class="mono" aria-hidden="true">SG</span></div>
+      <div class="p-body">
+        <h3>Samuel Galviz</h3>
+        <div class="role" data-en="Co-founder" data-es="Cofundador">Co-founder</div>
+        <p class="bio" data-en="Internationally trained general surgeon (Venezuela) and credentialed sonographer. Precision and safety in every protocol." data-es="Cirujano general con formación internacional (Venezuela) y ecografista certificado. Precisión y seguridad en cada protocolo.">Internationally trained general surgeon (Venezuela) and credentialed sonographer. Precision and safety in every protocol.</p>
+        <ul class="creds">
+          <li><span data-en="General Surgery (Venezuela)" data-es="Cirugía General (Venezuela)">General Surgery (Venezuela)</span><span>IMG</span></li>
+          <li><span data-en="Diagnostic Medical Sonographer" data-es="Ecografista médico">Diagnostic Medical Sonographer</span><span>RDMS · RVT</span></li>
+          <li><span data-en="Licensed Esthetician" data-es="Esteticista licenciado">Licensed Esthetician</span><span>NYS</span></li>
+          <li><span>Medical Assistant</span><span>MA</span></li>
+        </ul>
+        <a class="li js-linkedin" data-person="samuel" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.75h4V21H3zM9.5 9.75h3.8v1.6h.06c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.77 2.65 4.77 6.1V21h-4v-4.95c0-1.18-.02-2.7-1.65-2.7-1.65 0-1.9 1.29-1.9 2.62V21h-4z"/></svg>LinkedIn</a>
+      </div>
+    </article>
+  </div>
+</section>
 
-        // Single entry point for every "open the portal modal" button on the page —
-        // always forces the intended tab explicitly (login vs. new-patient/intake),
-        // instead of relying on whatever tab the modal happened to be left on last time.
-        function openAuthModal(tab) {
-            document.getElementById('auth-modal').classList.remove('hidden');
-            setAuthTab(tab === 'signup' ? 'signup' : 'login');
-            // setAuthTab returns early when the modal reopens on the tab it was
-            // closed on, so (re)load the freshly reset intake here too.
-            if (isSignUp) ensureIntakeFrameLoaded();
-        }
+<!-- ============ 05 · LOCATION ============ -->
+<section class="snap" id="location">
+  <div class="wrap">
+    <span class="eyebrow reveal"><span class="num">05</span><span data-en="Location" data-es="Ubicación">Location</span></span>
+    <h2 class="h2 reveal" data-delay="1"><span data-en="In the heart of" data-es="En el corazón de">In the heart of</span> <em>New York City</em></h2>
 
-        // 3. CAMBIAR ENTRE LOGIN Y NUEVO PACIENTE (INTAKE)
-        function setAuthTab(mode) {
-            const goSignUp = mode === 'signup';
-            if (goSignUp === isSignUp) return; // already on that tab
-            isSignUp = goSignUp;
+    <div class="loc">
+      <div class="map lux reveal snap-sub">
+        <div id="leaflet-map" role="img" aria-label="Map: Piel Spa at The New Yorker Hotel, 481 8th Ave, with nearby subway, train, bus and bike stations"></div>
+      </div>
 
-            document.getElementById('login-view').classList.toggle('hidden', isSignUp);
-            document.getElementById('signup-view').classList.toggle('hidden', !isSignUp);
-            document.getElementById('auth-modal').classList.toggle('new-patient-mode', isSignUp);
+      <div class="loc-info reveal snap-sub" data-delay="1">
+        <div class="addr-big">481 8th Ave</div>
+        <div class="addr-sub" data-en="New York, NY 10001 · at W 34th St, across from Penn Station" data-es="New York, NY 10001 · en la calle 34 Oeste, frente a Penn Station">New York, NY 10001 · at W 34th St, across from Penn Station</div>
+        <div class="hours"><i></i><span data-en="By appointment only" data-es="Atención solo con cita">By appointment only</span></div>
 
-            if (isSignUp) ensureIntakeFrameLoaded();
+        <div class="mode-tabs" role="tablist" aria-label="How to get here" id="mode-tabs">
+          <button role="tab" aria-selected="true" data-panel="m-subway" data-en="Subway" data-es="Metro">Subway</button>
+          <button role="tab" aria-selected="false" data-panel="m-train" data-en="Train" data-es="Tren">Train</button>
+          <button role="tab" aria-selected="false" data-panel="m-bus">Bus</button>
+          <button role="tab" aria-selected="false" data-panel="m-car" data-en="Car" data-es="Auto">Car</button>
+          <button role="tab" aria-selected="false" data-panel="m-bike" data-en="Bike" data-es="Bici">Bike</button>
+        </div>
 
-            const tabSignIn = document.getElementById('tab-signin');
-            const tabSignUp = document.getElementById('tab-signup');
-            if (isSignUp) {
-                tabSignIn.className = 'flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-white text-[#2A2330] opacity-50 hover:opacity-100';
-                tabSignUp.className = 'flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-[#B76E88] text-white';
-            } else {
-                tabSignIn.className = 'flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-[#2A2330] text-white';
-                tabSignUp.className = 'flex-1 py-3 text-[10px] uppercase tracking-widest font-bold transition bg-white text-[#2A2330] opacity-50 hover:opacity-100';
-            }
-        }
+        <div class="mode-panel active" id="m-subway">
+          <div class="route"><div class="bullets"><span class="b ace">A</span><span class="b ace">C</span><span class="b ace">E</span></div><div><strong>34 St–Penn Station</strong><span class="sub">8th Ave</span></div><span class="walk">2 min</span></div>
+          <div class="route"><div class="bullets"><span class="b r123">1</span><span class="b r123">2</span><span class="b r123">3</span></div><div><strong>34 St–Penn Station</strong><span class="sub">7th Ave</span></div><span class="walk">5 min</span></div>
+          <div class="route"><div class="bullets"><span class="b bdfm">B</span><span class="b bdfm">D</span><span class="b bdfm">F</span><span class="b bdfm">M</span><span class="b nqrw">N</span><span class="b nqrw">Q</span><span class="b nqrw">R</span><span class="b nqrw">W</span></div><div><strong>34 St–Herald Sq</strong><span class="sub">6th Ave &amp; Broadway</span></div><span class="walk">9 min</span></div>
+        </div>
+        <div class="mode-panel" id="m-train">
+          <div class="route"><span class="tag-s">LIRR · NJT</span><div><strong>Penn Station · Moynihan Hall</strong><span class="sub">LIRR · NJ Transit · Amtrak</span></div><span class="walk">3 min</span></div>
+          <div class="route"><span class="tag-s">PATH</span><div><strong>33 St</strong><span class="sub" data-en="From Hoboken &amp; Jersey City" data-es="Desde Hoboken y Jersey City">From Hoboken &amp; Jersey City</span></div><span class="walk">9 min</span></div>
+        </div>
+        <div class="mode-panel" id="m-bus">
+          <div class="route"><span class="tag-s">M34 SBS</span><div><strong data-en="34th St crosstown" data-es="Calle 34 (este–oeste)">34th St crosstown</strong><span class="sub" data-en="Stop at 8th Ave" data-es="Parada en 8th Ave">Stop at 8th Ave</span></div><span class="walk">1 min</span></div>
+          <div class="route"><span class="tag-s">M20</span><div><strong>8th Ave / 7th Ave</strong><span class="sub">Downtown · Uptown</span></div><span class="walk">1 min</span></div>
+          <div class="route"><span class="tag-s">PABT</span><div><strong>Port Authority</strong><span class="sub">42nd St &amp; 8th Ave</span></div><span class="walk">10 min</span></div>
+        </div>
+        <div class="mode-panel" id="m-car">
+          <div class="route"><span class="tag-s" data-en="Tunnel" data-es="Túnel">Tunnel</span><div><strong>Lincoln Tunnel</strong><span class="sub" data-en="From New Jersey" data-es="Desde New Jersey">From New Jersey</span></div><span class="walk">~5 min</span></div>
+          <div class="route"><span class="tag-s">Parking</span><div><strong data-en="Public garages" data-es="Estacionamientos públicos">Public garages</strong><span class="sub" data-en="Within 1–2 blocks" data-es="A 1–2 cuadras">Within 1–2 blocks</span></div><a class="walk" target="_blank" rel="noopener" href="https://www.google.com/maps/search/parking+near+481+8th+Ave+New+York+NY+10001" data-en="Find →" data-es="Buscar →">Find →</a></div>
+          <div class="route"><span class="tag-s">Ride</span><div><strong>Uber / Lyft</strong><span class="sub" data-en="Drop-off on 8th Ave" data-es="Te dejan en 8th Ave">Drop-off on 8th Ave</span></div><a class="walk" target="_blank" rel="noopener" href="https://m.uber.com/ul/?action=setPickup&amp;pickup=my_location&amp;dropoff%5Bformatted_address%5D=481%208th%20Ave%2C%20New%20York%2C%20NY%2010001" data-en="Ride →" data-es="Pedir →">Ride →</a></div>
+        </div>
+        <div class="mode-panel" id="m-bike">
+          <div class="route"><span class="tag-s" data-en="Lane" data-es="Ciclovía">Lane</span><div><strong data-en="8th Ave protected bike lane" data-es="Ciclovía protegida de 8th Ave">8th Ave protected bike lane</strong><span class="sub" data-en="Ride up to our door" data-es="Llegas hasta la puerta">Ride up to our door</span></div><span class="walk">0 min</span></div>
+          <div class="route"><span class="tag-s">Citi Bike</span><div><strong data-en="Docks nearby" data-es="Estaciones cercanas">Docks nearby</strong><span class="sub" data-en="A short walk away" data-es="A pocos pasos">A short walk away</span></div><a class="walk" target="_blank" rel="noopener" href="https://www.google.com/maps/search/Citi+Bike+station+near+481+8th+Ave+New+York+NY" data-en="Find →" data-es="Buscar →">Find →</a></div>
+        </div>
 
-// 4. LOGICA DE AUTENTICACION (LOGIN POR TELÉFONO)
-document.getElementById('do-auth').addEventListener('click', async () => {
-    const phone = document.getElementById('auth-phone-login').value.replace(/\D/g, '');
-    const password = document.getElementById('auth-password').value;
-    const btnText = document.getElementById('btn-text');
-    const spinner = document.getElementById('spinner');
-    const authBtn = document.getElementById('do-auth');
+        <div class="loc-actions">
+          <a class="btn btn-primary btn-sm" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&amp;destination=481+8th+Ave+New+York+NY+10001" data-en="Directions" data-es="Cómo llegar">Directions</a>
+          <a class="text-link" target="_blank" rel="noopener" href="https://maps.apple.com/?q=Piel+Spa&amp;address=481+8th+Ave,New+York,NY+10001">Apple Maps</a>
+          <a class="text-link js-book" href="agendar.html" data-en="Book" data-es="Agendar">Book</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-    if (!phone || !password) {
-        alert(currentLang === 'en' ? "Please fill in your phone number and password." : "Por favor llena tu número de teléfono y contraseña.");
-        return;
+<!-- ============ 06 · FAQ ============ -->
+<section class="snap" id="faq">
+  <div class="wrap faq-grid">
+    <div>
+      <span class="eyebrow reveal"><span class="num">06</span><span data-en="FAQ" data-es="Preguntas">FAQ</span></span>
+      <h2 class="h2 reveal" data-delay="1"><span data-en="Good" data-es="Buenas">Good</span> <em data-en="questions" data-es="preguntas">questions</em></h2>
+      <p class="lead reveal" data-delay="2" data-en="Can't find yours? Write to us on WhatsApp — we reply in English or Spanish." data-es="¿No encuentras la tuya? Escríbenos por WhatsApp, respondemos en inglés o en español.">Can't find yours? Write to us on WhatsApp — we reply in English or Spanish.</p>
+    </div>
+    <div class="faq reveal snap-sub" data-delay="1">
+      <details name="faq"><summary><span data-en="Do I need an evaluation before my first treatment?" data-es="¿Necesito una evaluación antes de mi primer tratamiento?">Do I need an evaluation before my first treatment?</span><span class="plus">+</span></summary><p data-en="Every first visit starts with a skin assessment so we can recommend what will actually work for you. If you already know what you want, we confirm it's right for your skin before starting." data-es="Toda primera visita empieza con una evaluación de la piel para recomendarte lo que de verdad te funcionará. Si ya sabes lo que quieres, confirmamos que sea adecuado para tu piel antes de empezar.">Every first visit starts with a skin assessment so we can recommend what will actually work for you. If you already know what you want, we confirm it's right for your skin before starting.</p></details>
+      <details name="faq"><summary><span data-en="Do you treat men?" data-es="¿Atienden hombres?">Do you treat men?</span><span class="plus">+</span></summary><p data-en="Yes. Our treatments are designed for women and men — from acne and texture to pigmentation and relaxing facials." data-es="Sí. Nuestros tratamientos están pensados para mujeres y hombres: desde acné y textura hasta manchas y faciales relajantes.">Yes. Our treatments are designed for women and men — from acne and texture to pigmentation and relaxing facials.</p></details>
+      <details name="faq"><summary><span data-en="Is there any downtime?" data-es="¿Hay tiempo de recuperación?">Is there any downtime?</span><span class="plus">+</span></summary><p data-en="Recovery time depends on the treatment you receive. Before we begin, we explain what to expect and how to care for your skin afterwards." data-es="El tiempo de recuperación depende del tratamiento que se realice. Antes de empezar te explicamos qué esperar y cómo cuidar tu piel después.">Recovery time depends on the treatment you receive. Before we begin, we explain what to expect and how to care for your skin afterwards.</p></details>
+      <details name="faq"><summary><span data-en="How many sessions will I need?" data-es="¿Cuántas sesiones voy a necesitar?">How many sessions will I need?</span><span class="plus">+</span></summary><p data-en="It depends on your skin and your goal. After your evaluation you'll receive a clear plan with the number of sessions and how often to come." data-es="Depende de tu piel y de tu objetivo. Después de tu evaluación recibes un plan claro con el número de sesiones y cada cuánto venir.">It depends on your skin and your goal. After your evaluation you'll receive a clear plan with the number of sessions and how often to come.</p></details>
+      <details name="faq"><summary><span data-en="Where exactly are you?" data-es="¿Dónde están exactamente?">Where exactly are you?</span><span class="plus">+</span></summary><p data-en="Inside The New Yorker Hotel, 481 8th Ave, at W 34th St — across from Penn Station." data-es="Dentro de The New Yorker Hotel, 481 8th Ave, en la calle 34 Oeste, frente a Penn Station.">Inside The New Yorker Hotel, 481 8th Ave, at W 34th St — across from Penn Station.</p></details>
+      <details name="faq"><summary><span data-en="Do you speak Spanish?" data-es="¿Atienden en inglés?">Do you speak Spanish?</span><span class="plus">+</span></summary><p data-en="Sí. Our whole team is bilingual — English and Spanish." data-es="Yes. Todo nuestro equipo es bilingüe: inglés y español.">Sí. Our whole team is bilingual — English and Spanish.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 07 · CONTACT + FOOTER ============ -->
+<section class="snap contact" id="contact">
+  <div class="wrap top">
+    <div class="contact-grid">
+      <div>
+        <span class="eyebrow reveal"><span class="num">07</span><span data-en="Contact" data-es="Contacto">Contact</span></span>
+        <h2 class="h2 reveal" data-delay="1"><span data-en="We're" data-es="Estamos">We're</span> <em data-en="here for you" data-es="para ti">here for you</em></h2>
+        <div class="contact-ways">
+          <a class="cway lux wa js-wa reveal" href="https://wa.me/19295613388?text=Hola%2C%20me%20gustar%C3%ADa%20obtener%20m%C3%A1s%20informaci%C3%B3n." target="_blank" rel="noopener">
+            <span class="ic"><svg viewBox="0 0 32 32" fill="currentColor"><path d="M16 3C9.4 3 4 8.4 4 15c0 2.4.7 4.6 1.9 6.5L4 29l7.8-1.9A12 12 0 0 0 16 27c6.6 0 12-5.4 12-12S22.6 3 16 3zm6 16.7c-.3.8-1.6 1.5-2.2 1.6-.6.1-1.3.1-2-.1-.5-.2-1.1-.4-1.9-.7-3.3-1.4-5.4-4.7-5.6-5-.2-.2-1.3-1.8-1.3-3.4 0-1.6.8-2.4 1.1-2.7.3-.3.7-.4.9-.4h.6c.2 0 .5-.1.7.6.3.7.9 2.3 1 2.4.1.2.1.4 0 .6-.1.2-.2.4-.3.6l-.5.6c-.2.2-.3.3-.1.7.2.3.9 1.4 1.8 2.3 1.3 1.1 2.3 1.5 2.6 1.6.3.2.5.1.7-.1.2-.2.8-1 1-1.3.2-.3.4-.3.7-.2.3.1 1.9.9 2.2 1.1.3.2.6.2.6.4.1.1.1.8-.2 1.5z"/></svg></span>
+            <div><strong>WhatsApp</strong><span>+1 (929) 561-3388 · <span data-en="Fastest reply" data-es="Respuesta más rápida">Fastest reply</span></span></div>
+          </a>
+          <a class="cway lux reveal" data-delay="1" href="mailto:info@piel-spa.com">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="m3 7 9 6 9-6"/></svg></span>
+            <div><strong>Email</strong><span>info@piel-spa.com</span></div>
+          </a>
+          <a class="cway lux reveal" data-delay="2" href="https://www.instagram.com/pielspanyc/" target="_blank" rel="noopener">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="currentColor"/></svg></span>
+            <div><strong>Instagram</strong><span>@pielspanyc</span></div>
+          </a>
+        </div>
+      </div>
+      <form class="cform reveal snap-sub" data-delay="1" id="contact-form" novalidate>
+        <div class="field"><label for="contact-name" data-en="Name" data-es="Nombre">Name</label><input id="contact-name" autocomplete="name" required></div>
+        <div class="field"><label for="contact-email">Email</label><input id="contact-email" type="email" autocomplete="email" required></div>
+        <div class="field"><label for="contact-message" data-en="Message" data-es="Mensaje">Message</label><textarea id="contact-message" rows="3" required></textarea></div>
+        <button id="contact-submit" type="submit" class="btn btn-primary" data-en="Send message" data-es="Enviar mensaje">Send message</button>
+        <div class="form-status" id="contact-status" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="row">
+        <a href="#top" class="brand"><span class="brand-piel">Piel</span><span class="brand-spa">spa</span></a>
+        <nav aria-label="Footer">
+          <a href="agendar.html" class="js-book" data-en="Book" data-es="Agendar">Book</a>
+          <a href="#" onclick="openAuthModal('signup');return false" data-en="New patient" data-es="Nuevo paciente">New patient</a>
+          <a href="#" onclick="openAuthModal('login');return false" data-en="Patient Portal" data-es="Portal del Paciente">Patient Portal</a>
+          <a href="tel:+19295613388">+1 (929) 561-3388</a>
+        </nav>
+        <div class="socials">
+          <a href="https://www.instagram.com/pielspanyc/" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="currentColor"/></svg></a>
+          <a class="js-facebook hidden" href="#" target="_blank" rel="noopener" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 8h3V4h-3c-2.8 0-4.5 1.8-4.5 4.6V11H7v4h2.5v9h4v-9H16l.5-4h-3V8.8c0-.5.3-.8.5-.8z"/></svg></a>
+          <a class="js-wa" href="https://wa.me/19295613388" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 32 32" fill="currentColor"><path d="M16 3C9.4 3 4 8.4 4 15c0 2.4.7 4.6 1.9 6.5L4 29l7.8-1.9A12 12 0 0 0 16 27c6.6 0 12-5.4 12-12S22.6 3 16 3z"/></svg></a>
+        </div>
+      </div>
+      <div class="bottom">
+        <span>&copy; 2026 Piel Spa LLC · The New Yorker Hotel, 481 8th Ave, New York, NY 10001</span>
+        <span><a href="privacidad.html" data-en="Privacy Policy" data-es="Política de Privacidad">Privacy Policy</a> · <a href="admin-login.html" data-en="Staff access" data-es="Acceso personal">Staff access</a></span>
+      </div>
+    </div>
+  </footer>
+</section>
+
+</main>
+
+<!-- Floating WhatsApp (desktop) -->
+<a class="wa-float js-wa" href="https://wa.me/19295613388?text=Hola%2C%20me%20gustar%C3%ADa%20obtener%20m%C3%A1s%20informaci%C3%B3n." target="_blank" rel="noopener" aria-label="WhatsApp">
+  <svg viewBox="0 0 32 32" fill="currentColor"><path d="M16.004 3C9.377 3 4 8.373 4 15c0 2.386.703 4.612 1.912 6.487L4 29l7.75-1.887A11.94 11.94 0 0 0 16.004 27C22.63 27 28 21.627 28 15S22.63 3 16.004 3zm0 21.75c-1.99 0-3.85-.55-5.44-1.5l-.39-.23-4.6 1.12 1.14-4.48-.25-.4A9.7 9.7 0 0 1 5.25 15c0-5.93 4.82-10.75 10.75-10.75S26.75 9.07 26.75 15 21.930 24.75 16 24.75zm5.98-8.06c-.33-.16-1.94-.96-2.24-1.07-.3-.11-.52-.16-.74.16-.22.33-.85 1.06-1.04 1.28-.19.22-.38.24-.71.08-.33-.16-1.380-.51-2.63-1.63-.97-.87-1.63-1.94-1.82-2.270-.19-.33-.02-.5.14-.67.14-.15.33-.38.49-.57.16-.19.22-.33.33-.55.11-.22.05-.41-.03-.57-.08-.16-.74-1.78-1.01-2.44-.27-.64-.55-.55-.74-.56-.19-.01-.41-.01-.63-.01-.22 0-.57.08-.87.41-.3.33-1.14 1.11-1.14 2.71 0 1.6 1.17 3.14 1.33 3.36.16.22 2.3 3.51 5.57 4.92.78.34 1.39.54 1.86.69.78.25 1.49.21 2.05.13.63-.09 1.94-.79 2.21-1.55.27-.76.27-1.42.19-1.55-.08-.14-.3-.22-.63-.38z"/></svg>
+</a>
+
+<!-- Mobile bottom bar -->
+<div class="mbar" id="mbar">
+  <a href="agendar.html" class="btn btn-primary js-book" data-en="Book an appointment" data-es="Agendar cita">Book an appointment</a>
+  <a class="wa js-wa" href="https://wa.me/19295613388?text=Hola%2C%20me%20gustar%C3%ADa%20obtener%20m%C3%A1s%20informaci%C3%B3n." target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 32 32" fill="currentColor"><path d="M16.004 3C9.377 3 4 8.373 4 15c0 2.386.703 4.612 1.912 6.487L4 29l7.75-1.887A11.94 11.94 0 0 0 16.004 27C22.63 27 28 21.627 28 15S22.63 3 16.004 3zm5.98 13.69c-.33-.16-1.94-.96-2.24-1.07-.3-.11-.52-.16-.74.16-.22.33-.85 1.06-1.04 1.28-.19.22-.38.24-.71.08-.33-.16-1.38-.51-2.63-1.63-.97-.87-1.63-1.94-1.82-2.27-.19-.33-.02-.5.14-.67.14-.15.33-.38.49-.57.16-.19.22-.33.33-.55.11-.22.05-.41-.03-.57-.08-.16-.74-1.78-1.01-2.44-.27-.64-.55-.55-.74-.56-.19-.01-.41-.01-.63-.01-.22 0-.57.08-.87.41-.3.33-1.14 1.11-1.14 2.71 0 1.6 1.17 3.14 1.33 3.36.16.22 2.3 3.51 5.57 4.92.78.34 1.39.54 1.86.69.78.25 1.49.21 2.05.13.63-.09 1.94-.79 2.21-1.55.27-.76.27-1.42.19-1.55-.08-.14-.3-.22-.63-.38z"/></svg></a>
+</div>
+
+<!-- ============ AUTH MODAL (Portal / New Patient) ============ -->
+<div id="auth-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Patient Portal">
+  <div id="auth-modal-panel">
+    <div class="modal-top">
+      <button id="modal-lang-toggle" class="lang-btn js-lang" type="button"></button>
+      <button class="close-x" type="button" onclick="closeAuthModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="seg">
+      <button id="tab-signin" class="on" type="button" onclick="setAuthTab('login')"><span data-en="Sign in" data-es="Iniciar sesión">Sign in</span></button>
+      <button id="tab-signup" type="button" onclick="setAuthTab('signup')"><span data-en="✦ New patient" data-es="✦ Nuevo paciente">✦ New patient</span></button>
+    </div>
+
+    <div id="login-view" style="display:grid;gap:12px">
+      <h2 class="login-title" data-en="Welcome back" data-es="Bienvenido de nuevo">Welcome back</h2>
+      <p class="login-sub" data-en="Sign in with the phone number you registered with." data-es="Ingresa con el número de teléfono con el que te registraste.">Sign in with the phone number you registered with.</p>
+      <div class="field"><label for="auth-phone-login" data-en="Phone" data-es="Teléfono">Phone</label><input type="tel" id="auth-phone-login" inputmode="tel" autocomplete="tel" placeholder="(555) 123-4567"></div>
+      <div class="field"><label for="auth-password" data-en="Password" data-es="Contraseña">Password</label>
+        <div class="pw-wrap"><input type="password" id="auth-password" autocomplete="current-password">
+          <button type="button" class="pw-eye" tabindex="-1" onclick="togglePassword('auth-password','eye-password')" aria-label="Show password"><span id="eye-password"></span></button></div>
+      </div>
+      <button type="button" class="forgot" onclick="handleForgotPassword()" data-en="Forgot your password?" data-es="¿Olvidaste tu contraseña?">Forgot your password?</button>
+      <button id="do-auth" type="button" class="btn btn-primary">
+        <span id="btn-text" data-en="Sign in" data-es="Iniciar sesión">Sign in</span>
+        <svg id="spinner" class="hidden" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/><path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+      </button>
+      <div class="form-status" id="auth-status" role="status" aria-live="polite"></div>
+    </div>
+
+    <div id="signup-view" class="hidden">
+      <iframe id="intake-frame" title="New Patient Intake"></iframe>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/* ============================================================
+   CONFIG — rellenar cuando estén listos
+   ============================================================ */
+const CONFIG = {
+  GA4_ID: '',            // ej. 'G-XXXXXXXXXX'  (Google Analytics 4)
+  META_PIXEL_ID: '',     // ej. '123456789012345' (Meta Pixel)
+  FACEBOOK_URL: '',      // ej. 'https://www.facebook.com/pielspanyc'
+  LINKEDIN: { freddy: '', samuel: '' }
+};
+
+/* Casos de antes/después (solo con consentimiento escrito). Con 3+ casos reemplazan las siluetas.
+   { before:'images/results/caso1-antes.webp', after:'images/results/caso1-despues.webp',
+     en:'Brighter, more even tone', es:'Un tono más luminoso y uniforme' } */
+const RESULTS = [];
+
+/* Hero: escritorio (16:9) y móvil (vertical, cada clip re-encuadrado). */
+const HEROES = {
+  pexels: { d: 'media/hero-pexels',  m: 'media/hero-pexels-m' },
+};
+
+/* ============================================================
+   0. Scroll fix (mobile browsers restoring old position)
+   ============================================================ */
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+if (!location.hash) { window.scrollTo(0, 0); window.addEventListener('pageshow', () => { if (!location.hash) window.scrollTo(0, 0); }); }
+
+/* ============================================================
+   1. ANALYTICS — solo en esta página de marketing (nunca en intake/portal)
+   ============================================================ */
+function track(event) {
+  try {
+    if (window.gtag) gtag('event', event);
+    if (window.fbq) {
+      if (event === 'book_click') fbq('track', 'Lead');
+      else if (event === 'whatsapp_click' || event === 'contact_form') fbq('track', 'Contact');
     }
+  } catch (_) {}
+}
+(function loadAnalytics() {
+  if (CONFIG.GA4_ID) {
+    const s = document.createElement('script');
+    s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + CONFIG.GA4_ID;
+    document.head.appendChild(s);
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function () { dataLayer.push(arguments); };
+    gtag('js', new Date()); gtag('config', CONFIG.GA4_ID);
+  }
+  if (CONFIG.META_PIXEL_ID) {
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', CONFIG.META_PIXEL_ID); fbq('track', 'PageView');
+  }
+})();
+function bindTracking(root) {
+  root.querySelectorAll('.js-book:not([data-t])').forEach(a => { a.dataset.t = 1; a.addEventListener('click', () => track('book_click')); });
+  root.querySelectorAll('.js-wa:not([data-t])').forEach(a => { a.dataset.t = 1; a.addEventListener('click', () => track('whatsapp_click')); });
+}
 
-    btnText.classList.add('hidden');
-    spinner.classList.remove('hidden');
-    authBtn.disabled = true;
-
-    try {
-        const result = await _supabase.auth.signInWithPassword({ email: syntheticEmail(phone), password });
-        if (result.error) {
-            alert("Error: " + result.error.message);
-            return;
-        }
-        window.location.href = 'dashboard.html';
-    } finally {
-        btnText.classList.remove('hidden');
-        spinner.classList.add('hidden');
-        authBtn.disabled = false;
-    }
+/* Enlaces opcionales */
+if (CONFIG.FACEBOOK_URL) document.querySelectorAll('.js-facebook').forEach(a => { a.href = CONFIG.FACEBOOK_URL; a.classList.remove('hidden'); });
+document.querySelectorAll('.js-linkedin').forEach(a => {
+  const url = CONFIG.LINKEDIN[a.dataset.person];
+  if (url) a.href = url; else a.classList.add('hidden');
 });
 
-        // 5. RECUPERAR CONTRASEÑA (por teléfono — el enlace se manda al correo real guardado en el perfil)
-        async function handleForgotPassword() {
-            const phone = document.getElementById('auth-phone-login').value.replace(/\D/g, '');
-            if (!phone) return alert(currentLang === 'en' ? "Please enter your phone number first." : "Por favor, ingresa tu número de teléfono primero.");
+/* ============================================================
+   2. LANGUAGE — guardado > idioma del dispositivo (es si empieza por es) > inglés
+   ============================================================ */
+function detectLang() {
+  try { const saved = localStorage.getItem('preferredLang'); if (saved === 'en' || saved === 'es') return saved; } catch (_) {}
+  const langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'en'];
+  for (const l of langs) {
+    const code = String(l).toLowerCase().slice(0, 2);
+    if (code === 'en') return 'en';
+    if (code === 'es') return 'es';
+  }
+  return 'en';
+}
+let currentLang = detectLang();
+try { localStorage.setItem('preferredLang', currentLang); } catch (_) {} // agendar/intake leen esta misma clave
+const WA_BASE = 'https://wa.me/19295613388?text=';
 
-            const { error } = await _supabase.functions.invoke('request-password-reset', {
-                body: { phone, redirect_to: window.location.origin + '/reset-password.html' }
-            });
+// "Escríbenos para conocer nuestros precios" en cada tratamiento (precios solo por WhatsApp)
+document.querySelectorAll('.t-panel').forEach(panel => {
+  const kicker = panel.querySelector('.kicker');
+  const a = document.createElement('a');
+  a.className = 'price-link js-wa';
+  a.target = '_blank'; a.rel = 'noopener';
+  a.dataset.topicEn = kicker.dataset.en; a.dataset.topicEs = kicker.dataset.es;
+  a.innerHTML = '<svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M16 3C9.4 3 4 8.4 4 15c0 2.4.7 4.6 1.9 6.5L4 29l7.8-1.9A12 12 0 0 0 16 27c6.6 0 12-5.4 12-12S22.6 3 16 3z"/></svg><span data-en="Message us for our prices" data-es="Escríbenos para conocer nuestros precios">Message us for our prices</span>';
+  panel.querySelector('.t-actions').appendChild(a);
+});
 
-            if (error) alert("Error: " + error.message);
-            else alert(currentLang === 'en'
-                ? "If that phone number is registered, a password reset link was sent to the email on file. Check your spam folder too. If it does not arrive in a few minutes, message us on WhatsApp."
-                : "Si ese número está registrado, se envió un enlace de recuperación al correo asociado a tu cuenta. Revisa también el spam. Si no llega en unos minutos, escríbenos por WhatsApp.");
-        }
-    </script>
+function applyLanguage() {
+  document.documentElement.lang = currentLang;
+  document.querySelectorAll('[data-en]').forEach(el => {
+    const v = el.getAttribute('data-' + currentLang);
+    if (v != null) el.textContent = v;
+  });
+  document.querySelectorAll('.js-lang').forEach(b => {
+    b.textContent = currentLang === 'en' ? 'ES' : 'EN';
+    b.setAttribute('aria-label', currentLang === 'en' ? 'Ver en español' : 'View in English');
+  });
+  document.querySelectorAll('.price-link').forEach(a => {
+    const topic = a.dataset['topic' + (currentLang === 'en' ? 'En' : 'Es')];
+    const msg = currentLang === 'en' ? `Hi! I'd like to know the prices for: ${topic}` : `¡Hola! Me gustaría conocer los precios de: ${topic}`;
+    a.href = WA_BASE + encodeURIComponent(msg);
+  });
+  renderResults();
+}
+function setLanguage(lang) {
+  currentLang = lang;
+  try { localStorage.setItem('preferredLang', lang); } catch (_) {}
+  applyLanguage();
+  const frame = document.getElementById('intake-frame');
+  if (frame && frame.contentWindow) frame.contentWindow.postMessage({ type: 'set-lang', lang }, window.location.origin);
+}
+document.querySelectorAll('.js-lang').forEach(b => b.addEventListener('click', () => setLanguage(currentLang === 'en' ? 'es' : 'en')));
+
+/* ============================================================
+   3. UI: header, menu, reveal, hero video, map
+   ============================================================ */
+const header = document.getElementById('header');
+const mbar = document.getElementById('mbar');
+const heroEl = document.querySelector('.hero');
+function onScroll() {
+  const y = window.scrollY;
+  header.classList.toggle('scrolled', y > heroEl.offsetHeight - 120);
+  mbar.classList.toggle('show', y > window.innerHeight * 0.6);
+}
+window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+function toggleMenu(open) {
+  const m = document.getElementById('mobile-menu');
+  m.classList.toggle('open', open);
+  m.setAttribute('aria-hidden', String(!open));
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+}, { rootMargin: '0px 0px -6% 0px' });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Video del hero: versión vertical en pantallas verticales; carga diferida; no se reproduce con ahorro de datos
+(function heroVideo() {
+  const v = document.getElementById('hero-video');
+  const media = v.parentElement;
+  const set = HEROES[new URLSearchParams(location.search).get('hero')] || HEROES.pexels;
+  const conn = navigator.connection || {};
+  const portrait = matchMedia('(max-aspect-ratio: 1/1)');
+  const base = () => portrait.matches ? set.m : set.d;
+  media.style.backgroundImage = `url('${base()}-poster.webp')`;
+  if (set !== HEROES.pexels && !portrait.matches) media.style.backgroundImage = `url('${set.d}-poster.webp')`;
+  if (reduceMotion || conn.saveData || /(^|-)2g$/.test(conn.effectiveType || '')) return;
+  const load = () => {
+    const b = base();
+    const [w, m] = v.querySelectorAll('source');
+    if (w.getAttribute('src') === b + '.webm') return;
+    w.src = b + '.webm'; m.src = b + '.mp4';
+    v.poster = b + '-poster.webp';
+    v.load(); v.play().catch(() => {});
+  };
+  portrait.addEventListener('change', load);
+  if (document.readyState === 'complete') setTimeout(load, 300); else window.addEventListener('load', () => setTimeout(load, 300));
+})();
+
+// Mapa interactivo (Leaflet + mapa base CARTO Positron sobre datos de OpenStreetMap).
+// Coordenadas reales de estaciones/paradas tomadas de OpenStreetMap. La ruta animada aparece solo al elegir una estación.
+(function transitMap() {
+  const el = document.getElementById('leaflet-map');
+  const HOME = [40.75298, -73.99362];           // The New Yorker Hotel, 481 8th Ave
+  const DOOR = [40.75290, -73.99362];
+  const C8_34 = [40.75232, -73.99347];           // 8th Ave & W 34th St
+  const C7_34 = [40.75121, -73.99079];           // 7th Ave & W 34th St
+  const C6_34 = [40.74985, -73.98818];           // 6th Ave/Broadway & W 34th St
+  const svgI = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>`;
+  const bullets = (cls, letters) => letters.split('').map(l => `<span class="b ${cls}">${l}</span>`).join('');
+  // rows[i] = estaciones (índices de marks) que corresponden a la fila i de la leyenda
+  const getModes = () => ({
+    'm-subway': {
+      marks: [
+        { at: [40.75243, -73.99369], html: bullets('ace', 'ACE'), route: [[40.75243, -73.99369], DOOR] },
+        { at: [40.75101, -73.99062], html: bullets('r123', '123'), route: [C7_34, C8_34, DOOR] },
+        { at: [40.74972, -73.98782], html: bullets('bdfm', 'BDFM') + bullets('nqrw', 'NQRW'), route: [[40.74972, -73.98782], C6_34, C7_34, C8_34, DOOR] }
+      ],
+      rows: [[0], [1], [2]]
+    },
+    'm-train': {
+      marks: [
+        { at: [40.75024, -73.99281], html: `<span class="mk-ic">${svgI('m-train')}</span><span class="mk-lbl">Penn Station</span>`, route: [[40.75144, -73.99355], DOOR] },
+        { at: [40.75104, -73.99470], html: `<span class="mk-ic">${svgI('m-train')}</span><span class="mk-lbl">Moynihan</span>`, route: [[40.75144, -73.99441], C8_34, DOOR] },
+        { at: [40.74854, -73.98870], html: `<span class="mk-ic">${svgI('m-train')}</span><span class="mk-lbl">PATH 33 St</span>`, route: [[40.74854, -73.98870], C6_34, C7_34, C8_34, DOOR] }
+      ],
+      rows: [[0, 1], [2]]
+    },
+    'm-bus': {
+      marks: [
+        { at: [40.75190, -73.99288], html: `<span class="mk-ic">${svgI('m-bus')}</span><span class="mk-lbl">M34 SBS</span>`, route: [[40.75190, -73.99288], C8_34, DOOR] },
+        { at: [40.75241, -73.99316], html: `<span class="mk-ic">${svgI('m-bus')}</span><span class="mk-lbl">M20</span>`, route: [[40.75241, -73.99316], [40.75298, -73.99340]] },
+        { at: [40.75731, -73.98973], html: `<span class="mk-ic">${svgI('m-bus')}</span><span class="mk-lbl">Port Authority</span>`, route: [[40.75731, -73.98973], [40.75394, -73.99205], [40.75300, -73.99340]] }
+      ],
+      rows: [[0], [1], [2]]
+    },
+    'm-car': { marks: [], rows: [] },
+    'm-bike': {
+      marks: [
+        { at: [40.75274, -73.99281], html: `<span class="mk-ic">${svgI('m-bike')}</span><span class="mk-lbl">Citi Bike</span>`, route: [[40.75274, -73.99281], [40.75298, -73.99340]] },
+        { at: [40.75169, -73.99370], html: `<span class="mk-ic">${svgI('m-bike')}</span>`, route: [[40.75169, -73.99370], DOOR] },
+        { at: [40.75451, -73.99188], html: `<span class="mk-ic">${svgI('m-bike')}</span>`, route: [[40.75451, -73.99188], [40.75300, -73.99340]] }
+      ],
+      rows: [[], [0, 1, 2]],
+      lane: [[40.75010, -73.99490], [40.75540, -73.99110]]
+    }
+  });
+  let MODES = null, LF, map, layer, routeLayer, current = null, ready = false;
+
+  function arrowDefs() {
+    const svg = el.querySelector('.leaflet-overlay-pane svg');
+    if (!svg || svg.querySelector('#route-arrow')) return;
+    svg.insertAdjacentHTML('afterbegin', '<defs><marker id="route-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse"><path d="M1 1 9 5 1 9z" fill="#7A3E5C"/></marker></defs>');
+  }
+  function rowsOf(id) { return [...document.querySelectorAll('#' + id + ' .route')]; }
+
+  // Dibuja la ruta animada solo de las estaciones elegidas
+  function pick(id, markIdx) {
+    const m = MODES[id]; if (!m) return;
+    routeLayer.clearLayers();
+    const pts = [HOME];
+    markIdx.forEach(i => {
+      const k = m.marks[i]; if (!k) return;
+      const line = LF.polyline(k.route, { color: '#7A3E5C', weight: 2.5, opacity: .95, className: 'route-anim', interactive: false }).addTo(routeLayer);
+      arrowDefs();
+      if (line.getElement()) line.getElement().setAttribute('marker-end', 'url(#route-arrow)');
+      pts.push(...k.route);
+    });
+    document.querySelectorAll('#leaflet-map .mk').forEach(n => n.classList.toggle('sel', markIdx.includes(Number(n.dataset.i))));
+    rowsOf(id).forEach((r, ri) => r.classList.toggle('sel', (m.rows[ri] || []).some(i => markIdx.includes(i)) && markIdx.length > 0));
+    if (pts.length > 1) map.flyToBounds(LF.latLngBounds(pts).pad(.25), { duration: .7, maxZoom: 17 });
+  }
+
+  window.showMode = function (id) {
+    if (!ready) return;
+    MODES = MODES || getModes();
+    current = id;
+    layer.clearLayers(); routeLayer.clearLayers();
+    const m = MODES[id] || MODES['m-car'];
+    const pts = [HOME];
+    if (m.lane) LF.polyline(m.lane, { color: '#B76E88', weight: 5, opacity: .25, interactive: false }).addTo(layer);
+    m.marks.forEach((k, i) => {
+      const mk = LF.marker(k.at, { icon: LF.divIcon({ className: '', html: `<div class="mk" data-i="${i}">${k.html}</div>`, iconSize: null }), keyboard: false }).addTo(layer);
+      mk.on('click', () => pick(id, [i]));
+      pts.push(k.at);
+    });
+    rowsOf(id).forEach(r => r.classList.remove('sel'));
+    if (pts.length > 1) map.flyToBounds(LF.latLngBounds(pts).pad(.18), { duration: .8, maxZoom: 17 });
+    else map.flyTo(HOME, 16, { duration: .8 });
+  };
+
+  function init() {
+    LF = window.L;
+    map = LF.map(el, { zoomControl: true, scrollWheelZoom: false, dragging: !LF.Browser.mobile, tap: false }).setView(HOME, 16);
+    // Mosaicos de OpenStreetMap (en gris por CSS). Si OSM los bloquea (p. ej. al abrir el archivo localmente), se usa el mapa gris de Esri.
+    const osm = LF.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
+    let fails = 0;
+    osm.on('tileerror', () => {
+      if (++fails !== 3) return;
+      map.removeLayer(osm);
+      el.classList.add('esri');
+      LF.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, attribution: 'Tiles &copy; Esri' }).addTo(map);
+    });
+    map.attributionControl.setPrefix(false);
+    LF.marker(HOME, { icon: LF.divIcon({ className: '', html: '<div class="mk-home"><span class="dot"></span><div class="card"><strong>Piel Spa</strong><span>The New Yorker Hotel</span></div></div>', iconSize: null }), zIndexOffset: 1000, interactive: false }).addTo(map);
+    layer = LF.layerGroup().addTo(map);
+    routeLayer = LF.layerGroup().addTo(map);
+    ready = true;
+    const active = document.querySelector('#mode-tabs [aria-selected="true"]');
+    showMode(active ? active.dataset.panel : 'm-subway');
+    document.querySelectorAll('#mode-tabs [role=tab]').forEach(t => t.addEventListener('click', () => showMode(t.dataset.panel)));
+    // Filas de la leyenda: al elegir una estación se dibuja su recorrido
+    document.querySelectorAll('.mode-panel').forEach(panel => {
+      rowsOf(panel.id).forEach((row, ri) => {
+        const idx = (MODES[panel.id] || {}).rows?.[ri] || [];
+        if (!idx.length) return;
+        row.classList.add('pickable'); row.tabIndex = 0; row.setAttribute('role', 'button');
+        const go = () => pick(panel.id, idx);
+        row.addEventListener('click', e => { if (!e.target.closest('a')) go(); });
+        row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+      });
+    });
+  }
+  function load() {
+    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(css);
+    const js = document.createElement('script'); js.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; js.onload = init; document.head.appendChild(js);
+  }
+  let requested = false;
+  const go = () => { if (requested) return; requested = true; mo.disconnect(); window.removeEventListener('scroll', near); load(); };
+  const near = () => { const r = el.getBoundingClientRect(); if (r.top < innerHeight + 600 && r.bottom > -600) go(); };
+  const mo = new IntersectionObserver(es => { if (es[0].isIntersecting) go(); }, { rootMargin: '600px' });
+  mo.observe(el);
+  window.addEventListener('scroll', near, { passive: true });
+  document.querySelectorAll('#mode-tabs [role=tab]').forEach(t => t.addEventListener('click', go, { once: true }));
+})();
+
+
+// Cursor propio: solo un punto ciruela (solo con mouse). Desactivar: ?cursor=off
+(function customCursor() {
+  if (!matchMedia('(pointer:fine)').matches || new URLSearchParams(location.search).get('cursor') === 'off') return;
+  const dot = document.createElement('div'); dot.className = 'cur-dot';
+  document.body.append(dot);
+  window.addEventListener('pointermove', e => {
+    document.documentElement.classList.add('has-cursor');
+    dot.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
+    const t = e.target;
+    dot.classList.toggle('on-dark', !!(t.closest && t.closest('.hero,.advisory,.footer,.mobile-menu') && !t.closest('.mobile-menu')));
+    dot.style.opacity = (t.closest && t.closest('input,textarea,select')) ? '0' : '';
+  }, { passive: true });
+  document.addEventListener('pointerleave', () => document.documentElement.classList.remove('has-cursor'));
+})();
+
+/* ============================================================
+   4. TABS (concerns + mobility)
+   ============================================================ */
+function setupTabs(listId) {
+  const list = document.getElementById(listId);
+  const tabs = [...list.querySelectorAll('[role=tab]')];
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(o => {
+      const on = o === t;
+      o.setAttribute('aria-selected', String(on));
+      document.getElementById(o.dataset.panel).classList.toggle('active', on);
+    });
+    if (list.scrollWidth > list.clientWidth) t.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }));
+}
+// Íconos Lucide (lucide.dev, licencia ISC) para la sección de ubicación
+const ICONS = {
+  'm-subway': '<rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/><path d="m8 19-2 3"/><path d="m18 22-2-3"/><path d="M8 15h.01"/><path d="M16 15h.01"/>',
+  'm-train': '<path d="M8 3.1V7a4 4 0 0 0 8 0V3.1"/><path d="m9 15-1-1"/><path d="m15 15 1-1"/><path d="M9 19c-2.8 0-5-2.2-5-5v-4a8 8 0 0 1 16 0v4c0 2.8-2.2 5-5 5Z"/><path d="m8 19-2 3"/><path d="m16 19 2 3"/>',
+  'm-bus': '<path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/>',
+  'm-car': '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>',
+  'm-bike': '<circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/>',
+  walk: '<path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/>'
+};
+const icon = (k) => `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]}</svg>`;
+document.querySelectorAll('#mode-tabs button').forEach(b => {
+  const label = document.createElement('span');
+  label.dataset.en = b.dataset.en || b.textContent; label.dataset.es = b.dataset.es || b.textContent;
+  label.textContent = b.textContent;
+  delete b.dataset.en; delete b.dataset.es;
+  b.innerHTML = icon(b.dataset.panel); b.appendChild(label);
+});
+document.querySelectorAll('#location span.walk').forEach(s => { s.insertAdjacentHTML('afterbegin', icon('walk')); });
+
+setupTabs('concern-tabs');
+setupTabs('mode-tabs');
+
+// FAQ: solo una pregunta abierta a la vez (respaldo para navegadores sin <details name>)
+document.querySelectorAll('.faq details').forEach(d => d.addEventListener('toggle', () => {
+  if (d.open) document.querySelectorAll('.faq details[open]').forEach(o => { if (o !== d) o.open = false; });
+}));
+
+/* ============================================================
+   5. RESULTS carousel with before/after slider
+   ============================================================ */
+const DEMO_CASES = [
+  { en: 'A more even, luminous tone', es: 'Un tono más uniforme y luminoso' },
+  { en: 'Calmer, clearer skin', es: 'Una piel más limpia y en calma' },
+  { en: 'Smoother texture, refined pores', es: 'Textura más suave, poros afinados' },
+  { en: 'Rested, hydrated glow', es: 'Una luminosidad descansada e hidratada' }
+];
+function silhouette(face, shade, glow) {
+  return `<svg viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <rect width="400" height="500" fill="#fff"/>
+    ${glow ? '<radialGradient id="gl"><stop offset="0" stop-color="#F6D9E3" stop-opacity=".7"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><circle cx="200" cy="200" r="190" fill="url(#gl)"/>' : ''}
+    <path d="M70 500c8-78 62-118 130-118s122 40 130 118z" fill="${shade}"/>
+    <rect x="168" y="300" width="64" height="90" rx="28" fill="${shade}"/>
+    <ellipse cx="200" cy="215" rx="92" ry="118" fill="${face}"/>
+  </svg>`;
+}
+function renderResults() {
+  const usingDemo = RESULTS.length < 3;
+  const cases = usingDemo ? DEMO_CASES : RESULTS;
+  document.getElementById('demo-flag').classList.toggle('hidden', !usingDemo);
+  const t = currentLang === 'en'
+    ? { b: 'Before', a: 'After', k: 'What we achieved together', cta: 'I want results like this', drag: 'Drag to compare' }
+    : { b: 'Antes', a: 'Después', k: 'Lo que logramos juntos', cta: 'Quiero resultados así', drag: 'Desliza para comparar' };
+  const car = document.getElementById('carousel');
+  car.innerHTML = cases.map(c => {
+    const before = c.before ? `<img src="${c.before}" alt="${t.b}" loading="lazy">` : `<div class="ph">${silhouette('#E4DCE0', '#D9CFD5')}</div>`;
+    const after  = c.after  ? `<img class="after" src="${c.after}" alt="${t.a}" loading="lazy">` : `<div class="ph after">${silhouette('#F3EDF0', '#EADFE6', true)}</div>`;
+    return `<article class="ba-card">
+      <div class="ba">${before}${after}
+        <span class="tag l">${t.b}</span><span class="tag r">${t.a}</span>
+        <span class="handle"></span>
+        <input type="range" min="0" max="100" value="50" aria-label="${t.drag}">
+      </div>
+      <div class="ba-caption">
+        <span class="k">${t.k}</span>
+        <h3>${c[currentLang] || c.en}</h3>
+        <a href="agendar.html" class="text-link js-book">${t.cta} <span aria-hidden="true">→</span></a>
+      </div></article>`;
+  }).join('');
+  car.querySelectorAll('.ba').forEach(ba => {
+    const r = ba.querySelector('input');
+    r.addEventListener('input', () => ba.style.setProperty('--pos', r.value + '%'));
+  });
+  bindTracking(car);
+}
+function scrollCarousel(dir) {
+  const car = document.getElementById('carousel');
+  const card = car.querySelector('.ba-card');
+  car.scrollBy({ left: dir * (card ? card.offsetWidth + 28 : 320), behavior: 'smooth' });
+}
+
+applyLanguage();
+bindTracking(document);
+
+/* ============================================================
+   6. SUPABASE + CONTACT FORM (inline status, no alerts)
+   ============================================================ */
+const SUPABASE_URL = 'https://qkjmrnqkoipdltauweub.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFram1ybnFrb2lwZGx0YXV3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTkyMjgsImV4cCI6MjA4OTA5NTIyOH0.EGqgJ9RNY9vYfuVeeEcGoMu_cIaygRq0hnyT-iE7zTw';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const L = (en, es) => currentLang === 'en' ? en : es;
+function setStatus(id, msg, kind) { const el = document.getElementById(id); el.textContent = msg; el.className = 'form-status' + (kind ? ' ' + kind : ''); }
+
+document.getElementById('contact-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const btn = document.getElementById('contact-submit');
+  const name = document.getElementById('contact-name').value.trim();
+  const email = document.getElementById('contact-email').value.trim();
+  const message = document.getElementById('contact-message').value.trim();
+  if (!name || !email || !message) return setStatus('contact-status', L('Please complete all fields.', 'Por favor completa todos los campos.'), 'err');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setStatus('contact-status', L('Please enter a valid email.', 'Por favor escribe un correo válido.'), 'err');
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = L('Sending…', 'Enviando…'); setStatus('contact-status', '');
+  try {
+    const { error } = await _supabase.functions.invoke('send-contact-message', { body: { name, email, message, source: 'index_contact_section' } });
+    if (error) return setStatus('contact-status', L('Could not send your message. Please try WhatsApp.', 'No se pudo enviar el mensaje. Intenta por WhatsApp.'), 'err');
+    event.target.reset(); track('contact_form');
+    setStatus('contact-status', L('Message sent — we\'ll reply soon. ✦', 'Mensaje enviado, te responderemos pronto. ✦'), 'ok');
+  } finally { btn.disabled = false; btn.textContent = original; }
+});
+
+/* ============================================================
+   7. PATIENT PORTAL MODAL (login por teléfono + intake de nuevo paciente)
+   ============================================================ */
+const EYE_OPEN = `<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>`;
+const EYE_OFF = `<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>`;
+document.getElementById('eye-password').innerHTML = EYE_OPEN;
+function togglePassword(inputId, iconId) {
+  const input = document.getElementById(inputId), icon = document.getElementById(iconId);
+  if (input.type === 'password') { input.type = 'text'; icon.innerHTML = EYE_OFF; }
+  else { input.type = 'password'; icon.innerHTML = EYE_OPEN; }
+}
+
+let isSignUp = false;
+// Must match create-patient-account's syntheticEmail()
+function syntheticEmail(phoneDigits) { return `${phoneDigits}@patients.piel-spa.internal`; }
+
+function closeAuthModal() {
+  const ok = isSignUp ? confirm(L('If you leave now, any unsaved progress on the intake form will be lost. Do you want to continue?', 'Si sales ahora, el progreso no guardado del formulario se perderá. ¿Deseas continuar?')) : true;
+  if (!ok) return;
+  document.getElementById('auth-modal').classList.add('hidden');
+  document.body.style.overflow = '';
+  resetIntakeFrame();
+}
+function resetIntakeFrame() {
+  const oldFrame = document.getElementById('intake-frame');
+  const fresh = document.createElement('iframe');
+  fresh.id = 'intake-frame'; fresh.title = oldFrame.title;
+  oldFrame.replaceWith(fresh);
+}
+function ensureIntakeFrameLoaded() {
+  const frame = document.getElementById('intake-frame');
+  if (!frame.getAttribute('src')) {
+    frame.addEventListener('load', () => frame.contentWindow && frame.contentWindow.postMessage({ type: 'set-lang', lang: currentLang }, window.location.origin), { once: true });
+    frame.src = 'intake.html#mode=new';
+  }
+}
+window.addEventListener('message', (event) => {
+  if (event.origin !== window.location.origin) return;
+  if (event.data?.type === 'close-intake-modal' || event.data?.type === 'intake-complete') {
+    document.getElementById('auth-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+    resetIntakeFrame();
+  }
+});
+function openAuthModal(tab) {
+  document.getElementById('auth-modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  setAuthTab(tab === 'signup' ? 'signup' : 'login');
+  if (isSignUp) ensureIntakeFrameLoaded();
+}
+function setAuthTab(mode) {
+  const goSignUp = mode === 'signup';
+  if (goSignUp === isSignUp) return;
+  isSignUp = goSignUp;
+  document.getElementById('login-view').classList.toggle('hidden', isSignUp);
+  document.getElementById('signup-view').classList.toggle('hidden', !isSignUp);
+  document.getElementById('auth-modal').classList.toggle('new-patient-mode', isSignUp);
+  if (isSignUp) ensureIntakeFrameLoaded();
+  const a = document.getElementById('tab-signin'), b = document.getElementById('tab-signup');
+  a.className = isSignUp ? '' : 'on';
+  b.className = isSignUp ? 'on np' : '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('mobile-menu').classList.contains('open')) toggleMenu(false);
+  else if (!document.getElementById('auth-modal').classList.contains('hidden')) closeAuthModal();
+});
+
+document.getElementById('do-auth').addEventListener('click', async () => {
+  const phone = document.getElementById('auth-phone-login').value.replace(/\D/g, '');
+  const password = document.getElementById('auth-password').value;
+  const btnText = document.getElementById('btn-text'), spinner = document.getElementById('spinner'), authBtn = document.getElementById('do-auth');
+  if (!phone || !password) return setStatus('auth-status', L('Please enter your phone number and password.', 'Por favor escribe tu teléfono y contraseña.'), 'err');
+  btnText.classList.add('hidden'); spinner.classList.remove('hidden'); authBtn.disabled = true; setStatus('auth-status', '');
+  try {
+    const result = await _supabase.auth.signInWithPassword({ email: syntheticEmail(phone), password });
+    if (result.error) return setStatus('auth-status', L('Phone or password is incorrect.', 'Teléfono o contraseña incorrectos.'), 'err');
+    window.location.href = 'dashboard.html';
+  } finally { btnText.classList.remove('hidden'); spinner.classList.add('hidden'); authBtn.disabled = false; }
+});
+document.getElementById('auth-password').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('do-auth').click(); });
+
+async function handleForgotPassword() {
+  const phone = document.getElementById('auth-phone-login').value.replace(/\D/g, '');
+  if (!phone) return setStatus('auth-status', L('Enter your phone number first.', 'Primero escribe tu número de teléfono.'), 'err');
+  const { error } = await _supabase.functions.invoke('request-password-reset', { body: { phone, redirect_to: window.location.origin + '/reset-password.html' } });
+  if (error) setStatus('auth-status', 'Error: ' + error.message, 'err');
+  else setStatus('auth-status', L('If that phone is registered, a reset link was sent to the email on file (check spam). No email after a few minutes? Message us on WhatsApp.', 'Si ese número está registrado, enviamos un enlace al correo de tu cuenta (revisa el spam). ¿No llega en unos minutos? Escríbenos por WhatsApp.'), 'ok');
+}
+</script>
 </body>
 </html>
