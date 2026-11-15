@@ -1603,10 +1603,13 @@ function renderResults() {
     let k = -1, timer = null, idle = null;
     const step = () => { k = (k + 1) % (zones.length + 1); show(k === zones.length ? 'all' : k); };
     const play = () => { clearInterval(timer); timer = setInterval(step, 2600); window.__zt.push(timer); };
-    const pick = i => { clearInterval(timer); clearTimeout(idle); show(i); idle = setTimeout(() => { k = i; play(); }, 9000); window.__zt.push(idle); };
+    // Al interactuar se detiene el recorrido automático; al soltar, la foto queda limpia, sin referencias
+    const pick = i => { clearInterval(timer); clearTimeout(idle); show(i); };
+    const clear = () => { clearInterval(timer); clearTimeout(idle); show('none'); };
     card.querySelectorAll('.hs, .zl li').forEach(el => {
-      el.addEventListener('click', e => { e.stopPropagation(); pick(Number(el.dataset.z)); });
+      el.addEventListener('click', e => { e.stopPropagation(); el.classList.contains('on') ? clear() : pick(Number(el.dataset.z)); });
       el.addEventListener('mouseenter', () => pick(Number(el.dataset.z)));
+      el.addEventListener('mouseleave', clear);
       el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(Number(el.dataset.z)); } });
     });
     show('all');
