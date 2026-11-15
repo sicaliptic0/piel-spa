@@ -371,8 +371,29 @@ dialog.menu-dialog::backdrop{background:rgba(35,29,39,.5);backdrop-filter:blur(6
 .ba img,.ba .ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .ba .after{clip-path:inset(0 0 0 var(--pos))}
 .ba .handle{position:absolute;top:8%;bottom:8%;left:var(--pos);width:1px;background:linear-gradient(transparent,rgba(122,62,92,.45) 15%,rgba(122,62,92,.45) 85%,transparent);transform:translateX(-.5px);pointer-events:none}
-.ba .handle::after{content:"‹ ›";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:50%;background:#fff;border:1px solid rgba(122,62,92,.25);display:flex;align-items:center;justify-content:center;font-size:15px;letter-spacing:3px;color:var(--plum);box-shadow:0 6px 20px -6px rgba(35,29,39,.25)}
+.ba .handle::after{content:"‹ ›";position:absolute;top:66%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:50%;background:#fff;border:1px solid rgba(122,62,92,.25);display:flex;align-items:center;justify-content:center;font-size:15px;letter-spacing:3px;color:var(--plum);box-shadow:0 6px 20px -6px rgba(35,29,39,.25)}
 .ba input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:ew-resize;margin:0}
+/* Un solo caso: destacado, foto grande y texto al lado */
+.carousel.single{justify-content:center;overflow:visible}
+.carousel.single .ba-card{flex-direction:row;align-items:center;gap:clamp(28px,5vw,72px);width:auto}
+.carousel.single .ba{width:min(58svh,86vw)}
+.carousel.single .ba-caption{align-items:flex-start;text-align:left;max-width:340px;padding:0;gap:12px}
+.carousel.single .ba-caption h3{font-size:clamp(28px,3vw,40px)}
+.carousel.single .ba-caption .hint{font-size:14px;color:var(--muted)}
+@media (max-width:760px){.carousel.single .ba-card{flex-direction:column;gap:18px}.carousel.single .ba-caption{align-items:center;text-align:center}}
+/* Zonas de mejora: cada línea es una capa que se enciende con su número */
+.ba .zone{position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,#F7BCD2,#D8B4F0 50%,#B4CDF5);-webkit-mask:var(--m) center/100% 100% no-repeat;mask:var(--m) center/100% 100% no-repeat;filter:drop-shadow(0 0 1.5px rgba(35,29,39,.6));opacity:0;transition:opacity .7s var(--ease)}
+.ba[data-on="all"] .zone,.ba .zone.on{opacity:1}
+.ba .hs{position:absolute;z-index:3;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-style:italic;font-size:16px;color:var(--plum);background:rgba(255,255,255,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 4px 14px -4px rgba(35,29,39,.35);transition:transform .35s var(--ease),background .35s,color .35s;cursor:pointer}
+.ba .hs:hover,.ba .hs.on{transform:scale(1.15);background:linear-gradient(120deg,#D97CA0,#B87CD1 50%,#7CA3D9);color:#fff}
+.ba .hs::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:1px solid rgba(255,255,255,.7);opacity:0;transform:scale(.8);transition:all .4s var(--ease)}
+.ba .hs.on::after{opacity:1;transform:none}
+.zl{list-style:none;margin:6px 0 4px;padding:0;border-top:1px solid var(--line);width:100%}
+.zl li{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:start;padding:10px 4px;border-bottom:1px solid var(--line);font-size:14.5px;line-height:1.4;color:var(--muted);cursor:pointer;transition:color .3s,padding .35s var(--ease);text-align:left}
+.zl li .n{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:var(--serif);font-style:italic;font-size:15px;color:var(--plum);border:1px solid #e3d4dc;transition:all .35s}
+.zl li:hover,.zl li.on{color:var(--ink);padding-left:8px}
+.zl li.on .n{background:linear-gradient(120deg,#D97CA0,#B87CD1 50%,#7CA3D9);border-color:transparent;color:#fff}
+@media (prefers-reduced-motion:reduce){.ba .zone{transition:none}}
 .ba .tag{position:absolute;bottom:6px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);pointer-events:none}
 .ba .tag.l{left:4px}.ba .tag.r{right:4px}
 .ba .ph svg{width:100%;height:100%}
@@ -1140,7 +1161,17 @@ const CONFIG = {
 /* Casos de antes/después (solo con consentimiento escrito). Con 3+ casos reemplazan las siluetas.
    { before:'images/results/caso1-antes.webp', after:'images/results/caso1-despues.webp',
      en:'Brighter, more even tone', es:'Un tono más luminoso y uniforme' } */
-const RESULTS = [];
+const RESULTS = [
+  { before: 'images/results/p1-antes.webp', after: 'images/results/p1-despues.webp', ratio: '1080 / 1068',
+    en: 'Facial harmony and balance', es: 'Armonía y equilibrio en el rostro',
+    // Zonas: capa de línea + posición del número (en % de la foto)
+    zones: [
+      { mask: 'images/results/p1-z1.webp', x: 31, y: 19, en: 'Softer nasolabial folds', es: 'Menor profundidad en los surcos nasogenianos' },
+      { mask: 'images/results/p1-z2.webp', x: 20.5, y: 71,   en: 'Softer marionette lines', es: 'Menor profundidad en las líneas de marioneta (labiomandibulares)' },
+      { mask: 'images/results/p1-z3.webp', x: 88,   y: 63,   en: 'Redefined jawline', es: 'Contorno mandibular redefinido' },
+      { mask: 'images/results/p1-z4.webp', x: 50.5, y: 90,   en: 'Reduced fat under the chin', es: 'Retracción del tejido adiposo submentoniano (papada)' }
+    ] }
+];
 
 /* Hero: escritorio (16:9) y móvil (vertical, cada clip re-encuadrado). */
 const HEROES = {
@@ -1522,8 +1553,12 @@ function silhouette(face, shade, glow) {
   </svg>`;
 }
 function renderResults() {
-  const usingDemo = RESULTS.length < 3;
+  (window.__zt || []).forEach(t => { clearInterval(t); clearTimeout(t); }); window.__zt = [];
+  // Casos reales primero; las siluetas de ejemplo solo si todavía no hay ninguno
+  const usingDemo = RESULTS.length === 0;
   const cases = usingDemo ? DEMO_CASES : RESULTS;
+  document.querySelector('#results .car-nav').classList.toggle('hidden', cases.length < 2);
+  document.getElementById('carousel').classList.toggle('single', cases.length === 1);
   document.getElementById('demo-flag').classList.toggle('hidden', !usingDemo);
   const t = currentLang === 'en'
     ? { b: 'Before', a: 'After', k: 'What we achieved together', cta: 'I want results like this', drag: 'Drag to compare' }
@@ -1533,7 +1568,7 @@ function renderResults() {
     const before = c.before ? `<img src="${c.before}" alt="${t.b}" loading="lazy">` : `<div class="ph">${silhouette('#E4DCE0', '#D9CFD5')}</div>`;
     const after  = c.after  ? `<img class="after" src="${c.after}" alt="${t.a}" loading="lazy">` : `<div class="ph after">${silhouette('#F3EDF0', '#EADFE6', true)}</div>`;
     return `<article class="ba-card">
-      <div class="ba">${before}${after}
+      <div class="ba"${c.ratio ? ` style="aspect-ratio:${c.ratio}"` : ''}${c.zones ? ' data-on="all"' : ''}>${before}${after}${(c.zones || []).map((z, i) => `<span class="zone" data-z="${i}" style="--m:url('${z.mask}')" aria-hidden="true"></span>`).join('')}${(c.zones || []).map((z, i) => `<button type="button" class="hs" data-z="${i}" style="left:${z.x}%;top:${z.y}%" aria-label="${z[currentLang] || z.en}">${i + 1}</button>`).join('')}
         <span class="tag l">${t.b}</span><span class="tag r">${t.a}</span>
         <span class="handle"></span>
         <input type="range" min="0" max="100" value="50" aria-label="${t.drag}">
@@ -1541,12 +1576,32 @@ function renderResults() {
       <div class="ba-caption">
         <span class="k">${t.k}</span>
         <h3>${c[currentLang] || c.en}</h3>
+        ${c.zones ? `<ol class="zl">${c.zones.map((z, i) => `<li data-z="${i}" tabindex="0"><span class="n">${i + 1}</span><span>${z[currentLang] || z.en}</span></li>`).join('')}</ol><p class="hint">${currentLang === 'en' ? 'Drag across the photo to compare. Tap a number to see each area.' : 'Desliza sobre la foto para comparar. Toca un número para ver cada zona.'}</p>` : ''}
         <a href="agendar.html" class="text-link js-book">${t.cta} <span aria-hidden="true">→</span></a>
       </div></article>`;
   }).join('');
   car.querySelectorAll('.ba').forEach(ba => {
     const r = ba.querySelector('input');
     r.addEventListener('input', () => ba.style.setProperty('--pos', r.value + '%'));
+  });
+  car.querySelectorAll('.ba-card').forEach(card => {
+    const ba = card.querySelector('.ba'), zones = card.querySelectorAll('.zone');
+    if (!zones.length) return;
+    const show = i => {
+      ba.dataset.on = i === 'all' ? 'all' : 'one';
+      card.querySelectorAll('[data-z]').forEach(el => el.classList.toggle('on', i !== 'all' && Number(el.dataset.z) === i));
+    };
+    let k = -1, timer = null, idle = null;
+    const step = () => { k = (k + 1) % (zones.length + 1); show(k === zones.length ? 'all' : k); };
+    const play = () => { clearInterval(timer); timer = setInterval(step, 2600); window.__zt.push(timer); };
+    const pick = i => { clearInterval(timer); clearTimeout(idle); show(i); idle = setTimeout(() => { k = i; play(); }, 9000); window.__zt.push(idle); };
+    card.querySelectorAll('.hs, .zl li').forEach(el => {
+      el.addEventListener('click', e => { e.stopPropagation(); pick(Number(el.dataset.z)); });
+      el.addEventListener('mouseenter', () => pick(Number(el.dataset.z)));
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(Number(el.dataset.z)); } });
+    });
+    show('all');
+    if (!reduceMotion) window.__zt.push(setTimeout(play, 1500));
   });
   bindTracking(car);
 }
