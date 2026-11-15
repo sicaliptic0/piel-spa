@@ -392,6 +392,15 @@ dialog.menu-dialog::backdrop{background:rgba(35,29,39,.5);backdrop-filter:blur(6
 .ba .hs:hover,.ba .hs.on{transform:scale(1.15);background:linear-gradient(120deg,#D97CA0,#B87CD1 50%,#7CA3D9);color:#fff}
 .ba .hs::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid rgba(255,255,255,.7);opacity:0;transform:scale(.8);transition:all .4s var(--ease)}
 .ba .hs.on::after{opacity:1;transform:none}
+.ba .ba-ctrl{position:absolute;top:10px;right:10px;z-index:4;display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.62);backdrop-filter:blur(12px) saturate(1.4);-webkit-backdrop-filter:blur(12px) saturate(1.4);box-shadow:0 6px 18px -8px rgba(35,29,39,.4);opacity:0;transform:translateY(-4px);transition:opacity .4s var(--ease),transform .4s var(--ease)}
+.ba:hover .ba-ctrl,.ba .ba-ctrl:focus-within{opacity:1;transform:none}
+@media (hover:none){.ba .ba-ctrl{opacity:.92;transform:none}}
+.ba .cb{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:var(--plum);cursor:pointer;transition:background .3s,color .3s}
+.ba .cb svg{width:15px;height:15px}
+.ba .cb:hover{background:rgba(255,255,255,.85)}
+.ba .cb[aria-pressed="true"]{background:linear-gradient(120deg,#D97CA0,#B87CD1 50%,#7CA3D9);color:#fff}
+.ba .cb-play .i-pause,.ba .cb-play[aria-pressed="true"] .i-play{display:none}
+.ba .cb-play[aria-pressed="true"] .i-pause{display:block}
 .zl{list-style:none;margin:6px 0 4px;padding:0;border-top:1px solid var(--line);width:100%}
 .zl li{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:start;padding:10px 4px;border-bottom:1px solid var(--line);font-size:14.5px;line-height:1.4;color:var(--muted);cursor:pointer;transition:color .3s,padding .35s var(--ease);text-align:left}
 .zl li .n{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:var(--serif);font-style:italic;font-size:15px;color:var(--plum);border:1px solid #e3d4dc;transition:all .35s}
@@ -1572,7 +1581,7 @@ function renderResults() {
     const before = c.before ? `<img src="${c.before}" alt="${t.b}" loading="lazy">` : `<div class="ph">${silhouette('#E4DCE0', '#D9CFD5')}</div>`;
     const after  = c.after  ? `<img class="after" src="${c.after}" alt="${t.a}" loading="lazy">` : `<div class="ph after">${silhouette('#F3EDF0', '#EADFE6', true)}</div>`;
     return `<article class="ba-card">
-      <div class="ba"${c.ratio ? ` style="aspect-ratio:${c.ratio}"` : ''}${c.zones ? ' data-on="all"' : ''}>${before}${after}${(c.zones || []).map((z, i) => `<span class="zone" data-z="${i}" style="--m:url('${z.mask}')" aria-hidden="true"></span>`).join('')}${(c.zones || []).map((z, i) => `<button type="button" class="hs" data-z="${i}" style="left:${z.x}%;top:${z.y}%" aria-label="${z[currentLang] || z.en}">${i + 1}</button>`).join('')}
+      <div class="ba"${c.ratio ? ` style="aspect-ratio:${c.ratio}"` : ''}${c.zones ? ' data-on="all"' : ''}>${before}${after}${(c.zones || []).map((z, i) => `<span class="zone" data-z="${i}" style="--m:url('${z.mask}')" aria-hidden="true"></span>`).join('')}${c.zones ? `<div class="ba-ctrl"><button type="button" class="cb cb-play" aria-pressed="false" aria-label="${currentLang === 'en' ? 'Play the areas one by one' : 'Recorrer las zonas'}" title="${currentLang === 'en' ? 'Play' : 'Recorrer'}"><svg class="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"/></svg><svg class="i-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="5.5" width="3.4" height="13" rx="1"/><rect x="13.6" y="5.5" width="3.4" height="13" rx="1"/></svg></button><button type="button" class="cb cb-refs" aria-pressed="false" aria-label="${currentLang === 'en' ? 'Show or hide references' : 'Mostrar u ocultar referencias'}" title="${currentLang === 'en' ? 'References' : 'Referencias'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="2.2 2.6"><path d="M4 16c3-6 6-9 8-9s5 3 8 9"/></svg></button></div>` : ''}${(c.zones || []).map((z, i) => `<button type="button" class="hs" data-z="${i}" style="left:${z.x}%;top:${z.y}%" aria-label="${z[currentLang] || z.en}">${i + 1}</button>`).join('')}
         <span class="tag l">${t.b}</span><span class="tag r">${t.a}</span>
         <span class="handle"></span>
         <input type="range" min="0" max="100" value="50" aria-label="${t.drag}">
@@ -1580,7 +1589,7 @@ function renderResults() {
       <div class="ba-caption">
         <span class="k">${t.k}</span>
         <h3>${c[currentLang] || c.en}</h3>
-        ${c.zones ? `<ol class="zl">${c.zones.map((z, i) => `<li data-z="${i}" tabindex="0"><span class="n">${i + 1}</span><span>${z[currentLang] || z.en}</span></li>`).join('')}</ol><p class="hint">${currentLang === 'en' ? 'Drag across the photo to compare. Tap a number to see each area.' : 'Desliza sobre la foto para comparar. Toca un número para ver cada zona.'}</p>` : ''}
+        ${c.zones ? `<ol class="zl">${c.zones.map((z, i) => `<li data-z="${i}" tabindex="0"><span class="n">${i + 1}</span><span>${z[currentLang] || z.en}</span></li>`).join('')}</ol><p class="hint">${currentLang === 'en' ? 'Drag across the photo to compare. Tap a number, or use ▷ and the reference button on the photo.' : 'Desliza sobre la foto para comparar. Toca un número, o usa ▷ y el botón de referencias sobre la foto.'}</p>` : ''}
         <a href="agendar.html" class="text-link js-book">${t.cta} <span aria-hidden="true">→</span></a>
       </div></article>`;
   }).join('');
@@ -1591,7 +1600,7 @@ function renderResults() {
     let dragging = false;
     const setPos = x => { const b = ba.getBoundingClientRect(); const p = Math.min(100, Math.max(0, (x - b.left) / b.width * 100)); ba.style.setProperty('--pos', p + '%'); r.value = p; };
     ba.addEventListener('dragstart', e => e.preventDefault()); // evita que el mouse "arrastre la imagen" en vez de la línea
-    ba.addEventListener('pointerdown', e => { if (e.target.closest('.hs')) return; if (e.pointerType === 'mouse') e.preventDefault(); dragging = true; try { ba.setPointerCapture(e.pointerId); } catch (_) {} setPos(e.clientX); });
+    ba.addEventListener('pointerdown', e => { if (e.target.closest('.hs, .ba-ctrl')) return; if (e.pointerType === 'mouse') e.preventDefault(); dragging = true; try { ba.setPointerCapture(e.pointerId); } catch (_) {} setPos(e.clientX); });
     ba.addEventListener('pointermove', e => { if (dragging) setPos(e.clientX); });
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => ba.addEventListener(ev, () => { dragging = false; }));
   });
@@ -1603,19 +1612,24 @@ function renderResults() {
       card.querySelectorAll('[data-z]').forEach(el => el.classList.toggle('on', i !== 'all' && Number(el.dataset.z) === i));
     };
     let k = -1, timer = null, idle = null;
+    const bPlay = card.querySelector('.cb-play'), bRefs = card.querySelector('.cb-refs');
+    const setBtns = (playing, all) => { bPlay.setAttribute('aria-pressed', String(playing)); bRefs.setAttribute('aria-pressed', String(all)); };
     const step = () => { k = (k + 1) % (zones.length + 1); show(k === zones.length ? 'all' : k); };
-    const play = () => { clearInterval(timer); timer = setInterval(step, 2600); window.__zt.push(timer); };
-    // Al interactuar se detiene el recorrido automático; al soltar, la foto queda limpia, sin referencias
-    const pick = i => { clearInterval(timer); clearTimeout(idle); show(i); };
-    const clear = () => { clearInterval(timer); clearTimeout(idle); show('none'); };
+    const stop = () => { clearInterval(timer); clearTimeout(idle); timer = null; };
+    const play = () => { stop(); k = -1; step(); timer = setInterval(step, 2400); window.__zt.push(timer); setBtns(true, false); };
+    // Al interactuar se detiene el recorrido; al soltar, la foto queda limpia, sin referencias
+    const pick = i => { stop(); show(i); setBtns(false, false); };
+    const clear = () => { stop(); show('none'); setBtns(false, false); };
+    const all = () => { stop(); show('all'); setBtns(false, true); };
+    bPlay.addEventListener('click', e => { e.stopPropagation(); timer ? clear() : play(); });
+    bRefs.addEventListener('click', e => { e.stopPropagation(); bRefs.getAttribute('aria-pressed') === 'true' ? clear() : all(); });
     card.querySelectorAll('.hs, .zl li').forEach(el => {
       el.addEventListener('click', e => { e.stopPropagation(); el.classList.contains('on') ? clear() : pick(Number(el.dataset.z)); });
       el.addEventListener('mouseenter', () => pick(Number(el.dataset.z)));
       el.addEventListener('mouseleave', clear);
       el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(Number(el.dataset.z)); } });
     });
-    show('all');
-    if (!reduceMotion) window.__zt.push(setTimeout(play, 1500));
+    show('none');   // la foto empieza limpia; el visitante decide si ver las referencias
   });
   bindTracking(car);
 }
