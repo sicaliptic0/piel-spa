@@ -303,12 +303,16 @@ ul,ol{list-style:none;margin:0;padding:0}
 .t-protocols h4{font-family:var(--sans);font-size:16.5px;font-weight:500;line-height:1.4}
 .t-protocols p{grid-column:2;font-size:15px;color:var(--muted)}
 .t-note{font-size:13.5px;color:var(--muted);margin-top:14px}
+.t-panel > .hair-status,.menu-grid .hair-status{font-size:13.5px;color:#843e4d}
+.menu-grid .hair-status{display:block;margin-top:2px}
 .t-actions{display:flex;flex-wrap:wrap;align-items:center;gap:14px 26px;margin-top:26px}
+#c-hair .t-actions{margin-top:10px}
 .price-link{display:inline-flex;align-items:center;gap:10px;font-size:14.5px;color:var(--ink);text-decoration:none;position:relative;padding-bottom:4px}
 .price-link svg{width:17px;height:17px;color:#25D366}
 .price-link::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--iris-text);transform:scaleX(.3);transform-origin:left;transition:transform .5s var(--ease)}
 .price-link:hover::after{transform:scaleX(1)}
-.menu-open{margin-top:22px}
+.menu-footer{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 20px;margin-top:22px}
+.menu-note{font-size:13.5px;color:var(--muted)}
 @media (max-width:900px){
   .t-grid{grid-template-columns:1fr;grid-template-rows:none}
   .t-head,.t-list,.t-panels{grid-column:1;grid-row:auto}
@@ -347,7 +351,9 @@ dialog.menu-dialog::backdrop{background:rgba(35,29,39,.5);backdrop-filter:blur(6
 .goal-list li:hover{padding-left:16px;color:#fff}
 .goal-list li:hover::after{transform:scaleX(1)}
 .goal-list li small{font-family:var(--sans);font-size:13px;letter-spacing:.14em;color:rgba(243,238,241,.5)}
-.advisory .btn-primary{background:#fff;color:var(--ink);margin-top:34px}
+.advisory-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;margin-top:34px}
+.advisory-actions .text-link{color:#E7BFD0}
+.advisory .btn-primary{background:#fff;color:var(--ink)}
 .advisory .btn-primary:hover{background:#F4E6EC}
 .fineprint{font-size:13px;color:rgba(243,238,241,.5);margin-top:16px;max-width:460px}
 @media (max-width:900px){.advisory .wrap{grid-template-columns:1fr}}
@@ -457,9 +463,9 @@ dialog.menu-dialog::backdrop{background:rgba(35,29,39,.5);backdrop-filter:blur(6
   .t-note{margin-top:8px}
   .t-actions{margin-top:14px}
   .t-actions .btn{min-height:44px}
-  .menu-open{margin-top:12px}
+  .menu-footer{margin-top:12px}
   .goal-list li{padding:11px 4px;font-size:clamp(24px,2.6vw,32px)}
-  .advisory .btn-primary{margin-top:22px}
+  .advisory-actions{margin-top:22px}
   .ba-card{width:min(calc(38svh * .8),80vw)}
   .carousel{margin-top:16px}
   .ba-caption{padding-top:10px;gap:4px}
@@ -776,116 +782,118 @@ form.cform{display:grid;gap:14px;padding:clamp(24px,3vw,40px);background:var(--b
   <div class="wrap t-grid">
     <div class="t-head">
       <span class="eyebrow reveal"><span class="num">01</span><span data-en="Treatments" data-es="Tratamientos">Treatments</span></span>
-      <h2 class="h2 reveal" data-delay="1"><span data-en="What would you like" data-es="¿Qué te gustaría">What would you like</span> <em data-en="to improve?" data-es="mejorar?">to improve?</em></h2>
+      <h2 class="h2 reveal" id="treatments-title" data-delay="1"><span data-en="What would you like" data-es="¿Qué te gustaría">What would you like</span> <em data-en="to improve?" data-es="mejorar?">to improve?</em></h2>
     </div>
 
-    <ol class="t-list reveal" data-delay="2" role="tablist" aria-label="Concerns" id="concern-tabs">
-      <li><button role="tab" aria-selected="true" data-panel="c-spots"><span class="n">01</span><span data-en="Dark spots &amp; melasma" data-es="Manchas y melasma">Dark spots &amp; melasma</span><span class="go">→</span></button></li>
-      <li><button role="tab" aria-selected="false" data-panel="c-acne"><span class="n">02</span><span data-en="Acne &amp; breakouts" data-es="Acné y brotes">Acne &amp; breakouts</span><span class="go">→</span></button></li>
-      <li><button role="tab" aria-selected="false" data-panel="c-texture"><span class="n">03</span><span data-en="Texture &amp; pores" data-es="Textura y poros">Texture &amp; pores</span><span class="go">→</span></button></li>
-      <li><button role="tab" aria-selected="false" data-panel="c-glow"><span class="n">04</span><span data-en="Dull, dehydrated skin" data-es="Piel opaca y deshidratada">Dull, dehydrated skin</span><span class="go">→</span></button></li>
-      <li><button role="tab" aria-selected="false" data-panel="c-hair"><span class="n">05</span><span data-en="Unwanted hair" data-es="Vello no deseado">Unwanted hair</span><span class="go">→</span></button></li>
-      <li><button role="tab" aria-selected="false" data-panel="c-relax"><span class="n">06</span><span data-en="Relax &amp; detox" data-es="Relajación y drenaje">Relax &amp; detox</span><span class="go">→</span></button></li>
+    <ol class="t-list reveal" data-delay="2" role="tablist" aria-labelledby="treatments-title" id="concern-tabs">
+      <li><button role="tab" id="tab-c-glow" aria-controls="c-glow" aria-selected="true" data-panel="c-glow"><span class="n" aria-hidden="true">01</span><span data-en="Skin maintenance" data-es="Mantenimiento de mi piel">Skin maintenance</span><span class="go" aria-hidden="true">→</span></button></li>
+      <li><button role="tab" id="tab-c-spots" aria-controls="c-spots" aria-selected="false" data-panel="c-spots"><span class="n" aria-hidden="true">02</span><span data-en="Dark spots &amp; melasma" data-es="Manchas y melasma">Dark spots &amp; melasma</span><span class="go" aria-hidden="true">→</span></button></li>
+      <li><button role="tab" id="tab-c-acne" aria-controls="c-acne" aria-selected="false" data-panel="c-acne"><span class="n" aria-hidden="true">03</span><span data-en="Acne &amp; breakouts" data-es="Acné y brotes">Acne &amp; breakouts</span><span class="go" aria-hidden="true">→</span></button></li>
+      <li><button role="tab" id="tab-c-texture" aria-controls="c-texture" aria-selected="false" data-panel="c-texture"><span class="n" aria-hidden="true">04</span><span data-en="Texture &amp; pores" data-es="Textura y poros">Texture &amp; pores</span><span class="go" aria-hidden="true">→</span></button></li>
+      <li><button role="tab" id="tab-c-hair" aria-controls="c-hair" aria-selected="false" data-panel="c-hair"><span class="n" aria-hidden="true">05</span><span data-en="Unwanted hair" data-es="Vello no deseado">Unwanted hair</span><span class="go" aria-hidden="true">→</span></button></li>
+      <li><button role="tab" id="tab-c-relax" aria-controls="c-relax" aria-selected="false" data-panel="c-relax"><span class="n" aria-hidden="true">06</span><span data-en="Relaxation &amp; drainage" data-es="Relajación y drenaje">Relaxation &amp; drainage</span><span class="go" aria-hidden="true">→</span></button></li>
     </ol>
 
     <div class="t-panels snap-sub">
-      <article class="t-panel lux active" id="c-spots" role="tabpanel">
-        <span class="kicker" data-en="Hyperpigmentation" data-es="Hiperpigmentación">Hyperpigmentation</span>
-        <h3 data-en="A more even, luminous tone" data-es="Un tono más uniforme y luminoso">A more even, luminous tone</h3>
-        <p data-en="We treat pigment at its source — not just cover it — and build a plan that keeps it from coming back." data-es="Tratamos la pigmentación desde su origen, no solo la cubrimos, y armamos un plan para que no regrese.">We treat pigment at its source — not just cover it — and build a plan that keeps it from coming back.</p>
+      <article class="t-panel lux active" id="c-glow" role="tabpanel" aria-labelledby="tab-c-glow">
+        <span class="kicker" data-en="Skin maintenance" data-es="Mantenimiento de mi piel">Skin maintenance</span>
+        <h3 data-en="Your facial routine" data-es="Tu rutina facial">Your facial routine</h3>
         <ul class="t-protocols">
-          <li><span class="i">i.</span><h4 data-en="Cosmelan depigmentation protocol" data-es="Protocolo despigmentante Cosmelan">Cosmelan depigmentation protocol</h4><p data-en="Professional depigmenting mask in studio, followed by a guided at-home maintenance phase." data-es="Mascarilla despigmentante profesional en cabina, seguida de una fase de mantenimiento guiada en casa.">Professional depigmenting mask in studio, followed by a guided at-home maintenance phase.</p></li>
-          <li><span class="i">ii.</span><h4 data-en="Depigmenting peels" data-es="Peels despigmentantes">Depigmenting peels</h4><p data-en="Superficial chemical exfoliation to fade sun spots and post-acne marks." data-es="Exfoliación química superficial para atenuar manchas solares y marcas post-acné.">Superficial chemical exfoliation to fade sun spots and post-acne marks.</p></li>
-        </ul>
-        <p class="t-note" data-en="Daily sun protection is part of every pigmentation plan." data-es="La protección solar diaria es parte de todo plan para manchas.">Daily sun protection is part of every pigmentation plan.</p>
-        <div class="t-actions"><a href="agendar.html" class="btn btn-primary js-book"><span data-en="Book this treatment" data-es="Agendar este tratamiento">Book this treatment</span><span class="arrow">→</span></a></div>
-      </article>
-
-      <article class="t-panel lux" id="c-acne" role="tabpanel">
-        <span class="kicker" data-en="Acne-prone skin" data-es="Piel con tendencia acneica">Acne-prone skin</span>
-        <h3 data-en="Calmer, clearer skin" data-es="Una piel más limpia y en calma">Calmer, clearer skin</h3>
-        <p data-en="Fewer breakouts, less marking, and a routine that finally makes sense for your skin." data-es="Menos brotes, menos marcas y una rutina que por fin tiene sentido para tu piel.">Fewer breakouts, less marking, and a routine that finally makes sense for your skin.</p>
-        <ul class="t-protocols">
-          <li><span class="i">i.</span><h4 data-en="Deep cleansing facial for acne" data-es="Limpieza facial profunda para acné">Deep cleansing facial for acne</h4><p data-en="Cleansing, exfoliation and professional extraction of blackheads and whiteheads." data-es="Limpieza, exfoliación y extracción profesional de puntos negros y blancos.">Cleansing, exfoliation and professional extraction of blackheads and whiteheads.</p></li>
-          <li><span class="i">ii.</span><h4 data-en="Salicylic peel" data-es="Peel salicílico">Salicylic peel</h4><p data-en="Unclogs pores and helps control oil." data-es="Destapa los poros y ayuda a controlar la grasa.">Unclogs pores and helps control oil.</p></li>
-          <li><span class="i">iii.</span><h4 data-en="LED light therapy" data-es="Terapia de luz LED">LED light therapy</h4><p data-en="Blue light to support acne-prone skin; red light to calm it." data-es="Luz azul para apoyar la piel con acné; luz roja para calmarla.">Blue light to support acne-prone skin; red light to calm it.</p></li>
+          <li><span class="i" aria-hidden="true">i.</span><h4 data-en="Essential Facial" data-es="Facial Esencial">Essential Facial</h4><p data-en="Routine facial cleansing." data-es="Limpieza facial de rutina.">Routine facial cleansing.</p></li>
+          <li><span class="i" aria-hidden="true">ii.</span><h4 data-en="Piel Glow" data-es="Piel Glow">Piel Glow</h4><p data-en="Our signature facial with dermaplaning." data-es="Nuestro facial insignia con dermaplaning.">Our signature facial with dermaplaning.</p></li>
+          <li><span class="i" aria-hidden="true">iii.</span><h4 data-en="Glass Skin by mesoestetic®" data-es="Glass Skin de mesoestetic®">Glass Skin by mesoestetic®</h4><p data-en="Radiance and hydration." data-es="Luminosidad e hidratación.">Radiance and hydration.</p></li>
         </ul>
         <div class="t-actions"><a href="agendar.html" class="btn btn-primary js-book"><span data-en="Book this treatment" data-es="Agendar este tratamiento">Book this treatment</span><span class="arrow">→</span></a></div>
       </article>
 
-      <article class="t-panel lux" id="c-texture" role="tabpanel">
-        <span class="kicker" data-en="Resurfacing" data-es="Renovación">Resurfacing</span>
-        <h3 data-en="Smoother skin you can feel" data-es="Una piel más suave al tacto">Smoother skin you can feel</h3>
-        <p data-en="Refine pores, soften rough texture and let your skincare actually absorb." data-es="Afina los poros, suaviza la textura áspera y permite que tus productos realmente se absorban.">Refine pores, soften rough texture and let your skincare actually absorb.</p>
+      <article class="t-panel lux" id="c-spots" role="tabpanel" aria-labelledby="tab-c-spots">
+        <span class="kicker" data-en="Dark spots &amp; melasma" data-es="Manchas y melasma">Dark spots &amp; melasma</span>
+        <h3 data-en="A more even tone" data-es="Un tono más uniforme">A more even tone</h3>
         <ul class="t-protocols">
-          <li><span class="i">i.</span><h4 data-en="Microdermabrasion" data-es="Microdermoabrasión">Microdermabrasion</h4><p data-en="Mechanical exfoliation that polishes the skin's surface." data-es="Exfoliación mecánica que pule la superficie de la piel.">Mechanical exfoliation that polishes the skin's surface.</p></li>
-          <li><span class="i">ii.</span><h4>Dermaplaning</h4><p data-en="Removes fine hair and dead cells for an instantly smoother finish." data-es="Remueve el vello fino y las células muertas para un acabado suave al instante.">Removes fine hair and dead cells for an instantly smoother finish.</p></li>
-          <li><span class="i">iii.</span><h4 data-en="Chemical peels" data-es="Peels químicos">Chemical peels</h4><p data-en="Superficial peels tailored to your skin type." data-es="Peels superficiales adaptados a tu tipo de piel.">Superficial peels tailored to your skin type.</p></li>
+          <li><span class="i" aria-hidden="true">i.</span><h4 data-en="Cosmelan depigmentation protocol" data-es="Protocolo despigmentante Cosmelan">Cosmelan depigmentation protocol</h4><p data-en="In-studio treatment with guided home care." data-es="Tratamiento en cabina y cuidado guiado en casa.">In-studio treatment with guided home care.</p></li>
+          <li><span class="i" aria-hidden="true">ii.</span><h4 data-en="Peels for dark spots" data-es="Peelings para manchas">Peels for dark spots</h4><p data-en="Depigmenting Peel and Mandelic Firming Peel for mild dark spots." data-es="Despigmentante y Mandélico Reafirmante para manchas leves.">Depigmenting Peel and Mandelic Firming Peel for mild dark spots.</p></li>
         </ul>
         <div class="t-actions"><a href="agendar.html" class="btn btn-primary js-book"><span data-en="Book this treatment" data-es="Agendar este tratamiento">Book this treatment</span><span class="arrow">→</span></a></div>
       </article>
 
-      <article class="t-panel lux" id="c-glow" role="tabpanel">
-        <span class="kicker" data-en="Radiance" data-es="Luminosidad">Radiance</span>
-        <h3 data-en="Glow now, hydration that lasts" data-es="Luminosidad hoy, hidratación que dura">Glow now, hydration that lasts</h3>
-        <p data-en="For skin that looks tired, tight or flat — before an event or as your monthly ritual." data-es="Para la piel que se ve cansada, tirante o apagada, antes de un evento o como tu ritual mensual.">For skin that looks tired, tight or flat — before an event or as your monthly ritual.</p>
+      <article class="t-panel lux" id="c-acne" role="tabpanel" aria-labelledby="tab-c-acne">
+        <span class="kicker" data-en="Acne &amp; breakouts" data-es="Acné y brotes">Acne &amp; breakouts</span>
+        <h3 data-en="Care for breakout-prone skin" data-es="Cuidado para piel con brotes">Care for breakout-prone skin</h3>
         <ul class="t-protocols">
-          <li><span class="i">i.</span><h4 data-en="Deep hydration facial" data-es="Facial de hidratación profunda">Deep hydration facial</h4><p data-en="Cleansing, exfoliation, hydration and a professional mask." data-es="Limpieza, exfoliación, hidratación y mascarilla profesional.">Cleansing, exfoliation, hydration and a professional mask.</p></li>
-          <li><span class="i">ii.</span><h4 data-en="LED &amp; high-frequency" data-es="LED y alta frecuencia">LED &amp; high-frequency</h4><p data-en="Light and current-based technology to revitalize the skin." data-es="Tecnología de luz y corrientes para revitalizar la piel.">Light and current-based technology to revitalize the skin.</p></li>
-          <li><span class="i">iii.</span><h4 data-en="Galvanic &amp; faradic currents" data-es="Corrientes galvánicas y farádicas">Galvanic &amp; faradic currents</h4><p data-en="Help active ingredients penetrate and tone the skin." data-es="Ayudan a la penetración de activos y a tonificar la piel.">Help active ingredients penetrate and tone the skin.</p></li>
+          <li><span class="i" aria-hidden="true">i.</span><h4 data-en="Purifying Acne Facial" data-es="Facial Purificante para Acné">Purifying Acne Facial</h4><p data-en="Blue LED light included." data-es="Incluye luz LED azul.">Blue LED light included.</p></li>
+          <li><span class="i" aria-hidden="true">ii.</span><h4 data-en="Clarifying Peel" data-es="Peeling Clarificante">Clarifying Peel</h4><p data-en="Aesthetic care for breakout-prone skin, if suitable after consultation." data-es="Cuidado estético para piel con brotes, según valoración en consulta.">Aesthetic care for breakout-prone skin, if suitable after consultation.</p></li>
         </ul>
         <div class="t-actions"><a href="agendar.html" class="btn btn-primary js-book"><span data-en="Book this treatment" data-es="Agendar este tratamiento">Book this treatment</span><span class="arrow">→</span></a></div>
       </article>
 
-      <article class="t-panel lux" id="c-hair" role="tabpanel">
-        <span class="kicker" data-en="Hair removal" data-es="Depilación">Hair removal</span>
-        <h3 data-en="Smooth, for longer" data-es="Suave por más tiempo">Smooth, for longer</h3>
-        <p data-en="From a quick wax to a long-term laser reduction plan, for face and body." data-es="Desde una depilación con cera hasta un plan de reducción láser a largo plazo, para rostro y cuerpo.">From a quick wax to a long-term laser reduction plan, for face and body.</p>
+      <article class="t-panel lux" id="c-texture" role="tabpanel" aria-labelledby="tab-c-texture">
+        <span class="kicker" data-en="Texture &amp; pores" data-es="Textura y poros">Texture &amp; pores</span>
+        <h3 data-en="Smoother skin" data-es="Una piel más suave">Smoother skin</h3>
         <ul class="t-protocols">
-          <li><span class="i">i.</span><h4 data-en="Waxing" data-es="Depilación con cera">Waxing</h4><p data-en="Hot or cold wax for face and body, including bikini." data-es="Cera caliente o fría para rostro y cuerpo, incluyendo bikini.">Hot or cold wax for face and body, including bikini.</p></li>
-          <li><span class="i">ii.</span><h4 data-en="Laser hair reduction" data-es="Depilación láser">Laser hair reduction</h4><p data-en="Progressive, long-lasting reduction across a series of sessions." data-es="Reducción progresiva y duradera a lo largo de varias sesiones.">Progressive, long-lasting reduction across a series of sessions.</p></li>
+          <li><span class="i" aria-hidden="true">i.</span><h4 data-en="Microdermabrasion" data-es="Microdermoabrasión">Microdermabrasion</h4><p data-en="Mechanical exfoliation." data-es="Exfoliación mecánica.">Mechanical exfoliation.</p></li>
+          <li><span class="i" aria-hidden="true">ii.</span><h4 data-en="Chemical peels" data-es="Peelings químicos">Chemical peels</h4><p data-en="Exfoliation tailored to your skin." data-es="Exfoliación adaptada a tu piel.">Exfoliation tailored to your skin.</p></li>
         </ul>
         <div class="t-actions"><a href="agendar.html" class="btn btn-primary js-book"><span data-en="Book this treatment" data-es="Agendar este tratamiento">Book this treatment</span><span class="arrow">→</span></a></div>
       </article>
 
-      <article class="t-panel lux" id="c-relax" role="tabpanel">
-        <span class="kicker" data-en="Wellbeing" data-es="Bienestar">Wellbeing</span>
-        <h3 data-en="Release tension, reduce puffiness" data-es="Libera tensión, reduce la inflamación">Release tension, reduce puffiness</h3>
-        <p data-en="Hands-on techniques that leave your face lighter and your shoulders looser." data-es="Técnicas manuales que dejan el rostro más ligero y los hombros más relajados.">Hands-on techniques that leave your face lighter and your shoulders looser.</p>
+      <article class="t-panel lux" id="c-hair" role="tabpanel" aria-labelledby="tab-c-hair">
+        <span class="kicker" data-en="Unwanted hair" data-es="Vello no deseado">Unwanted hair</span>
+        <h3 data-en="Laser hair removal" data-es="Depilación láser">Laser hair removal</h3>
+        <p data-en="Four-wavelength diode laser for progressive hair reduction." data-es="Láser de diodo de cuatro longitudes de onda para reducir el vello progresivamente.">Four-wavelength diode laser for progressive hair reduction.</p>
         <ul class="t-protocols">
-          <li><span class="i">i.</span><h4 data-en="Facial, neck &amp; shoulder massage" data-es="Masaje facial, de cuello y hombros">Facial, neck &amp; shoulder massage</h4><p data-en="Relaxing massage that releases accumulated tension." data-es="Masaje relajante que libera la tensión acumulada.">Relaxing massage that releases accumulated tension.</p></li>
-          <li><span class="i">ii.</span><h4 data-en="Manual lymphatic drainage" data-es="Drenaje linfático manual">Manual lymphatic drainage</h4><p data-en="Gentle technique to reduce facial puffiness." data-es="Técnica suave para reducir la inflamación del rostro.">Gentle technique to reduce facial puffiness.</p></li>
+          <li><span class="i" aria-hidden="true">i.</span><h4 data-en="Treatment areas" data-es="Zonas de tratamiento">Treatment areas</h4><p data-en="Face (including upper lip and chin), underarms, bikini, arms, legs, back and chest." data-es="Rostro (incluidos bozo y mentón), axilas, bikini, brazos, piernas, espalda y pecho.">Face (including upper lip and chin), underarms, bikini, arms, legs, back and chest.</p></li>
+        </ul>
+        <p class="t-note hair-status" data-en="Coming soon" data-es="Próximamente">Coming soon</p>
+        <div class="t-actions"></div>
+      </article>
+
+      <article class="t-panel lux" id="c-relax" role="tabpanel" aria-labelledby="tab-c-relax">
+        <span class="kicker" data-en="Relaxation &amp; drainage" data-es="Relajación y drenaje">Relaxation &amp; drainage</span>
+        <h3 data-en="Gentle care" data-es="Cuidado suave">Gentle care</h3>
+        <ul class="t-protocols">
+          <li><span class="i" aria-hidden="true">i.</span><h4 data-en="Manual lymphatic drainage" data-es="Drenaje linfático manual">Manual lymphatic drainage</h4><p data-en="A gentle manual technique for facial puffiness." data-es="Técnica manual suave para la hinchazón facial.">A gentle manual technique for facial puffiness.</p></li>
         </ul>
         <div class="t-actions"><a href="agendar.html" class="btn btn-primary js-book"><span data-en="Book this treatment" data-es="Agendar este tratamiento">Book this treatment</span><span class="arrow">→</span></a></div>
       </article>
 
-      <button type="button" class="text-link menu-open" onclick="document.getElementById('menu-dialog').showModal()"><span data-en="See the full service menu" data-es="Ver el menú completo de servicios">See the full service menu</span> <span aria-hidden="true">↗</span></button>
+      <div class="menu-footer">
+        <button type="button" class="text-link menu-open" onclick="document.getElementById('menu-dialog').showModal()"><span data-en="See the full service menu" data-es="Ver el menú completo de servicios">See the full service menu</span> <span aria-hidden="true">↗</span></button>
+        <p class="menu-note" data-en="Your consultation is included if you receive a treatment." data-es="La consulta está incluida si realizas un tratamiento.">Your consultation is included if you receive a treatment.</p>
+      </div>
     </div>
   </div>
 </section>
 
-<dialog class="menu-dialog" id="menu-dialog" aria-label="Service menu">
+<dialog class="menu-dialog" id="menu-dialog" aria-labelledby="service-menu-title">
   <div class="inner">
-    <button class="close-x" type="button" aria-label="Close" onclick="this.closest('dialog').close()">&times;</button>
-    <span class="eyebrow" data-en="Service menu" data-es="Menú de servicios">Service menu</span>
+    <button class="close-x" type="button" id="menu-close" aria-label="Close" onclick="this.closest('dialog').close()">&times;</button>
+    <span class="eyebrow" id="service-menu-title" data-en="Service menu" data-es="Menú de servicios">Service menu</span>
     <div class="menu-grid">
-      <div><h5 data-en="Facials" data-es="Faciales">Facials</h5><ul>
-        <li data-en="Deep cleansing facial" data-es="Limpieza facial profunda">Deep cleansing facial</li>
-        <li data-en="Extractions" data-es="Extracciones">Extractions</li>
-        <li data-en="Hydration facial with mask" data-es="Facial de hidratación con mascarilla">Hydration facial with mask</li>
+      <div><h5 data-en="Skin maintenance" data-es="Mantenimiento de mi piel">Skin maintenance</h5><ul>
+        <li data-en="Essential Facial" data-es="Facial Esencial">Essential Facial</li>
+        <li data-en="Piel Glow" data-es="Piel Glow">Piel Glow</li>
+        <li data-en="Glass Skin by mesoestetic®" data-es="Glass Skin de mesoestetic®">Glass Skin by mesoestetic®</li>
+        <li data-en="Radiance Peel" data-es="Peeling Luminosidad">Radiance Peel</li>
+      </ul></div>
+      <div><h5 data-en="Dark spots &amp; melasma" data-es="Manchas y melasma">Dark spots &amp; melasma</h5><ul>
+        <li data-en="Cosmelan depigmentation protocol" data-es="Protocolo despigmentante Cosmelan">Cosmelan depigmentation protocol</li>
+        <li data-en="Depigmenting Peel" data-es="Peeling Despigmentante">Depigmenting Peel</li>
+        <li data-en="Mandelic Firming Peel for mild dark spots" data-es="Peeling Mandélico Reafirmante para manchas leves">Mandelic Firming Peel for mild dark spots</li>
+      </ul></div>
+      <div><h5 data-en="Acne &amp; breakouts" data-es="Acné y brotes">Acne &amp; breakouts</h5><ul>
+        <li data-en="Purifying Acne Facial" data-es="Facial Purificante para Acné">Purifying Acne Facial</li>
+        <li data-en="Clarifying Peel" data-es="Peeling Clarificante">Clarifying Peel</li>
+      </ul></div>
+      <div><h5 data-en="Texture &amp; pores" data-es="Textura y poros">Texture &amp; pores</h5><ul>
         <li data-en="Microdermabrasion" data-es="Microdermoabrasión">Microdermabrasion</li>
-        <li>Dermaplaning</li>
-        <li data-en="Superficial chemical peels" data-es="Peels químicos superficiales">Superficial chemical peels</li>
-        <li data-en="Cosmelan protocol" data-es="Protocolo Cosmelan">Cosmelan protocol</li></ul></div>
-      <div><h5 data-en="Technology" data-es="Aparatología">Technology</h5><ul>
-        <li data-en="LED light therapy" data-es="Terapia de luz LED">LED light therapy</li>
-        <li data-en="High-frequency" data-es="Alta frecuencia">High-frequency</li>
-        <li data-en="Galvanic &amp; faradic currents" data-es="Corrientes galvánicas y farádicas">Galvanic &amp; faradic currents</li>
-        <li data-en="Laser hair reduction" data-es="Depilación láser">Laser hair reduction</li></ul></div>
-      <div><h5 data-en="Body &amp; wellbeing" data-es="Cuerpo y bienestar">Body &amp; wellbeing</h5><ul>
-        <li data-en="Waxing (face &amp; body)" data-es="Depilación con cera (rostro y cuerpo)">Waxing (face &amp; body)</li>
-        <li data-en="Facial, neck &amp; shoulder massage" data-es="Masaje facial, cuello y hombros">Facial, neck &amp; shoulder massage</li>
-        <li data-en="Manual lymphatic drainage" data-es="Drenaje linfático manual">Manual lymphatic drainage</li></ul></div>
+        <li data-en="Chemical peels" data-es="Peelings químicos">Chemical peels</li>
+      </ul></div>
+      <div><h5 data-en="Unwanted hair" data-es="Vello no deseado">Unwanted hair</h5><ul>
+        <li><span data-en="Laser hair removal" data-es="Depilación láser">Laser hair removal</span><span class="hair-status" data-en="Coming soon" data-es="Próximamente">Coming soon</span></li>
+      </ul></div>
+      <div><h5 data-en="Relaxation &amp; drainage" data-es="Relajación y drenaje">Relaxation &amp; drainage</h5><ul>
+        <li data-en="Manual lymphatic drainage" data-es="Drenaje linfático manual">Manual lymphatic drainage</li>
+      </ul></div>
     </div>
   </div>
 </dialog>
@@ -898,13 +906,16 @@ form.cform{display:grid;gap:14px;padding:clamp(24px,3vw,40px);background:var(--b
       <span class="eyebrow reveal"><span class="num">02</span><span data-en="Expert guidance" data-es="Asesoría experta">Expert guidance</span></span>
       <h2 class="h2 reveal" data-delay="1"><span data-en="Guidance for what" data-es="Asesoría según lo que">Guidance for what</span> <em data-en="you're looking for" data-es="estás buscando">you're looking for</em></h2>
       <p class="lead reveal" data-delay="2" data-en="Drawing on our international medical training, we help you understand which evidence-based options fit your goal. No pressure, and no trends without evidence." data-es="Con nuestra formación médica internacional te ayudamos a entender qué opciones con respaldo científico se ajustan a tu objetivo. Sin presión y sin modas sin evidencia.">Drawing on our international medical training, we help you understand which evidence-based options fit your goal. No pressure, and no trends without evidence.</p>
-      <a href="agendar.html" class="btn btn-primary js-book reveal" data-delay="3"><span data-en="Book a skin evaluation" data-es="Agendar evaluación de piel">Book a skin evaluation</span><span class="arrow">→</span></a>
+      <div class="advisory-actions reveal" data-delay="3">
+        <a href="agendar.html" class="btn btn-primary js-book"><span data-en="Book a skin evaluation" data-es="Agendar evaluación de piel">Book a skin evaluation</span><span class="arrow">→</span></a>
+        <a id="advisory-whatsapp" class="text-link js-wa" href="https://wa.me/19295613388" target="_blank" rel="noopener" data-message-en="Hi, I’d like some guidance on which option might be right for me." data-message-es="Hola, me gustaría recibir asesoría para saber qué opción es adecuada para mí."><span data-en="Ask for guidance on WhatsApp" data-es="Pedir asesoría por WhatsApp">Ask for guidance on WhatsApp</span><span aria-hidden="true">↗</span></a>
+      </div>
     </div>
     <ul class="goal-list reveal snap-sub" data-delay="2">
       <li><span data-en="Wrinkles" data-es="Arrugas">Wrinkles</span><small>01</small></li>
       <li><span data-en="Sagging" data-es="Flacidez">Sagging</span><small>02</small></li>
-      <li><span data-en="Dull skin" data-es="Piel opaca">Dull skin</span><small>03</small></li>
-      <li><span data-en="Dry skin" data-es="Piel seca">Dry skin</span><small>04</small></li>
+      <li><span data-en="Radiance &amp; hydration" data-es="Luminosidad e hidratación">Radiance &amp; hydration</span><small>03</small></li>
+      <li><span data-en="Volume loss" data-es="Pérdida de volumen">Volume loss</span><small>04</small></li>
       <li><span data-en="Under-eye circles" data-es="Ojeras">Under-eye circles</span><small>05</small></li>
     </ul>
   </div>
@@ -1261,19 +1272,53 @@ let currentLang = detectLang();
 try { localStorage.setItem('preferredLang', currentLang); } catch (_) {} // agendar/intake leen esta misma clave
 const WA_BASE = 'https://wa.me/19295613388?text=';
 
-// "Escríbenos para conocer nuestros precios" en cada tratamiento (precios solo por WhatsApp)
-document.querySelectorAll('.t-panel').forEach(panel => {
-  const kicker = panel.querySelector('.kicker');
+const treatmentMessages = {
+  'c-glow': {
+    en: 'Hi, I’d like to know the prices for your maintenance facials.',
+    es: 'Hola, me gustaría conocer los precios de los faciales para el mantenimiento de mi piel.'
+  },
+  'c-spots': {
+    en: 'Hi, I’d like to know the prices for treatments for dark spots and melasma.',
+    es: 'Hola, me gustaría conocer los precios de los tratamientos para manchas y melasma.'
+  },
+  'c-acne': {
+    en: 'Hi, I’d like to know the prices for treatments for acne and breakouts.',
+    es: 'Hola, me gustaría conocer los precios de los tratamientos para acné y brotes.'
+  },
+  'c-texture': {
+    en: 'Hi, I’d like to know the prices for treatments to improve my skin texture and the appearance of my pores.',
+    es: 'Hola, me gustaría conocer los precios de los tratamientos para mejorar la textura de mi piel y la apariencia de mis poros.'
+  },
+  'c-hair': {
+    en: 'Hi, I’d like to know when laser hair removal will be available and how much it will cost.',
+    es: 'Hola, me gustaría saber cuándo estará disponible la depilación láser y conocer sus precios.'
+  },
+  'c-relax': {
+    en: 'Hi, I’d like to know how much manual lymphatic drainage costs.',
+    es: 'Hola, me gustaría saber el precio del drenaje linfático manual.'
+  }
+};
+
+document.querySelectorAll('.t-panel .t-actions').forEach(actions => {
+  const panelId = actions.closest('.t-panel').id;
   const a = document.createElement('a');
   a.className = 'price-link js-wa';
   a.target = '_blank'; a.rel = 'noopener';
-  a.dataset.topicEn = kicker.dataset.en; a.dataset.topicEs = kicker.dataset.es;
+  a.dataset.messageEn = treatmentMessages[panelId].en;
+  a.dataset.messageEs = treatmentMessages[panelId].es;
   a.innerHTML = '<svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M16 3C9.4 3 4 8.4 4 15c0 2.4.7 4.6 1.9 6.5L4 29l7.8-1.9A12 12 0 0 0 16 27c6.6 0 12-5.4 12-12S22.6 3 16 3z"/></svg><span data-en="Message us for our prices" data-es="Escríbenos para conocer nuestros precios">Message us for our prices</span>';
-  panel.querySelector('.t-actions').appendChild(a);
+  if (panelId === 'c-hair') {
+    const label = a.querySelector('span');
+    label.dataset.en = 'Ask about availability and prices';
+    label.dataset.es = 'Consultar disponibilidad y precios';
+    label.textContent = label.dataset.en;
+  }
+  actions.appendChild(a);
 });
 
 function applyLanguage() {
   document.documentElement.lang = currentLang;
+  document.getElementById('menu-close').setAttribute('aria-label', currentLang === 'es' ? 'Cerrar' : 'Close');
   document.querySelectorAll('[data-en]').forEach(el => {
     const v = el.getAttribute('data-' + currentLang);
     if (v != null) el.textContent = v;
@@ -1282,10 +1327,8 @@ function applyLanguage() {
     b.textContent = currentLang === 'en' ? 'ES' : 'EN';
     b.setAttribute('aria-label', currentLang === 'en' ? 'Ver en español' : 'View in English');
   });
-  document.querySelectorAll('.price-link').forEach(a => {
-    const topic = a.dataset['topic' + (currentLang === 'en' ? 'En' : 'Es')];
-    const msg = currentLang === 'en' ? `Hi! I'd like to know the prices for: ${topic}` : `¡Hola! Me gustaría conocer los precios de: ${topic}`;
-    a.href = WA_BASE + encodeURIComponent(msg);
+  document.querySelectorAll('.js-wa[data-message-en][data-message-es]').forEach(a => {
+    a.href = WA_BASE + encodeURIComponent(a.getAttribute('data-message-' + currentLang));
   });
   renderResults();
 }
