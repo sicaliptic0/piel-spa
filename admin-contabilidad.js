@@ -12,7 +12,7 @@
     const CUENTAS = ['Chase Ink Business', 'Amex Business', 'Débito Chase Business', 'Cuenta LLC (Zelle/cheque)', 'Tarjeta Chase', 'BofA Mastercard',
         'BofA Travel', 'Visa (sin identificar)', 'Tarjeta personal', 'Zelle / transferencia personal', 'Efectivo', 'Cheque', 'Sin dato'];
     const PAY_LABEL = { cash: 'Efectivo', transfer: 'Transferencia', zelle: 'Zelle', debit: 'Tarjeta de débito', credit: 'Tarjeta de crédito', cherry: 'Cherry', check: 'Cheque', other: 'Otro' };
-    const VIEWS = [['resumen', 'Resumen'], ['gastos', 'Gastos'], ['socios', 'Socios'], ['estado', 'Estado de cuenta'], ['ingresos', 'Ingresos'],
+    const VIEWS = [['panel', 'Panel'], ['resumen', 'Resumen'], ['gastos', 'Gastos'], ['fijos', 'Gastos fijos'], ['socios', 'Socios'], ['estado', 'Estado de cuenta'], ['ingresos', 'Ingresos'],
         ['impuestos', 'Impuestos'], ['conciliacion', 'Conciliación'], ['reportes', 'Reportes']];
 
     // ---------- state
@@ -50,17 +50,19 @@
     // ---------- data
     async function load() {
         const q = (p) => p.then(r => { if (r.error) throw r.error; return r.data || []; });
-        const [cfg, cats, exp, mov, inc, pay] = await Promise.all([
+        const [cfg, cats, exp, mov, inc, pay, fijos] = await Promise.all([
             q(_supabase.from('acct_settings').select('*').eq('id', 1)),
             q(_supabase.from('acct_categories').select('*').order('sort')),
             q(_supabase.from('acct_expenses').select('*').is('deleted_at', null).order('spent_on', { ascending: false }).limit(5000)),
             q(_supabase.from('acct_partner_movements').select('*').is('deleted_at', null)),
             q(_supabase.from('acct_income').select('*').is('deleted_at', null)),
             q(_supabase.from('payments').select('*').limit(5000)),
+            q(_supabase.from('acct_recurring').select('*').order('description')),
         ]);
         db = {
             cfg: cfg[0] || { share_freddy: 0.5, share_samuel: 0.5, loan_rate: 0 },
             categorias: cats,
+            fijos,
             gastos: exp.map(e => ({ id: e.id, fecha: e.spent_on, descripcion: e.description, proveedor: e.vendor || '', categoria: e.category, libro: e.ledger,
                 monto: Number(e.amount), cuenta: e.account || '', pagado_por: e.paid_by, estado: e.reimb_status, fecha_reembolso: e.reimbursed_on, nota: e.note || '',
                 receipt: e.receipt_path, source: e.source })),
@@ -181,8 +183,9 @@
         dialog.acc { width:100vw; max-width:100vw; height:100dvh; max-height:100dvh; margin:0; border-radius:0; }
         dialog.acc .dlg-actions { position:sticky; bottom:0; background:#fff; padding:12px 0 calc(12px + env(safe-area-inset-bottom)); border-top:1px solid #EDE1E7; }
       }
-      @media print { body.acc-printing * { visibility:hidden !important; } body.acc-printing #acc-stmt, body.acc-printing #acc-stmt * { visibility:visible !important; }
-        body.acc-printing #acc-stmt { position:fixed; inset:0; border:none; box-shadow:none; } }`;
+      @media print { body.acc-printing * { visibility:hidden !important; } body.acc-printing .acc-print, body.acc-printing .acc-print * { visibility:visible !important; }
+        body.acc-printing .acc-print { position:absolute; left:0; top:0; width:100%; border:none; box-shadow:none; } body.acc-printing { height:auto !important; overflow:visible !important; }
+        body.acc-printing .acc-print table.t th { position:static; } .acc-nobreak { break-inside:avoid; } }`;
     function build() {
         if (built) return; built = true;
         const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
@@ -190,13 +193,13 @@
         root.innerHTML = `<div class="max-w-6xl mx-auto">
           <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
             <div class="flex gap-2 overflow-x-auto pb-1" id="acc-tabs">${VIEWS.map(([v, t]) => `<button class="sub" data-v="${v}">${t}</button>`).join('')}</div>
-            <div class="flex gap-2 flex-wrap"><button class="soft" onclick="Acc.openIphone()">iPhone</button><button class="abtn" onclick="Acc.openMov()">+ Aporte de socio</button><button class="abtn rose hidden md:inline-block" onclick="Acc.openGasto()">+ Nuevo gasto</button></div>
+            <div class="flex gap-2 flex-wrap"><button class="soft" onclick="Acc.openSheets()">Google Sheets</button><button class="soft" onclick="Acc.openIphone()">iPhone</button><button class="abtn" onclick="Acc.openMov()">+ Aporte de socio</button><button class="abtn rose hidden md:inline-block" onclick="Acc.openGasto()">+ Nuevo gasto</button></div>
           </div>
           <div id="acc-body" class="pb-20 md:pb-0"><p class="text-sm opacity-50 text-center py-10">Cargando…</p></div>
           <button class="fab md:hidden" onclick="Acc.openGasto()" aria-label="Nuevo gasto">+</button></div>`;
         root.querySelectorAll('#acc-tabs .sub').forEach(b => b.onclick = () => { view = b.dataset.v; try { localStorage.setItem('acc-view', view); } catch (e) {} render(); });
-        try { view = localStorage.getItem('acc-view') || 'resumen'; } catch (e) {}
-        if (!VIEWS.some(v => v[0] === view)) view = 'resumen';
+        try { view = localStorage.getItem('acc-view') || 'panel'; } catch (e) {}
+        if (!VIEWS.some(v => v[0] === view)) view = 'panel';
         document.body.insertAdjacentHTML('beforeend', DIALOGS);
         $('acc-g-form').addEventListener('submit', saveGasto);
         $('acc-m-form').addEventListener('submit', saveMov);
@@ -204,7 +207,8 @@
 
     async function open() {
         build();
-        if (!loading) loading = refresh().catch(err => {
+        // Fixed monthly expenses whose day has arrived are created before loading.
+        if (!loading) loading = _supabase.rpc('acct_generate_recurring').then(() => refresh(), () => refresh()).catch(err => {
             $('acc-body').innerHTML = `<p class="text-sm text-red-500 text-center py-8">${esc(/acct_|schema cache/i.test(err.message || '') ? 'Falta correr el SQL de supabase/migrations/20261121_accounting.sql.' : 'No se pudo cargar: ' + err.message)}</p>`;
         }).finally(() => { loading = null; });
         return loading;
@@ -214,7 +218,7 @@
         if (!db) return;
         document.querySelectorAll('#acc-tabs .sub').forEach(b => b.classList.toggle('on', b.dataset.v === view));
         const body = $('acc-body');
-        ({ resumen: viewResumen, gastos: viewGastos, socios: viewSocios, estado: viewEstado, ingresos: viewIngresos,
+        ({ panel: viewPanel, fijos: viewFijos, resumen: viewResumen, gastos: viewGastos, socios: viewSocios, estado: viewEstado, ingresos: viewIngresos,
             impuestos: viewImpuestos, conciliacion: viewConciliacion, reportes: viewReportes })[view](body);
     }
 
@@ -464,7 +468,7 @@
             <div><label class="lbl" for="acc-em">Mes</label><select id="acc-em">${ms.slice().reverse().map(x => `<option value="${x}" ${x === m ? 'selected' : ''}>${mesLabel(x)}</option>`).join('')}</select></div>
             <div><label class="lbl" for="acc-et">Tasa anual de préstamos (%)</label><input id="acc-et" inputmode="decimal" value="${r2(tasa * 100)}"></div>
             <div class="col-span-2 flex justify-end"><button class="abtn" onclick="Acc.imprimir()">Imprimir / PDF</button></div></div>
-          <div class="card p-6 md:p-10" id="acc-stmt">
+          <div class="card p-6 md:p-10 acc-print" id="acc-stmt">
             <div class="flex flex-wrap items-start justify-between gap-4 mb-6"><div><p class="lbl">Piel Spa LLC · Estado de cuenta del socio</p><h2 class="text-4xl italic">${s}</h2><p class="text-sm opacity-70">${mesLargo(m)} · participación ${SHARE(s) * 100}%</p></div>
               <div class="text-right text-xs opacity-60">Generado ${fdate(today())}<br>Documento interno</div></div>
             <div class="grid md:grid-cols-2 gap-8"><div>
@@ -633,6 +637,7 @@
         const line = (a, b, c, cls = '') => `<div class="stmt-line ${cls}"><span><span class="text-[10px] font-bold text-[#B76E88] inline-block w-10">${a}</span>${b}</span><span class="num ${c < 0 ? 'neg' : ''}">${money(c)}</span></div>`;
         const m2 = [['Saldo al inicio del año', 'inicial'], ['(+) Aportes', 'aportes'], ['(+/−) Resultado asignado', 'resultado'], ['(−) Retiros', 'retiros'], ['Saldo al final del año', 'final']];
         body.innerHTML = `<div class="card p-4 mb-4 flex flex-wrap items-end gap-3"><div class="w-36"><label class="lbl" for="acc-ra">Año fiscal</label><select id="acc-ra">${anios().slice().reverse().map(a => `<option ${a === rAnio ? 'selected' : ''}>${a}</option>`).join('')}</select></div>
+            <div class="w-40"><label class="lbl" for="acc-cm">Cierre del mes</label><select id="acc-cm">${months().slice().reverse().map(x => `<option value="${x}">${mesLabel(x)}</option>`).join('')}</select></div><button class="soft" onclick="Acc.cierreMes(document.getElementById('acc-cm').value)">Ver cierre / PDF</button>
             <div class="flex flex-wrap gap-2 ml-auto"><button class="abtn" onclick="Acc.exportContadora()">Reporte para la contadora (Excel)</button><button class="soft" onclick="Acc.exportFormatoSheet()">Excel con formato del Sheet</button></div></div>
           <div class="grid md:grid-cols-2 gap-4"><div class="card p-5"><h3 class="text-2xl italic">Form 1065 (estimado)</h3><p class="text-xs opacity-60 mb-3">Para revisar con la contadora. Libro LLC, sin cobros anulados.</p>
             ${lineas1065(f).map(([a, b, c], i) => line(a, b, c, i === 5 ? 'total' : '')).join('')}
@@ -688,6 +693,182 @@
         XLSX.utils.book_append_sheet(wb, sheet(db.movimientos.map(m => ({ Fecha: asDate(m.fecha), Mes: mes(m.fecha), Socio: m.socio, Tipo: m.tipo, 'Monto ($)': m.monto, Concepto: m.concepto,
             Confirmado: m.confirmado ? 'Sí' : 'No', Origen: 'Contabilidad', Nota: m.nota })), [11, 11, 16, 26, 12, 50, 11, 14, 50]), 'Movimientos socios');
         XLSX.writeFile(wb, `Libro Contable PIEL SPA - datos ${today()}.xlsx`);
+    }
+
+    // ---------- Panel: the original Sheet's DASHBOARD, one column per month
+    const GRUPOS = [['Costo de ventas', 'Costos variables (insumos y productos)'], ['Gasto operativo', 'Gastos fijos y operativos'],
+        ['Activo', 'Equipo (activos)'], ['No deducible', 'No deducible'], ['No es gasto', 'No es gasto (depósitos)'], ['Revisar', 'Por revisar']];
+    // Rows: {t:'h'|'r'|'tot'|'sep', label, v:{month:value}, cat?, mov?}
+    function panelRows(ms) {
+        const rows = [], z = () => Object.fromEntries(ms.map(m => [m, 0]));
+        const add = (label, fn, extra = {}) => { const v = z(); ms.forEach(m => v[m] = r2(fn(m))); rows.push({ t: 'r', label, v, ...extra }); return v; };
+        const ingLLC = m => db.ingresos.filter(i => !i.anulado && i.libro === 'LLC' && ym(i.fecha) === m);
+        const mov = (tipo, m) => db.movimientos.filter(x => x.confirmado && x.tipo === tipo && ym(x.fecha) === m).reduce((s, x) => s + x.monto, 0);
+        const gas = (cat, m) => db.gastos.filter(g => g.libro === 'LLC' && g.categoria === cat && ym(g.fecha) === m).reduce((s, g) => s + g.monto, 0);
+        const sum = (...vs) => { const v = z(); ms.forEach(m => v[m] = r2(vs.reduce((s, x) => s + (x.sign || 1) * x.v[m], 0))); return v; };
+        rows.push({ t: 'h', label: 'A · Entradas' });
+        const ap = add('Aportes de capital (socios)', m => mov('Aporte de capital', m));
+        const pr = add('Préstamos de socios', m => mov('Préstamo del socio', m));
+        const ve = add('Ventas de servicios y productos', m => ingLLC(m).filter(i => i.categoria !== 'Otro ingreso').reduce((s, i) => s + (i.monto || 0), 0));
+        const re = add('Recargos de tarjeta', m => ingLLC(m).reduce((s, i) => s + (i.recargo || 0), 0));
+        const ot = add('Otros ingresos (bono, etc.)', m => ingLLC(m).filter(i => i.categoria === 'Otro ingreso').reduce((s, i) => s + (i.monto || 0), 0));
+        const totE = sum({ v: ap }, { v: pr }, { v: ve }, { v: re }, { v: ot }); rows.push({ t: 'tot', label: 'Total entradas', v: totE });
+        rows.push({ t: 'h', label: 'B · Salidas' });
+        const grupoV = {};
+        GRUPOS.forEach(([kind, titulo]) => {
+            const cats = db.categorias.filter(c => c.kind === kind);
+            if (!cats.length) return;
+            rows.push({ t: 'sub', label: titulo });
+            const vs = cats.map(c => add(c.name, m => gas(c.name, m), { cat: c.name }));
+            grupoV[kind] = sum(...vs.map(v => ({ v })));
+        });
+        const totS = sum(...Object.values(grupoV).map(v => ({ v }))); rows.push({ t: 'tot', label: 'Total gastos', v: totS });
+        const ret = add('Retiros de capital (socios)', m => mov('Retiro de capital', m));
+        const pp = add('Pagos de préstamos a socios', m => mov('Pago de préstamo al socio', m));
+        rows.push({ t: 'tot', label: 'Balance del mes (entradas − salidas)', v: sum({ v: totE }, { v: totS, sign: -1 }, { v: ret, sign: -1 }, { v: pp, sign: -1 }) });
+        rows.push({ t: 'h', label: 'C · Resultado y K-1' });
+        const res = sum({ v: ve }, { v: re }, { v: ot }, { v: grupoV['Costo de ventas'] || z(), sign: -1 }, { v: grupoV['Gasto operativo'] || z(), sign: -1 });
+        rows.push({ t: 'tot', label: 'Resultado (ventas − costos − gastos operativos)', v: res });
+        SOCIOS.forEach(s => { const v = z(); ms.forEach(m => v[m] = r2(res[m] * SHARE(s))); rows.push({ t: 'r', label: `${s} · ${SHARE(s) * 100}%`, v }); });
+        rows.push({ t: 'h', label: 'D · Socios (saldo al cierre del mes)' });
+        SOCIOS.forEach(s => add(`La LLC le debe a ${s}`, m => socioAcumulado(s, m).debe, { acum: true }));
+        SOCIOS.forEach(s => add(`Capital de ${s}`, m => socioAcumulado(s, m).capital, { acum: true }));
+        add('Impuesto cobrado (se paga al estado)', m => ingLLC(m).reduce((s, i) => s + (i.impuesto || 0), 0));
+        return rows;
+    }
+    let pAnio = null, pMes = null;
+    function viewPanel(body) {
+        const todos = months(), anios = [...new Set(todos.map(m => m.slice(0, 4)))];
+        if (!pAnio || (pAnio !== 'todo' && !anios.includes(pAnio))) pAnio = today().slice(0, 4);
+        const ms = pAnio === 'todo' ? todos : todos.filter(m => m.startsWith(pAnio));
+        if (!pMes || !ms.includes(pMes)) pMes = ms.includes(today().slice(0, 7)) ? today().slice(0, 7) : ms[ms.length - 1];
+        const rows = panelRows(ms);
+        const tot = r => r.acum ? r.v[ms[ms.length - 1]] : ms.reduce((s, m) => s + r.v[m], 0);
+        const celda = (r, m) => r.cat && r.v[m] ? `<td class="num"><button class="hover:underline" onclick="Acc.irGastos('${esc(r.cat)}','${m}')">${money(r.v[m])}</button></td>` : cell(r.v[m]);
+        const sticky = 'position:sticky;left:0;background:inherit;z-index:1';
+        body.innerHTML = `<div class="card p-4 mb-4 flex flex-wrap items-end gap-3">
+            <div class="w-32"><label class="lbl" for="acc-pa">Año</label><select id="acc-pa">${anios.map(a => `<option ${a === pAnio ? 'selected' : ''}>${a}</option>`).join('')}<option value="todo" ${pAnio === 'todo' ? 'selected' : ''}>Todo</option></select></div>
+            <div class="w-40 md:hidden"><label class="lbl" for="acc-pm">Mes</label><select id="acc-pm">${ms.slice().reverse().map(m => `<option value="${m}" ${m === pMes ? 'selected' : ''}>${mesLabel(m)}</option>`).join('')}</select></div>
+            <p class="text-xs opacity-60 md:ml-auto">Como el DASHBOARD del Sheet. Toca un monto de gasto para ver el detalle. Solo libro LLC.</p></div>
+          <div class="card overflow-hidden hidden md:block"><div class="overflow-x-auto"><table class="t">
+            <thead><tr><th style="${sticky};background:#FDFBFC;z-index:2">Concepto</th>${ms.map(m => `<th class="num">${mesLabel(m)}</th>`).join('')}<th class="num">Total</th></tr></thead>
+            <tbody>${rows.map(r => r.t === 'h' ? `<tr><td colspan="${ms.length + 2}" class="pt-5 font-bold text-[#B76E88] uppercase text-[11px] tracking-widest" style="background:#fff">${esc(r.label)}</td></tr>`
+                : r.t === 'sub' ? `<tr><td colspan="${ms.length + 2}" class="text-[11px] font-semibold opacity-70" style="background:#FDFBFC">${esc(r.label)}</td></tr>`
+                : `<tr class="${r.t === 'tot' ? 'font-bold' : ''}" style="background:${r.t === 'tot' ? '#FBF0F3' : '#fff'}"><td class="whitespace-nowrap" style="${sticky}">${esc(r.label)}</td>${ms.map(m => celda(r, m)).join('')}${cell(tot(r))}</tr>`).join('')}</tbody></table></div></div>
+          <div class="md:hidden space-y-1">${rows.map(r => r.t === 'h' ? `<p class="pt-4 pb-1 font-bold text-[#B76E88] uppercase text-[11px] tracking-widest">${esc(r.label)}</p>`
+                : r.t === 'sub' ? `<p class="pt-2 text-[12px] font-semibold opacity-70">${esc(r.label)}</p>`
+                : (r.v[pMes] || r.t === 'tot') ? `<div class="flex justify-between gap-3 px-3 py-2 rounded-lg ${r.t === 'tot' ? 'bg-[#FBF0F3] font-bold' : 'bg-white border border-[#EDE1E7]'}" ${r.cat ? `onclick="Acc.irGastos('${esc(r.cat)}','${pMes}')"` : ''}><span class="text-sm">${esc(r.label)}</span><span class="num text-sm ${r.v[pMes] < 0 ? 'neg' : ''}">${money(r.v[pMes])}</span></div>` : '').join('')}
+            <p class="text-[11px] opacity-60 pt-2">En el teléfono se muestra un mes; las filas en cero se ocultan.</p></div>`;
+        $('acc-pa').onchange = e => { pAnio = e.target.value; render(); };
+        $('acc-pm').onchange = e => { pMes = e.target.value; render(); };
+    }
+    function irGastos(cat, mes) { gf.q = ''; gf.cat = cat; gf.mes = mes; gf.pag = ''; gf.est = ''; view = 'gastos'; render(); }
+
+    // ---------- Gastos fijos (monthly, created by acct_generate_recurring)
+    function viewFijos(body) {
+        const list = db.fijos;
+        const mensual = list.filter(f => f.active).reduce((s, f) => s + Number(f.amount), 0);
+        body.innerHTML = `<div class="card p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm">Cada gasto fijo se crea solo cada mes el día indicado, como pendiente si lo paga un socio. Si un mes fue distinto, corrige ese gasto en Gastos.<br><b>${money(mensual)}</b> al mes en gastos fijos activos.</p>
+            <button class="abtn rose" onclick="Acc.openFijo()">+ Gasto fijo</button></div>
+          <div class="grid md:grid-cols-2 gap-3">${list.length ? list.map(f => `<div class="gcard" onclick="Acc.openFijo('${f.id}')">
+              <div class="flex-1 min-w-0"><div class="flex justify-between gap-2"><p class="font-medium">${esc(f.description)}</p><p class="font-semibold whitespace-nowrap">${money(Number(f.amount))}</p></div>
+              <p class="text-[12px] opacity-60">Día ${f.day_of_month} de cada mes · ${esc(f.category)}${f.vendor ? ' · ' + esc(f.vendor) : ''}</p>
+              <div class="flex flex-wrap gap-1 mt-1"><span class="badge b-llc">${esc(f.paid_by)}</span>${f.active ? '<span class="badge b-ok">Activo</span>' : '<span class="badge b-pend">Pausado</span>'}<span class="text-[11px] opacity-60">desde ${fdate(f.starts_on)}${f.ends_on ? ' hasta ' + fdate(f.ends_on) : ''}</span></div></div></div>`).join('')
+            : '<p class="text-sm opacity-60">Todavía no hay gastos fijos. Agrega la renta, Claude, el teléfono, el seguro…</p>'}</div>`;
+    }
+    function openFijo(id) {
+        let dlg = $('acc-df');
+        if (!dlg) {
+            document.body.insertAdjacentHTML('beforeend', `<dialog id="acc-df" class="acc"><form id="acc-f-form" method="dialog" class="p-6 space-y-3">
+              <h3 class="text-2xl italic" id="acc-f-title">Gasto fijo</h3><input type="hidden" id="acc-f-id">
+              <div><label class="lbl" for="acc-f-desc">Descripción</label><input id="acc-f-desc" required placeholder="Ej. Renta del local, Claude, Tello"></div>
+              <div class="grid grid-cols-2 gap-3"><div><label class="lbl" for="acc-f-monto">Monto al mes ($)</label><input id="acc-f-monto" inputmode="decimal" required></div>
+                <div><label class="lbl" for="acc-f-dia">Día del mes</label><input id="acc-f-dia" inputmode="numeric" required></div></div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="lbl" for="acc-f-cat">Categoría</label><select id="acc-f-cat"></select></div>
+                <div><label class="lbl" for="acc-f-prov">Proveedor</label><input id="acc-f-prov"></div></div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="lbl" for="acc-f-pag">Lo paga</label><select id="acc-f-pag"><option>LLC</option><option>Freddy</option><option>Samuel</option><option>Ambos (50/50)</option></select></div>
+                <div><label class="lbl" for="acc-f-cuenta">Cuenta / tarjeta</label><select id="acc-f-cuenta"></select></div></div>
+              <div class="grid grid-cols-2 gap-3"><div><label class="lbl" for="acc-f-desde">Desde</label><input type="date" id="acc-f-desde" required></div>
+                <div><label class="lbl" for="acc-f-hasta">Hasta (opcional)</label><input type="date" id="acc-f-hasta"></div></div>
+              <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="acc-f-act" class="accent-[#B76E88]"> Activo</label>
+              <p class="text-[11px] opacity-60">Al guardar se crean los meses que ya pasaron desde la fecha "Desde". Si ya cargaste a mano algún mes, pon "Desde" en el mes siguiente.</p>
+              <div class="dlg-actions flex justify-end gap-2 pt-2"><button type="button" class="soft" onclick="this.closest('dialog').close()">Cancelar</button><button class="abtn">Guardar</button></div>
+            </form></dialog>`);
+            dlg = $('acc-df');
+            $('acc-f-form').addEventListener('submit', saveFijo);
+        }
+        const f = id ? db.fijos.find(x => x.id === id) : { description: '', amount: '', day_of_month: 1, category: 'Software y suscripciones', paid_by: 'LLC', account: 'Débito Chase Business', starts_on: today(), active: true };
+        fill($('acc-f-cat'), db.categorias.filter(c => ['Gasto operativo', 'Costo de ventas'].includes(c.kind)).map(c => c.name)); fill($('acc-f-cuenta'), CUENTAS);
+        $('acc-f-title').textContent = id ? 'Editar gasto fijo' : 'Nuevo gasto fijo';
+        $('acc-f-id').value = id || ''; $('acc-f-desc').value = f.description; $('acc-f-monto').value = f.amount; $('acc-f-dia').value = f.day_of_month;
+        $('acc-f-cat').value = f.category; $('acc-f-prov').value = f.vendor || ''; $('acc-f-pag').value = f.paid_by; $('acc-f-cuenta').value = f.account || 'Sin dato';
+        $('acc-f-desde').value = f.starts_on; $('acc-f-hasta').value = f.ends_on || ''; $('acc-f-act').checked = !!f.active;
+        dlg.showModal();
+    }
+    async function saveFijo(ev) {
+        ev.preventDefault();
+        const amount = amt($('acc-f-monto').value), dia = parseInt($('acc-f-dia').value, 10);
+        if (!amount || amount <= 0) { alert('Escribe el monto.'); return; }
+        if (!(dia >= 1 && dia <= 31)) { alert('El día debe estar entre 1 y 31.'); return; }
+        const id = $('acc-f-id').value;
+        const row = { description: $('acc-f-desc').value.trim(), amount, day_of_month: dia, category: $('acc-f-cat').value, vendor: $('acc-f-prov').value.trim() || null,
+            paid_by: $('acc-f-pag').value, account: $('acc-f-cuenta').value, starts_on: $('acc-f-desde').value, ends_on: $('acc-f-hasta').value || null, active: $('acc-f-act').checked };
+        const res = id ? await _supabase.from('acct_recurring').update(row).eq('id', id) : await _supabase.from('acct_recurring').insert({ ...row, created_by: await userId() });
+        if (res.error) { alert('No se pudo guardar: ' + res.error.message); return; }
+        const { data: n, error } = await _supabase.rpc('acct_generate_recurring');
+        $('acc-df').close(); await refresh();
+        toast(error ? 'Guardado. No se pudieron crear los meses: ' + error.message : n ? `Guardado. Se crearon ${n} gastos de meses que ya pasaron.` : 'Gasto fijo guardado.');
+    }
+
+    // ---------- Cierre del mes (printable: Imprimir → Guardar como PDF)
+    function cierreMes(m) {
+        let host = $('acc-cierre');
+        if (!host) { document.body.insertAdjacentHTML('beforeend', '<dialog id="acc-cierre" class="acc" style="width:min(900px,calc(100vw - 16px))"><div class="p-4 flex justify-end gap-2 no-print border-b border-[#EDE1E7] sticky top-0 bg-white z-10"><button class="soft" onclick="this.closest(\'dialog\').close()">Cerrar</button><button class="abtn" onclick="Acc.imprimir()">Imprimir / PDF</button></div><div class="p-6 md:p-10 acc-print" id="acc-cierre-body"></div></dialog>'); host = $('acc-cierre'); }
+        const rows = panelRows([m]), v = r => r.v ? r.v[m] : 0;
+        const gas = db.gastos.filter(g => g.libro === 'LLC' && ym(g.fecha) === m).sort((a, b) => a.categoria.localeCompare(b.categoria) || a.fecha.localeCompare(b.fecha));
+        const porCat = {}; gas.forEach(g => (porCat[g.categoria] = porCat[g.categoria] || []).push(g));
+        const ing = db.ingresos.filter(i => !i.anulado && ym(i.fecha) === m).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+        const line = (a, b, cls = '') => `<div class="stmt-line ${cls}"><span>${a}</span><span class="num">${b}</span></div>`;
+        const socio = s => { const ini = socioAcumulado(s, prevMonth(m)), r = socioMes(s, m);
+            return `<div class="acc-nobreak"><h4 class="text-xl italic mt-2">${s}</h4>${line('Capital al inicio', money(ini.capital))}${line('(+) Aportes', money(r.aportes))}${line('(−) Retiros', money(r.retiros))}${line('Capital al final', money(ini.capital + r.aportes - r.retiros), 'total')}
+              ${line('La LLC le debía al inicio', money(ini.debe))}${line('(+) Gastos que pagó', money(r.gastos))}${line('(−) Reembolsos recibidos', money(r.reembolsos))}${line('La LLC le debe al final', money(ini.debe + r.gastos - r.reembolsos), 'total')}</div>`; };
+        $('acc-cierre-body').innerHTML = `
+          <div class="flex flex-wrap items-start justify-between gap-4 mb-6"><div><p class="lbl">Piel Spa LLC · Cierre del mes</p><h2 class="text-4xl italic">${mesLargo(m)}</h2></div>
+            <div class="text-right text-xs opacity-60">Generado ${fdate(today())}<br>Documento interno · Form 1065, socios 50/50</div></div>
+          <div class="grid md:grid-cols-2 gap-8">
+            <div class="acc-nobreak"><h3 class="text-2xl italic mb-2">Resumen</h3>${rows.filter(r => r.t !== 'h' && r.t !== 'sub' && (v(r) || r.t === 'tot')).map(r => line(esc(r.label), money(v(r)), r.t === 'tot' ? 'total' : '')).join('')}</div>
+            <div><h3 class="text-2xl italic mb-2">Socios</h3>${SOCIOS.map(socio).join('')}</div>
+          </div>
+          <h3 class="text-2xl italic mt-8 mb-2">Gastos del mes (${gas.length})</h3>
+          ${Object.entries(porCat).map(([c, list]) => `<div class="acc-nobreak mb-3"><p class="font-semibold text-sm flex justify-between"><span>${esc(c)}</span><span class="num">${money(list.reduce((s, g) => s + g.monto, 0))}</span></p>
+            <table class="t"><tbody>${list.map(g => `<tr><td class="whitespace-nowrap">${fdate(g.fecha)}</td><td>${esc(g.descripcion)}</td><td class="text-xs">${esc(g.pagado_por)}</td><td class="num">${money(g.monto)}</td></tr>`).join('')}</tbody></table></div>`).join('') || '<p class="text-sm opacity-60">Sin gastos.</p>'}
+          <h3 class="text-2xl italic mt-8 mb-2">Ingresos del mes (${ing.length})</h3>
+          ${ing.length ? `<table class="t"><thead><tr><th>Fecha</th><th>Cliente</th><th>Servicio</th><th>Método</th><th class="num">Venta</th><th class="num">Impuesto</th><th>Libro</th></tr></thead><tbody>${ing.map(i => `<tr><td class="whitespace-nowrap">${fdate(i.fecha)}</td><td>${esc(i.cliente)}</td><td class="text-xs">${esc(i.servicio)}</td><td class="text-xs">${esc(i.metodo)}</td><td class="num">${money(i.monto)}</td>${cell(i.impuesto || 0)}<td class="text-xs">${i.libro === 'LLC' ? 'LLC' : 'NJ fuera'}</td></tr>`).join('')}</tbody></table>` : '<p class="text-sm opacity-60">Sin ingresos.</p>'}
+          <div class="grid grid-cols-2 gap-10 mt-16 acc-nobreak">${SOCIOS.map(s => `<div class="border-t border-[#2A2330] pt-2 text-sm">${s}<br><span class="text-xs opacity-60">Firma y fecha</span></div>`).join('')}</div>`;
+        host.showModal();
+    }
+
+    // ---------- Google Sheets: the sheet pulls everything with its own key (tools/contabilidad-sheets-sync.gs)
+    async function openSheets() {
+        const { data: key, error } = await _supabase.rpc('accounting_sync_key');
+        if (error) { alert(/accounting_sync_key/.test(error.message) ? 'Falta correr el SQL de supabase/migrations/20261121_accounting_fixed_and_sync.sql.' : error.message); return; }
+        let dlg = $('acc-ds');
+        if (!dlg) { document.body.insertAdjacentHTML('beforeend', `<dialog id="acc-ds" class="acc" style="width:min(640px,calc(100vw - 32px))"><div class="p-6 space-y-4 max-h-[85vh] overflow-y-auto" id="acc-ds-body"></div></dialog>`); dlg = $('acc-ds'); }
+        const site = location.origin.includes('localhost') ? 'https://piel-spa.com' : location.origin;
+        $('acc-ds-body').innerHTML = `<div class="flex items-start justify-between gap-3"><h3 class="text-3xl italic">Google Sheets</h3><button class="text-2xl opacity-40 hover:opacity-100 leading-none" onclick="this.closest('dialog').close()" aria-label="Cerrar">&times;</button></div>
+          <p class="text-sm">El Sheet se actualiza solo cada 10 minutos con todo lo de Contabilidad: Panel, Gastos, Ingresos, Socios, Estado de socios y Gastos fijos. El día 1 de cada mes guarda el cierre del mes anterior en PDF en tu Google Drive.</p>
+          <ol class="list-decimal pl-5 text-sm space-y-2">
+            <li>Abre el Google Sheet <b>Libro Contable PIEL SPA 2026</b> (o el que quieras usar).</li>
+            <li>Menú <b>Extensiones → Apps Script</b>. Borra lo que haya y pega el código de <a class="underline text-[#B76E88]" href="${esc(site)}/tools/contabilidad-sheets-sync.gs" target="_blank" rel="noopener">${esc(site)}/tools/contabilidad-sheets-sync.gs</a>. Guarda.</li>
+            <li>Vuelve al Sheet y recarga la página. Aparece el menú <b>Piel Spa · Contabilidad</b>.</li>
+            <li>Menú → <b>Configurar clave</b> y pega esta clave:
+              <div class="flex gap-2 mt-1"><input readonly value="${esc(key)}" id="acc-ds-key" class="font-mono text-xs"><button class="soft" onclick="navigator.clipboard.writeText(document.getElementById('acc-ds-key').value).then(()=>this.textContent='Copiada')">Copiar</button></div></li>
+            <li>Menú → <b>Activar actualización automática</b> y acepta los permisos de Google.</li>
+            <li>Menú → <b>Actualizar ahora</b> para la primera carga.</li>
+          </ol>
+          <p class="text-[12px] opacity-70">Las pestañas que escribe el sistema terminan en "· Sistema" y se reescriben cada vez: no escribas en ellas. Tus otras pestañas no se tocan. La clave solo sirve para leer la contabilidad; no la compartas.</p>`;
+        if (!dlg.open) dlg.showModal();
     }
 
     // ---------- iPhone: home-screen page and the "Gasto Piel" Shortcut
@@ -752,6 +933,6 @@
         openIphone();
     }
 
-    window.Acc = { open, refresh, openIphone, crearCodigo, revocarCodigo, masGastos, toggleFiltros, clearSel, sortBy, toggleSel, selAll, bulkSet, openGasto, delGasto, verRecibo, openMov, delMov, verEstado, imprimir,
+    window.Acc = { open, refresh, irGastos, openFijo, cierreMes, openSheets, openIphone, crearCodigo, revocarCodigo, masGastos, toggleFiltros, clearSel, sortBy, toggleSel, selAll, bulkSet, openGasto, delGasto, verRecibo, openMov, delMov, verEstado, imprimir,
         guardarConciliacion, irACobros, depAporte, exportContadora, exportFormatoSheet };
 })();
