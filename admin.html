@@ -7853,32 +7853,42 @@
         ];
         // Pasos del protocolo en el orden en que se aplican. time: cuándo se usa
         // ('auto' = según el producto: de mañana o de noche).
+        // Pasos del protocolo. times: momento del día en que puede usarse el producto
+        // (los de «mañana y noche» sirven en los dos pasos de sérum/tratamiento).
         const SC_SLOTS = [
-            { id: 'cleanser',       steps: ['cleanser'],               label: 'Limpiador',            time: 'ampm' },
-            { id: 'double_cleanse', steps: ['double_cleanse'],         label: 'Doble limpieza',       time: 'pm' },
-            { id: 'serum',          steps: ['serum'],                  label: 'Sérum hidratante',     time: 'am' },
-            { id: 'active_am',      steps: ['active_am'],              label: 'Activo de mañana',     time: 'am' },
-            { id: 'active_one',     steps: ['active_pm', 'active_am'], label: 'Activo',               time: 'auto' },
-            { id: 'eye',            steps: ['eye'],                    label: 'Contorno de ojos',     time: 'ampm' },
-            { id: 'active_pm',      steps: ['active_pm'],              label: 'Activo de noche',      time: 'pm' },
-            { id: 'moisturizer',    steps: ['moisturizer'],            label: 'Hidratante',           time: 'ampm' },
-            { id: 'repair',         steps: ['repair'],                 label: 'Reparador / barrera',  time: 'pm' },
-            { id: 'spf',            steps: ['spf'],                    label: 'Protector solar',      time: 'am' },
-            { id: 'weekly',         steps: ['weekly'],                 label: 'Mascarilla semanal',   time: 'weekly' },
+            { id: 'double_cleanse', steps: ['double_cleanse'],                     label: 'Primera limpieza (desmaquillante)', time: 'pm' },
+            { id: 'cleanser',       steps: ['cleanser'],                           label: 'Limpiador',               time: 'ampm' },
+            { id: 'serum_am',       steps: ['serum', 'active_am', 'active_pm'],    label: 'Sérum de mañana',         time: 'am', times: ['am', 'both'] },
+            { id: 'active_one',     steps: ['active_pm', 'active_am'],             label: 'Activo',                  time: 'auto' },
+            { id: 'eye',            steps: ['eye'],                                label: 'Contorno de ojos',        time: 'ampm' },
+            { id: 'active_pm',      steps: ['active_pm', 'active_am', 'serum'],    label: 'Tratamiento de noche',    time: 'pm', times: ['pm', 'both'], noRetinoid: true },
+            { id: 'retinoid',       steps: ['active_pm'],                          label: 'Retinoide (noches alternas)', time: 'pm', onlyRetinoid: true },
+            { id: 'moisturizer',    steps: ['moisturizer'],                        label: 'Hidratante',              time: 'ampm' },
+            { id: 'repair',         steps: ['repair'],                             label: 'Reparador / barrera',     time: 'pm' },
+            { id: 'spf',            steps: ['spf'],                                label: 'Protector solar',         time: 'am' },
+            { id: 'weekly',         steps: ['weekly'],                             label: 'Mascarilla semanal',      time: 'weekly' },
         ];
-        const SC_ACTIVE_SLOTS = ['active_am', 'active_pm', 'active_one'];
+        const SC_ACTIVE_SLOTS = ['serum_am', 'active_pm', 'retinoid', 'active_one'];
+        const SC_PLUS_SLOTS = ['serum_am', 'active_pm'];          // aquí un 2.º producto puede ser «Además»
+        const SC_RETINOID_CONCERNS = ['wrinkles', 'acne', 'texture', 'spots', 'melasma'];
+        // Retinoide de primera línea (solo se sugiere solo para acné, arrugas o textura).
+        const SC_RETINOID_FIRST = {
+            acne: ['meso_blemiderm', 'differin_adapalene', 'tretinoin_0025'],
+            wrinkles: ['tretinoin_0025', 'meso_skinretin', 'lrp_retinol_b3', 'avene_retrinal', 'sc_retinol03'],
+            texture: ['meso_skinretin', 'tretinoin_0025', 'lrp_retinol_b3'],
+        };
         const SC_ROLES = { main: 'Principal', alt: 'Alternativa', plus: 'Además' };
         const SC_ACID = ['aha', 'bha'];
         // Activo de primera línea por condición (en orden de preferencia; se toma el primero
         // que no esté bloqueado y sirva para el tipo de piel).
         const SC_FIRST_LINE = {
-            melasma:     { am: ['meso_tran3x_concentrate', 'lrp_mela_b3', 'pc_azelaic'],       pm: ['meso_tran3x_gelcream', 'azelaic_rx', 'pc_azelaic'] },
-            acne:        { am: ['lrp_niacinamide10', 'pc_niacinamide', 'to_niacinamide'],    pm: ['meso_blemiderm', 'differin_adapalene', 'azelaic_rx', 'pc_azelaic'] },
+            melasma:     { am: ['meso_tran3x_concentrate', 'lrp_mela_b3', 'pc_azelaic'],       pm: ['meso_tran3x_gelcream', 'meso_tran3x_concentrate', 'azelaic_rx', 'pc_azelaic'] },
+            acne:        { am: ['lrp_niacinamide10', 'pc_niacinamide', 'to_niacinamide'],    pm: ['azelaic_rx', 'pc_azelaic', 'lrp_niacinamide10'] },
             redness:     { am: ['pc_azelaic', 'azelaic_rx'],                                 pm: ['pc_azelaic', 'azelaic_rx'] },
-            spots:       { am: ['meso_tran3x_concentrate', 'lrp_vitc10', 'isdin_flavoc'],    pm: ['meso_tran3x_gelcream', 'pc_azelaic'] },
-            wrinkles:    { am: ['meso_aox_ferulic', 'lrp_vitc10', 'isdin_flavoc', 'sc_ce_ferulic'],              pm: ['tretinoin_0025', 'meso_skinretin', 'inkey_bakuchiol'] },
+            spots:       { am: ['meso_tran3x_concentrate', 'lrp_vitc10', 'isdin_flavoc'],    pm: ['meso_tran3x_gelcream', 'meso_tran3x_concentrate', 'pc_azelaic'] },
+            wrinkles:    { am: ['meso_aox_ferulic', 'lrp_vitc10', 'isdin_flavoc', 'sc_ce_ferulic'],              pm: ['meso_firming_concentrate', 'meso_ha_densimatrix', 'inkey_bakuchiol'] },
             shine:       { am: ['lrp_niacinamide10', 'pc_niacinamide', 'to_niacinamide'],    pm: ['meso_blemiderm_resurfacing', 'pc_bha'] },
-            texture:     { am: ['meso_brightening_concentrate', 'meso_aox_ferulic', 'lrp_vitc10'], pm: ['meso_ultimate_micropeel', 'to_mandelic', 'meso_skinretin', 'isdin_night_peel'] },
+            texture:     { am: ['meso_brightening_concentrate', 'meso_aox_ferulic', 'lrp_vitc10'], pm: ['meso_ultimate_micropeel', 'to_mandelic', 'isdin_night_peel'] },
             dehydration: { am: [], pm: [] },
         };
         const SC_CONSENSUS_NOTE = '📚 Esta rutina sigue el orden recomendado por la Academia Americana de Dermatología (AAD) y el consenso de expertos publicado en el Journal of Cosmetic Dermatology (2023)⁴: limpieza, tratamiento, hidratación y fotoprotección. Los productos y activos fueron seleccionados para tu tipo de piel por el equipo de Piel Spa.';
@@ -8056,7 +8066,7 @@
             const fromIntake = '<span class="text-[9px] opacity-50 ml-1">(del ingreso)</span>';
             const eyeConcern = SC_EYE_CONCERNS.some(c => s.concerns.includes(c.id));
             const protocol = s.level === 'advanced'
-                ? '<b>Mañana:</b> limpiador → sérum activo → contorno → hidratante → protector.<br><b>Noche:</b> doble limpieza → limpiador → activo rotativo (noche de retinoide / noche de despigmentante o exfoliante / noche de recuperación) → hidratante → reparador.<br><b>Semanal:</b> mascarilla.'
+                ? '<b>Mañana:</b> limpiador → 1 sérum (hidratante o activo) → contorno → hidratante → protector.<br><b>Noche:</b> limpiador → tratamiento de noche → retinoide en noches alternas (si está indicado) → contorno → hidratante → reparador.<br><b>Semanal:</b> mascarilla. La guía arma el calendario de noches.'
                 : '<b>Mañana:</b> limpiador → hidratante → protector.<br><b>Noche:</b> limpiador → 1 activo para la condición principal → hidratante.<br>Contorno solo si hay una condición periocular.';
             return `
                 ${scSection('Capa 0 · Seguridad', `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">${SC_SAFETY.map(x =>
@@ -8068,7 +8078,8 @@
                     <p class="text-[11px] leading-relaxed bg-[#FDFBFC] border border-[#EDE1E7] rounded-lg px-3 py-2 mt-2">${protocol}</p>`)}
                 ${scSection('Capa 2 · Tipo de piel', `<div class="grid grid-cols-2 sm:grid-cols-5 gap-2">${SC_SKIN_TYPES.map(t =>
                     scRadio('sc-skin', s.skin === t.id, `scSet('skin','${t.id}')`, t.label + (s.fromIntake.skin && currentAdmissionData?.skin_type === t.id ? fromIntake : ''))).join('')}</div>
-                    <div class="mt-2 ${s.skin === 'sensitive' ? 'hidden' : ''}">${scChip(s.sensitive, `scToggleSensitive()`, 'Además es <b>sensible</b> (sin fragancia, activos suaves, uno a la vez)')}</div>`)}
+                    <div class="mt-2 ${s.skin === 'sensitive' ? 'hidden' : ''}">${scChip(s.sensitive, `scToggleSensitive()`, 'Además es <b>sensible</b> (sin fragancia, activos suaves, uno a la vez)')}</div>
+                    <div class="mt-2">${scChip(!!s.makeup, `scSet('makeup', ${!s.makeup})`, 'Usa <b>maquillaje o protector resistente al agua</b> a diario → agrega una primera limpieza (desmaquillante) en la noche')}</div>`)}
                 ${scSection('Capa 3 · Condiciones del rostro', `<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">${SC_FACE_CONCERNS.map(c =>
                     scChip(s.concerns.includes(c.id), `scToggleConcern('${c.id}')`, c.label)).join('')}</div>`,
                     s.level === 'basic'
@@ -8102,7 +8113,7 @@
 
         function scConfigKey() {
             const s = scState;
-            return JSON.stringify([s.level, s.skin, s.sensitive, [...s.concerns].sort(), s.eye, s.safety]);
+            return JSON.stringify([s.level, s.skin, s.sensitive, [...s.concerns].sort(), s.eye, s.safety, !!s.makeup]);
         }
 
         function scGoTo(stage) {
@@ -8142,8 +8153,11 @@
             const pickedRetinoid = Object.values(s.picks).flat().some(x => { const p = scById(x.id); return p && scIsRetinoid(p); });
             const slots = SC_SLOTS.map(sl => ({ ...sl, required: ['cleanser', 'moisturizer', 'spf'].includes(sl.id) })).filter(sl => {
                 switch (sl.id) {
-                    case 'double_cleanse': case 'weekly': case 'active_am': case 'active_pm': return adv && (!sl.id.startsWith('active') || face.length > 0);
-                    case 'serum': return adv || face.includes('dehydration');
+                    case 'double_cleanse': return !!s.makeup;
+                    case 'weekly': return adv;
+                    case 'serum_am': return adv || face.includes('dehydration');
+                    case 'active_pm': return adv && face.length > 0;
+                    case 'retinoid': return adv && face.some(c => SC_RETINOID_CONCERNS.includes(c));
                     case 'active_one': return !adv && face.length > 0;
                     case 'eye': return adv || eyeC.length > 0 || s.eye;
                     case 'repair': return adv || s.sensitive || s.skin === 'dry' || !!s.safety.procedure || pickedRetinoid;
@@ -8162,9 +8176,13 @@
             const suggested = (s.suggested && s.suggested[slot.id]) || [];
             return (scProducts || []).filter(p => {
                 if (!slot.steps.includes(p.step) || p.us_available === false) return false;
+                if (slot.times && !slot.times.includes(p.time_of_day)) return false;
+                if (slot.onlyRetinoid && !scIsRetinoid(p)) return false;
+                if (slot.noRetinoid && scIsRetinoid(p)) return false;
                 const types = p.skin_types || [];
                 if (!(types.includes(skin) || (s.sensitive && types.includes('sensitive')))) return false;
-                if (SC_ACTIVE_SLOTS.includes(slot.id)) return (p.concerns || []).some(c => wanted.includes(c));
+                // Un activo solo aparece si trata una condición marcada; los sérums hidratantes siempre.
+                if (SC_ACTIVE_SLOTS.includes(slot.id) && p.step !== 'serum') return (p.concerns || []).some(c => wanted.includes(c));
                 if (slot.id === 'eye' && eyeC.length) return (p.concerns || []).some(c => eyeC.includes(c));
                 return true;
             }).map(p => ({ p, matches: (p.concerns || []).filter(c => wanted.includes(c)).length }))
@@ -8236,7 +8254,7 @@
                 list.forEach(x => used.add(x.id));
             };
             // Orden: los activos primero (deciden si hay retinoide → reparador).
-            const order = ['active_one', 'active_pm', 'active_am', 'eye', 'cleanser', 'double_cleanse', 'serum', 'moisturizer', 'spf', 'repair', 'weekly'];
+            const order = ['active_one', 'retinoid', 'active_pm', 'serum_am', 'eye', 'cleanser', 'double_cleanse', 'moisturizer', 'spf', 'repair', 'weekly'];
             for (let pass = 0; pass < 2; pass++) {
                 const visible = scVisibleSlots();
                 order.forEach(id => {
@@ -8244,25 +8262,32 @@
                     if (!slot || (s.picks[id] || []).length) return;
                     if (id === 'active_one') {
                         const c = face[0];
-                        const pick = c && choose(slot, [...SC_FIRST_LINE[c].pm, ...SC_FIRST_LINE[c].am]);
+                        const pick = c && choose(slot, [...(SC_RETINOID_FIRST[c] || []), ...SC_FIRST_LINE[c].pm, ...SC_FIRST_LINE[c].am]);
                         if (pick) set(slot, [{ id: pick, role: 'main' }]);
                         return;
                     }
-                    if (id === 'active_pm' || id === 'active_am') {
+                    if (id === 'retinoid') {
+                        for (const c of face) {
+                            const pick = SC_RETINOID_FIRST[c] && choose(slot, SC_RETINOID_FIRST[c]);
+                            if (pick) { set(slot, [{ id: pick, role: 'main' }]); break; }
+                        }
+                        return;
+                    }
+                    if (id === 'active_pm' || id === 'serum_am') {
                         const key = id === 'active_pm' ? 'pm' : 'am';
+                        // Noche: 1 tratamiento si ya hay retinoide (se alternan), hasta 2 si no; mañana: 1.
+                        const max = key === 'pm' && !(s.picks.retinoid || []).length ? 2 : 1;
                         const list = [];
                         for (const c of face) {
-                            const hasRetinoid = list.some(x => scIsRetinoid(scById(x.id) || {}));
-                            const pick = choose(slot, SC_FIRST_LINE[c][key].filter(pid => !(hasRetinoid && scIsRetinoid(scById(pid) || {}))));
-                            if (!pick || list.some(x => x.id === pick)) continue;
-                            // Noche: hasta 2 activos (rotación); mañana: 1.
+                            const pick = choose(slot, SC_FIRST_LINE[c][key].filter(pid => !list.some(x => x.id === pid)));
+                            if (!pick) continue;
                             list.push({ id: pick, role: list.length ? 'plus' : 'main' });
-                            s.picks[id] = list;   // para que el bloqueo de un solo retinoide lo vea
-                            if (list.length >= (key === 'pm' ? 2 : 1)) break;
+                            used.add(pick);
+                            if (list.length >= max) break;
                         }
-                        delete s.picks[id];
-                        set(slot, list);
-                        return;
+                        if (list.length) { set(slot, list); return; }
+                        if (id === 'active_pm') return;   // sin tratamiento de noche indicado
+                        // Mañana sin activo indicado: un sérum hidratante (lógica de base, abajo).
                     }
                     if (id === 'weekly' && !face.some(c => ['acne', 'shine', 'texture', 'dehydration', 'redness'].includes(c))) return;
                     // Pasos de base: el mejor candidato para la condición (marca y stock solo desempatan).
@@ -8324,7 +8349,7 @@
             if (i >= 0) list.splice(i, 1);
             else {
                 if (list.length >= 2) { alert('Máximo 2 productos por paso. Desmarca uno primero.'); scRerender(); return; }
-                list.push({ id: productId, role: list.length ? (SC_ACTIVE_SLOTS.includes(slotId) && slotId !== 'active_one' ? 'plus' : 'alt') : 'main' });
+                list.push({ id: productId, role: list.length ? (SC_PLUS_SLOTS.includes(slotId) ? 'plus' : 'alt') : 'main' });
             }
             if (list.length && !list.some(x => x.role === 'main')) list[0].role = 'main';
             scState.dirty = true;
@@ -8335,7 +8360,7 @@
             const list = scState.picks[slotId] || [];
             const item = list.find(x => x.id === productId);
             if (!item) return;
-            if (role === 'main') list.forEach(x => { if (x !== item && x.role === 'main') x.role = SC_ACTIVE_SLOTS.includes(slotId) && slotId !== 'active_one' ? 'plus' : 'alt'; });
+            if (role === 'main') list.forEach(x => { if (x !== item && x.role === 'main') x.role = SC_PLUS_SLOTS.includes(slotId) ? 'plus' : 'alt'; });
             item.role = role;
             if (!list.some(x => x.role === 'main')) list[0].role = 'main';
             scState.dirty = true;
@@ -8368,7 +8393,7 @@
                     const pick = picked.find(x => x.id === p.id);
                     const reason = pick ? null : scBlockReason(p, sl.id);
                     const warns = scWarnings(p);
-                    const roles = Object.entries(SC_ROLES).filter(([k]) => k !== 'plus' || (SC_ACTIVE_SLOTS.includes(sl.id) && sl.id !== 'active_one'));
+                    const roles = Object.entries(SC_ROLES).filter(([k]) => k !== 'plus' || SC_PLUS_SLOTS.includes(sl.id));
                     return `<div class="flex items-start gap-3 px-3 py-2 border rounded-lg ${pick ? 'border-[#B76E88] bg-[#FBF0F3]' : 'border-[#EDE1E7]'} ${reason ? 'opacity-45' : ''}">
                         <input type="checkbox" ${pick ? 'checked' : ''} ${reason ? 'disabled' : ''} onchange="scTogglePick('${sl.id}','${p.id}')" class="accent-[#B76E88] mt-1 flex-shrink-0">
                         ${scThumb(p)}
@@ -8376,7 +8401,8 @@
                             <p><span class="font-semibold text-[#2A2330]">${escapeHtml(p.name)}</span> <span class="opacity-60">· ${escapeHtml(p.brand)}</span>
                                 ${suggested.includes(p.id) ? '<span class="ml-1 text-[9px] uppercase tracking-widest font-bold text-white bg-[#B76E88] rounded-full px-2 py-0.5">✓ Sugerido</span>' : ''}
                                 ${p.in_stock ? '<span class="ml-1 text-[9px] uppercase tracking-widest font-bold text-[#B76E88]">★ En stock</span>' : ''}
-                                ${p.tinted ? '<span class="ml-1 text-[9px] uppercase tracking-widest opacity-60">con color</span>' : ''}</p>
+                                ${p.tinted ? '<span class="ml-1 text-[9px] uppercase tracking-widest opacity-60">con color</span>' : ''}
+                                <span class="ml-1 text-[10px] opacity-70" title="Cuándo se usa">${p.time_of_day === 'am' ? '☀️ mañana' : p.time_of_day === 'pm' ? '🌙 noche' : '☀️🌙 mañana y noche'}</span></p>
                             ${scPriceLine(p)}
                             ${p.format || p.key_actives ? `<p class="text-[11px] opacity-60 mt-0.5">${p.format ? `<b class="font-medium">${escapeHtml(p.format)}</b>` : ''}${p.format && p.key_actives ? ' · ' : ''}${escapeHtml(p.key_actives || '')}</p>` : ''}
                             ${p.internal_notes ? `<p class="text-[11px] italic opacity-50 mt-0.5">📝 ${escapeHtml(p.internal_notes)}</p>` : ''}
@@ -8396,7 +8422,10 @@
                 const hint = sl.id === 'repair' ? 'Noches de recuperación, piel sensible o seca, después de procedimientos o si hay irritación.'
                     : sl.id === 'eye' ? 'Si la cara lleva retinoide o ácidos, la guía indica aplicar el contorno primero, como escudo.'
                     : sl.id === 'active_one' ? 'Rutina básica: 1 activo para la condición principal. El 2.º producto queda como alternativa.'
-                    : SC_ACTIVE_SLOTS.includes(sl.id) ? 'Con 2 productos: «Además» = se usan los dos (si uno es retinoide, en noches distintas); «Alternativa» = uno u otro.'
+                    : sl.id === 'serum_am' ? 'Un sérum: activo para la condición o, si no hay, uno hidratante. Con 2: «Además» = se usan los dos (primero el más ligero).'
+                    : sl.id === 'active_pm' ? 'Despigmentantes, exfoliantes o hidratantes de noche (incluye los de mañana y noche). El retinoide va aparte; la guía arma el calendario.'
+                    : sl.id === 'retinoid' ? 'Un solo retinoide. Si hay tratamiento de noche, la guía los alterna (ej. lunes y jueves retinoide).'
+                    : sl.id === 'double_cleanse' ? 'Solo porque usa maquillaje o protector resistente al agua: va antes del limpiador, en la noche.'
                     : 'El 2.º producto queda como alternativa para el paciente.';
                 return `<div class="mb-5">
                     <div class="flex items-baseline justify-between gap-2 mb-1">
@@ -8432,7 +8461,7 @@
                 if (sl.time === 'auto') time = p.time_of_day === 'am' ? 'am' : 'pm';
                 items.push({ slot: sl.id, step_label: sl.label, role: x.role, time, product_id: p.id, name: p.name, brand: p.brand,
                     tone: x.tone || null, usage: p.usage || null, classes: p.classes || [], is_prescription: p.is_prescription, tinted: !!p.tinted,
-                    in_stock: !!p.in_stock, format: p.format || null, image_url: p.image_url || null });
+                    in_stock: !!p.in_stock, format: p.format || null, image_url: p.image_url || null, step: p.step });
             }));
             return items;
         }
@@ -8444,7 +8473,7 @@
             const bySlot = id => items.filter(it => it.slot === id);
             const inTime = (list, t) => list.filter(it => it.time === t || it.time === 'ampm');
             const fmt = it => `${it.name} (${it.brand})${it.tone ? ', tono ' + it.tone : ''}${it.in_stock ? ' · disponible en Piel Spa' : ''}`;
-            const line = (label, list) => {
+            const line = (label, list, extra = '') => {
                 const main = list.filter(it => it.role !== 'alt');
                 const alt = list.filter(it => it.role === 'alt');
                 if (!main.length) return null;
@@ -8452,70 +8481,87 @@
                 if (alt.length) txt += `. Alternativa: ${alt.map(fmt).join(' o ')}`;
                 const usage = main.map(it => it.usage).filter(Boolean)[0];
                 if (usage) txt += `. ${usage}`;
-                return txt;
+                return txt + extra;
             };
             const mains = items.filter(it => it.role !== 'alt');
-            const activesAm = [...bySlot('active_am'), ...bySlot('active_one').filter(it => it.time === 'am')];
-            const activesPmAll = [...bySlot('active_pm'), ...bySlot('active_one').filter(it => it.time === 'pm')];
-            const pmActives = activesPmAll.filter(it => it.role !== 'alt');
-            const retinoid = mains.find(it => it.classes.includes('retinoid') && it.slot !== 'eye');
+            const one = bySlot('active_one');
+            const retinoidItems = [...bySlot('retinoid'), ...one.filter(it => it.classes.includes('retinoid'))];
+            const retinoid = retinoidItems.find(it => it.role !== 'alt');
             const tretinoin = mains.find(it => it.classes.includes('tretinoin'));
-            const faceAcid = mains.some(it => it !== retinoid && !['eye', 'weekly', 'cleanser', 'double_cleanse'].includes(it.slot) && SC_ACID.some(c => it.classes.includes(c)));
+            const amSerum = [...bySlot('serum_am'), ...one.filter(it => it.time === 'am' && !it.classes.includes('retinoid'))];
+            const nightTreat = [...bySlot('active_pm'), ...one.filter(it => it.time === 'pm' && !it.classes.includes('retinoid'))];
+            const treats = nightTreat.filter(it => it.role !== 'alt');
+            const isAcid = it => SC_ACID.some(c => it.classes.includes(c));
             const eyeItems = bySlot('eye');
-            const eyeShield = eyeItems.length > 0 && (!!retinoid || faceAcid);
+            const eyeShield = eyeItems.length > 0 && (!!retinoid || treats.some(isAcid));
             const repair = bySlot('repair');
+            const weeklyItems = bySlot('weekly').filter(it => it.role !== 'alt');
+            const needsCalendar = !!retinoid || treats.some(isAcid) || treats.length > 1;
+            const lightRank = it => /sérum|líquido|loción|spray/i.test(it.format || '') ? 0 : /gel/i.test(it.format || '') ? 1 : 2;
+            const sortLight = list => [...list].sort((a, b) => lightRank(a) - lightRank(b));
 
             const am = [], pm = [];
             const push = (arr, txt) => { if (txt) arr.push(txt); };
             push(am, line('Limpiador', inTime(bySlot('cleanser'), 'am')));
-            push(am, line('Sérum hidratante', bySlot('serum')));
-            push(am, line('Activo', activesAm));
+            push(am, line('Sérum', sortLight(amSerum)));
             push(am, line('Contorno de ojos', inTime(eyeItems, 'am')));
             push(am, line('Hidratante', inTime(bySlot('moisturizer'), 'am')));
             push(am, line('Protector solar', bySlot('spf')));
 
-            push(pm, line('Doble limpieza', bySlot('double_cleanse')));
+            push(pm, line('Primera limpieza (si usaste maquillaje o protector)', bySlot('double_cleanse')));
             const pmCleanser = inTime(bySlot('cleanser'), 'pm');
             if (pmCleanser.some(it => it.role !== 'alt')) push(pm, line('Limpiador', pmCleanser));
             else if (bySlot('cleanser').length) pm.push('Limpiador: uno suave sin activos (el de la mañana es solo para la mañana).');
-            if (eyeShield) { const eyeLine = line('Contorno de ojos (primero, como escudo)', inTime(eyeItems, 'pm')); if (eyeLine) pm.push(eyeLine + '. Aplícalo en el hueso orbital y espera 10 minutos antes del activo.'); }
-            if (retinoid && pmActives.length > 1) {
-                const others = pmActives.filter(it => it !== retinoid);
-                pm.push(`Activo de noche, en noches alternas: noches de retinoide, ${fmt(retinoid)}${retinoid.usage ? ' (' + retinoid.usage.replace(/\.$/, '') + ')' : ''}. Las otras noches, ${others.map(fmt).join(' + ')}`);
-            } else if (pmActives.length > 1) {
-                push(pm, line('Activos de noche (uno después del otro)', activesPmAll));
-            } else {
-                { const l = line('Activo de noche', activesPmAll); if (l) pm.push(tretinoin ? l + '. Técnica sándwich: hidratante, activo, hidratante.' : l); }
-            }
+            if (eyeShield) push(pm, line('Contorno de ojos (primero, como escudo)', inTime(eyeItems, 'pm'), '. Aplícalo en el hueso orbital y espera 10 minutos antes de los tratamientos.'));
+            push(pm, line(needsCalendar ? 'Tratamiento (según «Tus noches»)' : 'Tratamiento', sortLight(nightTreat)));
+            push(pm, line('Retinoide (según «Tus noches»)', retinoidItems, tretinoin ? ' Técnica sándwich: hidratante, tretinoína, hidratante.' : ''));
             if (!eyeShield) push(pm, line('Contorno de ojos', inTime(eyeItems, 'pm')));
             push(pm, line('Hidratante', inTime(bySlot('moisturizer'), 'pm')));
-            { const l = line('Reparador', repair); if (l) pm.push(l + (retinoid ? '. Al final de la noche y, sobre todo, en las noches de recuperación.' : '. Al final de la noche.')); }
+            push(pm, line('Reparador', repair, retinoid ? '. Sobre todo en las noches de descanso.' : ''));
 
-            const weekly = line('Mascarilla', bySlot('weekly'));
+            // Calendario: qué va cada noche (a partir de la semana 3).
+            const names = list => list.map(it => it.name).join(' + ');
+            const rest = `solo hidratante${repair.length ? ' y reparador' : ''}`;
+            const nights = [];
+            if (retinoid) {
+                const acids = treats.filter(isAcid), gentle = treats.filter(it => !isAcid(it));
+                nights.push(`Lunes y jueves: ${retinoid.name}${tretinoin ? ' (técnica sándwich)' : ''}.`);
+                if (acids.length && gentle.length) nights.push(`Martes y viernes: ${names(acids)}.`, `Miércoles y sábado: ${names(gentle)}.`);
+                else if (treats.length) nights.push(`Martes, miércoles, viernes y sábado: ${names(treats)}.`);
+                else nights.push(`Las demás noches: ${rest}.`);
+                nights.push(`Domingo: descanso (${rest})${weeklyItems.length ? ` o la mascarilla` : ''}.`);
+                nights.push(`Desde el mes 2, si tu piel lo tolera: ${retinoid.name} lunes, miércoles y viernes${treats.length ? `; ${names(treats)} las otras noches` : ''}${tretinoin ? '. La frecuencia final de la tretinoína la ajustamos en tu control' : ''}.`);
+            } else if (treats.length) {
+                const acids = treats.filter(isAcid), gentle = sortLight(treats.filter(it => !isAcid(it)));
+                if (acids.length && gentle.length) nights.push(`Lunes, miércoles y viernes: ${names(acids)}.`, `Martes, jueves y sábado: ${names(gentle)}.`, `Domingo: descanso (${rest}).`);
+                else if (acids.length) nights.push(`Lunes, miércoles y viernes: ${names(acids)}.`, `Las demás noches: ${rest}.`);
+                else if (gentle.length > 1) nights.push(`Todas las noches: primero ${gentle[0].name} y después ${gentle[1].name} (del más ligero al más denso).`);
+            }
+            if (nights.length && weeklyItems.length) nights.push(`Mascarilla: 1 o 2 veces por semana, en una noche de descanso${retinoid || treats.some(isAcid) ? ', nunca junto al retinoide o los ácidos' : ''}.`);
 
+            // Antes de empezar: pocas reglas, claras.
             const tips = [];
-            const actives = mains.filter(it => SC_ACTIVE_SLOTS.includes(it.slot)).map(it => it.name);
-            if (actives.length) tips.push(`Semanas 1 y 2: solo limpiador, hidratante y protector. Semanas 3 y 4: agrega ${actives.length > 1 ? actives.slice(0, -1).join(', ') + ' y ' + actives[actives.length - 1] : actives[0]}, 2 o 3 veces por semana. Desde el mes 2: la frecuencia completa si no hay irritación.`);
-            if (tretinoin) tips.push('Tretinoína: empieza 2 noches por semana (por ejemplo lunes y jueves), una cantidad del tamaño de un guisante, con técnica sándwich: hidratante, tretinoína, hidratante. Subimos la frecuencia en tu control de 4 a 6 semanas.');
-            if (retinoid && (faceAcid || bySlot('weekly').some(it => SC_ACID.some(c => it.classes.includes(c))))) tips.push('Nunca uses el retinoide la misma noche que ácidos o la mascarilla exfoliante.');
-            if (tretinoin && mains.some(it => it.classes.includes('bpo'))) tips.push('El peróxido de benzoilo, solo en la mañana: de noche degrada la tretinoína.');
-            if (scFaceConcerns().includes('melasma')) tips.push('Melasma: protector con color todos los días, también en casa cerca de ventanas. Evita el calor directo (sauna, vapor) y no frotes la piel.');
-            if (eyeShield) tips.push('Aplica los activos del rostro evitando el área de los ojos.');
-            tips.push('Reaplica el protector cada 2 o 3 horas si estás al aire libre o cerca de ventanas.');
-            if (items.some(it => it.in_stock)) tips.push('Los productos marcados «disponible en Piel Spa» los encuentras en la clínica: pregúntanos en tu próxima visita o escríbenos.');
-            tips.push(`Si notas ardor, enrojecimiento o descamación fuerte: deja los activos de 3 a 5 noches, usa solo limpiador${repair.length ? ', reparador' : ''} e hidratante, y escríbenos.`);
+            if (treats.length || retinoid || amSerum.some(it => it.step !== 'serum'))
+                tips.push(`Semanas 1 y 2: usa solo limpiador, hidratante y protector. Desde la semana 3, suma los tratamientos${nights.length ? ' como indica «Tus noches»' : ''}.`);
+            tips.push('Protector todas las mañanas, aunque no salgas; reaplícalo cada 2 o 3 horas si estás al sol.');
+            if (scFaceConcerns().includes('melasma')) tips.push('Melasma: protector con color siempre y evita el calor directo (sauna, vapor).');
+            if (tretinoin) tips.push(`Tretinoína: una cantidad del tamaño de un guisante, sobre la piel seca, evitando ojos y comisuras${mains.some(it => it.classes.includes('bpo')) ? '. El peróxido de benzoilo, solo en la mañana' : ''}.`);
+            tips.push('Si arde, se enrojece o se pela mucho: pausa los tratamientos 3 a 5 noches y escríbenos.');
+            if (items.some(it => it.in_stock)) tips.push('Los productos marcados «disponible en Piel Spa» los encuentras en la clínica.');
 
             const goals = [...scFaceConcerns().map(c => scLabel(SC_FACE_CONCERNS, c)), ...scEyeConcerns().map(c => scLabel(SC_EYE_CONCERNS, c))];
             const header = `Hola${firstName ? ' ' + firstName : ''}, esta es tu rutina ${s.level === 'advanced' ? 'avanzada' : 'básica'} para piel ${scLabel(SC_SKIN_TYPES, s.skin).toLowerCase()}${s.sensitive && s.skin !== 'sensitive' ? ' y sensible' : ''}.`
                 + (goals.length ? ' Objetivos: ' + goals.join(', ').toLowerCase() + '.' : '');
             const numbered = arr => arr.map((t, i) => `${i + 1}. ${t}`).join('\n');
+            const weekly = line('Mascarilla', bySlot('weekly'));
             return [
                 header,
                 SC_CLEANSING_INTRO,
+                '✅ ANTES DE EMPEZAR\n' + tips.map(t => '- ' + t).join('\n'),
                 '☀️ MAÑANA\n' + numbered(am),
                 pm.length ? '🌙 NOCHE\n' + numbered(pm) : '',
-                weekly ? '🗓️ UNA O DOS VECES POR SEMANA\n- ' + weekly : '',
-                'Indicaciones\n' + tips.map(t => '- ' + t).join('\n'),
+                nights.length ? '🗓️ TUS NOCHES (desde la semana 3)\n' + nights.map(t => '- ' + t).join('\n') : '',
+                weekly ? '🧖 UNA O DOS VECES POR SEMANA\n- ' + weekly : '',
                 SC_CONSENSUS_NOTE,
                 SC_REFERENCES,
             ].filter(Boolean).join('\n\n');
@@ -8536,17 +8582,24 @@
                     </div>
                 </div>
                 <div class="mt-4 space-y-2">
-                    <label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" id="sc-send-portal" checked class="accent-[#B76E88]"> Publicar en el portal del paciente (resumen en su inicio + guía completa)</label>
-                    <label class="flex items-center gap-2 text-xs ${hasPhone ? 'cursor-pointer' : 'opacity-40'}"><input type="checkbox" id="sc-send-wa" ${hasPhone ? '' : 'disabled'} class="accent-[#B76E88]"> Enviar por WhatsApp el mensaje${hasPhone ? '' : ' (sin teléfono válido)'}</label>
-                    <label class="flex items-center gap-2 text-xs ${hasPhone ? 'cursor-pointer' : 'opacity-40'} ml-6"><input type="checkbox" id="sc-send-wa-pdf" ${hasPhone ? 'checked' : 'disabled'} class="accent-[#B76E88]"> … y el PDF de la rutina</label>
+                    <label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" id="sc-send-portal" checked onchange="scUpdateSaveLabel()" class="accent-[#B76E88]"> Publicar en el portal del paciente (resumen en su inicio + guía completa)</label>
+                    <label class="flex items-center gap-2 text-xs ${hasPhone ? 'cursor-pointer' : 'opacity-40'}"><input type="checkbox" id="sc-send-wa" ${hasPhone ? 'checked' : 'disabled'} onchange="scUpdateSaveLabel()" class="accent-[#B76E88]"> Enviar por WhatsApp el mensaje${hasPhone ? '' : ' (sin teléfono válido)'}</label>
+                    <label class="flex items-center gap-2 text-xs ${hasPhone ? 'cursor-pointer' : 'opacity-40'} ml-6"><input type="checkbox" id="sc-send-wa-pdf" ${hasPhone ? 'checked' : 'disabled'} class="accent-[#B76E88]"> … y el PDF de la rutina (va adjunto como archivo)</label>
+                    ${hasPhone ? '<p class="text-[11px] opacity-50 ml-6">Si el paciente no te escribió en las últimas 24 horas, WhatsApp le manda primero un aviso; al tocar «Ver recomendaciones» recibe la guía y el PDF.</p>' : ''}
                 </div>
                 <div class="flex flex-wrap justify-between gap-3 pt-4 mt-4 border-t border-[#EDE1E7]">
                     <button onclick="scGoTo(2)" class="px-5 py-3 uppercase text-[10px] tracking-widest font-bold border border-[#EDE1E7] rounded-lg hover:border-[#B76E88]">← Productos</button>
                     <div class="flex flex-wrap gap-2">
                         <button onclick="scDownloadPdf(scCurrentDraft())" class="px-5 py-3 uppercase text-[10px] tracking-widest font-bold border border-[#EDE1E7] rounded-lg hover:border-[#B76E88]">Ver PDF</button>
-                        <button id="sc-save-btn" onclick="saveSkincareRoutine()" class="bg-[#B76E88] text-white px-6 py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#9C5570] transition rounded-lg">Guardar rutina</button>
+                        <button id="sc-save-btn" onclick="saveSkincareRoutine()" class="bg-[#B76E88] text-white px-6 py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#9C5570] transition rounded-lg">${hasPhone ? 'Guardar y enviar' : 'Guardar rutina'}</button>
                     </div>
                 </div>`;
+        }
+
+        function scUpdateSaveLabel() {
+            const btn = document.getElementById('sc-save-btn');
+            const wa = document.getElementById('sc-send-wa');
+            if (btn && !btn.disabled) btn.innerText = wa?.checked ? 'Guardar y enviar' : 'Guardar rutina';
         }
 
         // La rutina que se está armando, con la misma forma que una guardada.
@@ -8599,7 +8652,7 @@
                 loadNotes();
                 alert(results.join('\n'));
             } finally {
-                if (btn.isConnected) { btn.disabled = false; btn.innerText = 'Guardar rutina'; }
+                if (btn.isConnected) { btn.disabled = false; scUpdateSaveLabel(); }
             }
         }
 
@@ -8848,7 +8901,7 @@
             const steps = ['cleanser', 'double_cleanse', 'serum', 'ACTIVES', 'eye', 'moisturizer', 'repair', 'spf', 'weekly'];
             steps.forEach(step => {
                 if (step === 'ACTIVES') {
-                    const actives = mains.filter(it => SC_ACTIVE_SLOTS.includes(it.slot));
+                    const actives = mains.filter(it => SC_ACTIVE_SLOTS.includes(it.slot) && it.step !== 'serum');
                     if (!actives.length) return;
                     const seen = new Set();
                     const parts = [];
@@ -8859,7 +8912,7 @@
                     out.push({ title: 'Activo de tratamiento', text: 'Es el paso que trata tu objetivo (manchas, arrugas, acné…). Va justo después de limpiar, que es cuando la piel lo aprovecha mejor.', parts });
                     return;
                 }
-                if (!mains.some(it => it.slot === step)) return;
+                if (!mains.some(it => it.slot === step || (step === 'serum' && it.step === 'serum'))) return;
                 const [title, text] = SC_WHY_STEP[step];
                 let extra = '';
                 if (step === 'spf' && mains.some(it => it.slot === 'spf' && it.tinted)) extra = ' El color (óxidos de hierro) bloquea además la luz visible, que empeora el melasma y las manchas.';
@@ -8933,7 +8986,7 @@
         // Convierte el texto de la guía (editable) en bloques para el PDF.
         function scParseGuide(text) {
             const blocks = String(text || '').split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
-            const out = { intro: [], cleansing: null, am: [], pm: [], weekly: [], tips: [], note: '', refs: [], other: [] };
+            const out = { intro: [], cleansing: null, am: [], pm: [], nights: [], weekly: [], tips: [], note: '', refs: [], other: [] };
             blocks.forEach(b => {
                 const lines = b.split('\n').map(l => l.trim()).filter(Boolean);
                 const head = lines[0];
@@ -8942,8 +8995,9 @@
                 else if (/^Referencias$/i.test(head)) out.refs.push(...lines.slice(1));
                 else if (/^☀️|^MAÑANA/i.test(head)) out.am.push(...rest);
                 else if (/^🌙|^NOCHE/i.test(head)) out.pm.push(...rest);
-                else if (/^🗓️/.test(head)) out.weekly.push(...rest);
-                else if (/^Indicaciones/i.test(head)) out.tips.push(...rest);
+                else if (/^🗓️ TUS NOCHES/.test(head)) out.nights.push(...rest);
+                else if (/^🧖|^🗓️/.test(head)) out.weekly.push(...rest);
+                else if (/^✅|^Indicaciones/i.test(head)) out.tips.push(...rest);
                 else if (/^📚/.test(head)) out.note = b.replace(/^📚\s*/, '');
                 else if (!out.am.length && !out.pm.length) out.intro.push(b);
                 else out.other.push(b);
@@ -9000,16 +9054,19 @@
                         ${g.cleansing.lead.map(l => `<p style="font:300 11.5px/1.6 Outfit,sans-serif;margin:0 0 6px;">${esc(l)}</p>`).join('')}
                         ${g.cleansing.bullets.map(b => `<div style="display:flex;gap:8px;font:400 11.5px/1.55 Outfit,sans-serif;margin:4px 0;"><span style="color:#B76E88;">•</span><span>${esc(b)}</span></div>`).join('')}
                     </div>` : ''}
+                    ${g.tips.length ? `<div class="pdf-avoid" style="margin:0 0 14px;background:#2A2330;color:#fff;border-radius:14px;padding:14px 18px;">
+                        <div style="font:italic 500 20px 'Cormorant Garamond',serif;margin-bottom:6px;">Antes de empezar</div>
+                        ${g.tips.map(t => `<div style="display:flex;gap:8px;font:300 11.5px/1.55 Outfit,sans-serif;margin:4px 0;"><span style="color:#E7B8C8;">•</span><span>${esc(t)}</span></div>`).join('')}</div>` : ''}
                     <div style="display:flex;gap:14px;align-items:flex-start;">
                         ${column('☀️', 'Mañana', g.am)}
                         ${g.pm.length ? column('🌙', 'Noche', g.pm) : ''}
                     </div>
+                    ${g.nights.length ? `<div class="pdf-avoid" style="margin-top:14px;border:1px solid #B76E88;border-radius:14px;padding:12px 16px;">
+                        <div style="font:italic 500 20px 'Cormorant Garamond',serif;color:#2A2330;margin-bottom:6px;">🗓️ Tus noches <span style="font:400 11px Outfit,sans-serif;opacity:.6;">(desde la semana 3)</span></div>
+                        ${g.nights.map(t => { const m = t.match(/^([^:]{2,60}):\s*(.*)$/); return `<div style="display:flex;gap:10px;font:400 11.5px/1.55 Outfit,sans-serif;margin:3px 0;">${m ? `<span style="flex:0 0 150px;font-weight:600;color:#B76E88;">${esc(m[1])}</span><span>${esc(m[2])}</span>` : `<span>${esc(t)}</span>`}</div>`; }).join('')}</div>` : ''}
                     ${g.weekly.length ? `<div class="pdf-avoid" style="margin-top:14px;border:1px solid #EDE1E7;border-radius:14px;padding:12px 16px;">
-                        <div style="font:600 9px Montserrat,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#B76E88;margin-bottom:4px;">🗓️ Una o dos veces por semana</div>
+                        <div style="font:600 9px Montserrat,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#B76E88;margin-bottom:4px;">🧖 Una o dos veces por semana</div>
                         ${g.weekly.map(w => `<div style="font:400 11.5px/1.5 Outfit,sans-serif;">${scPdfStockBadge(esc(w))}</div>`).join('')}</div>` : ''}
-                    ${g.tips.length ? `<div class="pdf-avoid" style="margin-top:14px;background:#2A2330;color:#fff;border-radius:14px;padding:14px 18px;">
-                        <div style="font:italic 500 20px 'Cormorant Garamond',serif;margin-bottom:6px;">Indicaciones</div>
-                        ${g.tips.map(t => `<div style="display:flex;gap:8px;font:300 11.5px/1.55 Outfit,sans-serif;margin:4px 0;"><span style="color:#E7B8C8;">•</span><span>${esc(t)}</span></div>`).join('')}</div>` : ''}
                     ${g.other.map(p => `<p style="font:300 12px/1.6 Outfit,sans-serif;margin:12px 0;">${esc(p)}</p>`).join('')}
                     <div class="html2pdf__page-break"></div>
                     <div style="font:italic 500 26px 'Cormorant Garamond',serif;color:#B76E88;margin:6px 0 4px;">Por qué cada paso</div>

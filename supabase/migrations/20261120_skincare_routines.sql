@@ -556,3 +556,15 @@ where p.id = v.id;
 -- La Roche-Posay replaced Pure Vitamin C10 with Vitamin C12 Serum in the US.
 update public.skincare_products set name = 'Vitamin C12 Serum', key_actives = 'Vitamina C pura 12% + ácido salicílico', price_usd = 50 where id = 'lrp_vitc10';
 update public.skincare_products set size = '144 g' where id = 'cerave_healing';
+
+-- 2026-11-21: morning/night use per product (morning-only and night-only stay as they are)
+-- and when to use Tran3x Concentrate vs Gel Cream.
+update public.skincare_products set time_of_day = 'both'
+    where id in ('meso_tran3x_gelcream', 'lrp_mela_b3', 'meso_brightening_concentrate', 'lrp_niacinamide10', 'pc_niacinamide', 'to_niacinamide',
+                 'meso_ha_densimatrix', 'meso_skin_balance', 'meso_firming_concentrate', 'pc_azelaic', 'azelaic_rx', 'sc_discoloration', 'meso_tran3x_concentrate');
+update public.skincare_products set internal_notes =
+    'Sérum intensivo: manchas marcadas o inicio del tratamiento. Mañana y/o noche, antes de la crema. Se combina con el Gel Cream (Concentrate primero).'
+    where id = 'meso_tran3x_concentrate';
+update public.skincare_products set internal_notes =
+    'Crema diaria de mantenimiento: tono uniforme y evitar que vuelvan las manchas. Sola de noche o encima del Concentrate; también sirve de hidratante tratante.'
+    where id = 'meso_tran3x_gelcream';
