@@ -7904,7 +7904,8 @@
             + '3. Grove GL, Kligman AM. Age-associated changes in human epidermal cell renewal. J Gerontol. 1983;38:137-42.\n'
             + '4. Goh CL, et al. Expert consensus on holistic skin care routine: focus on acne, rosacea, atopic dermatitis, and sensitive skin syndrome. J Cosmet Dermatol. 2023;22:45-54.\n'
             + 'La frecuencia de la limpieza profesional es una recomendación de práctica estética basada en el ciclo de renovación de la piel; no la fija una guía oficial.';
-        const SC_PDF_LIB = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        const SC_PDF_LIB = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js';
+        const SC_PDF_FONTS = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.min.js';
         const SC_PDF_FILENAME = 'Rutina-skincare-Piel-Spa.pdf';
 
         let scProducts = null;     // catálogo (se carga una vez)
@@ -8461,7 +8462,7 @@
                 if (sl.time === 'auto') time = p.time_of_day === 'am' ? 'am' : 'pm';
                 items.push({ slot: sl.id, step_label: sl.label, role: x.role, time, product_id: p.id, name: p.name, brand: p.brand,
                     tone: x.tone || null, usage: p.usage || null, classes: p.classes || [], is_prescription: p.is_prescription, tinted: !!p.tinted,
-                    in_stock: !!p.in_stock, format: p.format || null, image_url: p.image_url || null, step: p.step });
+                    in_stock: !!p.in_stock, format: p.format || null, image_url: p.image_url || null, step: p.step, size: p.size || null });
             }));
             return items;
         }
@@ -8657,6 +8658,9 @@
             }
         }
 
+        // En WhatsApp, «Alternativa:» en negrita para que se vea de un vistazo.
+        function scWaBold(text) { return String(text || '').replace(/Alternativa:/g, '*Alternativa:*'); }
+
         // WhatsApp desde el número de la clínica: el mensaje y, si se pide, el PDF.
         // Ventana de 24 h cerrada → plantilla de aviso; al tocarla, le llegan texto y PDF.
         async function scSendWhatsApp(routine, withPdf) {
@@ -8677,14 +8681,14 @@
                 }
             }
             const { data: waData, error: waError } = await _supabase.functions.invoke('whatsapp-send', {
-                body: { recommendation: { patient_id: routine.patient_id, texts: splitWhatsAppText(buildWhatsAppRecommendations([{ title, body: text }])),
+                body: { recommendation: { patient_id: routine.patient_id, texts: splitWhatsAppText(buildWhatsAppRecommendations([{ title, body: scWaBold(text) }])),
                     tratamiento: 'rutina de skincare', fecha: formatDayMonthEs(scLocalDate(routine.created_at)),
                     ...(document_ ? { document: document_ } : {}) } },
             });
             if (waError || waData?.error) {
                 const problem = await functionError(waError, waData);
                 results.push('✗ WhatsApp automático falló (' + problem + '). Se abre WhatsApp para enviarlo a mano' + (withPdf ? '; el PDF se descarga para que lo adjuntes.' : '.'));
-                openWhatsAppModal({ name: currentPatientName, phone: currentPatientPhone, text: buildWhatsAppRecommendations([{ title, body: text }]) });
+                openWhatsAppModal({ name: currentPatientName, phone: currentPatientPhone, text: buildWhatsAppRecommendations([{ title, body: scWaBold(text) }]) });
                 if (withPdf) scDownloadPdf(routine);
             } else {
                 const pdfOk = !!document_ && waData.document === true;
@@ -8871,7 +8875,7 @@
         // Explicación de cada paso (va al final del PDF).
         const SC_WHY_STEP = {
             cleanser: ['Limpiador', 'Retira grasa, sudor, contaminación y restos de producto sin dañar la barrera de la piel. Una piel limpia deja que los tratamientos actúen; un limpiador suave evita la irritación.'],
-            double_cleanse: ['Doble limpieza', 'El protector solar y el maquillaje están hechos para resistir el agua. El primer paso (aceite o agua micelar) los disuelve para que el limpiador termine el trabajo sin frotar.'],
+            double_cleanse: ['Primera limpieza (desmaquillante)', 'El protector solar y el maquillaje están hechos para resistir el agua. El primer paso (aceite o agua micelar) los disuelve para que el limpiador termine el trabajo sin frotar.'],
             serum: ['Sérum hidratante', 'Aporta agua a la piel (ácido hialurónico, activos de barrera). Una piel bien hidratada se ve más firme y tolera mejor los activos.'],
             eye: ['Contorno de ojos', 'La piel alrededor de los ojos es más fina y sensible que la del resto del rostro, por eso necesita fórmulas específicas. Cuando usas activos fuertes en la cara, aplicarlo primero la protege como un escudo.'],
             moisturizer: ['Hidratante', 'Sella el agua dentro de la piel y repara la barrera, la capa que la protege de irritantes y de la deshidratación. También reduce la irritación que pueden causar los activos.'],
@@ -8946,10 +8950,6 @@
                 + (missing ? ` · ${missing} producto${missing > 1 ? 's' : ''} sin precio` : '') + ` <span class="opacity-50">(en stock: precio Piel Spa si lo cargaste; el resto, referencia en EE. UU.)</span></p>`;
         }
 
-        function scPdfStockBadge(html) {
-            return html.replace(/ · disponible en Piel Spa/g, ' <span style="display:inline-block;padding:1px 7px;border-radius:999px;background:#B76E88;color:#fff;font:600 8px Montserrat,sans-serif;letter-spacing:.08em;text-transform:uppercase;vertical-align:1px;">Disponible en Piel Spa</span>');
-        }
-
         // Miniatura del producto (foto de referencia, solo en el admin) que se amplía al tocarla.
         function scThumb(p, size = 44) {
             const box = `width:${size}px;height:${size}px;flex:0 0 ${size}px;`;
@@ -8969,19 +8969,6 @@
                 ${p.key_actives ? `<p class="text-xs mt-1">${escapeHtml(p.key_actives)}</p>` : ''}
                 <button onclick="this.closest('.fixed').remove()" class="mt-4 text-[10px] uppercase tracking-widest font-bold text-[#B76E88]">Cerrar</button></div>`;
             document.body.appendChild(overlay);
-        }
-
-        let scPdfLibPromise = null;
-        function scLoadPdfLib() {
-            if (window.html2pdf) return Promise.resolve();
-            if (!scPdfLibPromise) scPdfLibPromise = new Promise((resolve, reject) => {
-                const tag = document.createElement('script');
-                tag.src = SC_PDF_LIB;
-                tag.onload = () => resolve();
-                tag.onerror = () => { scPdfLibPromise = null; reject(new Error('no se pudo cargar el generador de PDF')); };
-                document.head.appendChild(tag);
-            });
-            return scPdfLibPromise;
         }
 
         // Convierte el texto de la guía (editable) en bloques para el PDF.
@@ -9006,114 +8993,288 @@
             return out;
         }
 
-        function scPdfHtml(routine) {
+        // Lista de compra: cada producto una sola vez, en el orden en que se necesita
+        // (lo indispensable primero, los tratamientos desde la semana 3).
+        const SC_LIST_PHASES = [
+            { title: 'Para empezar (semana 1)', slots: ['double_cleanse', 'cleanser', 'moisturizer', 'spf'] },
+            { title: 'Desde la semana 3', slots: ['serum_am', 'active_am', 'serum', 'active_one', 'active_pm', 'retinoid'] },
+            { title: 'Complementos', slots: ['eye', 'repair'] },
+            { title: 'Una o dos veces por semana', slots: ['weekly'] },
+        ];
+        const SC_LIST_USE = { double_cleanse: 'Desmaquillante', cleanser: 'Limpiador', moisturizer: 'Hidratante', spf: 'Protector solar',
+            serum_am: 'Sérum', active_am: 'Sérum', serum: 'Sérum', active_one: 'Tratamiento', active_pm: 'Tratamiento', retinoid: 'Retinoide',
+            eye: 'Contorno de ojos', repair: 'Reparador', weekly: 'Mascarilla' };
+        function scShoppingList(items) {
+            const when = t => t === 'am' ? 'mañana' : t === 'pm' ? 'noche' : t === 'weekly' ? '1–2 veces por semana' : 'mañana y noche';
+            const enrich = it => ({ ...it, size: it.size || scById(it.product_id)?.size || null });
+            const seen = new Map();   // product_id → fila (un producto aparece una sola vez)
+            return SC_LIST_PHASES.map(ph => {
+                const rows = [];
+                ph.slots.forEach(slot => {
+                    const inSlot = (items || []).filter(it => it.slot === slot).map(enrich);
+                    const mains = inSlot.filter(it => it.role !== 'alt');
+                    const alts = inSlot.filter(it => it.role === 'alt');
+                    mains.forEach((it, i) => {
+                        const use = `${SC_LIST_USE[slot] || it.step_label} · ${when(it.time)}`;
+                        if (seen.has(it.product_id)) { const r = seen.get(it.product_id); if (!r.uses.includes(use)) r.uses.push(use); return; }
+                        const row = { item: it, uses: [use], alts: i === 0 ? alts.filter(a => !seen.has(a.product_id)) : [] };
+                        seen.set(it.product_id, row);
+                        row.alts.forEach(a => seen.set(a.product_id, row));
+                        rows.push(row);
+                    });
+                });
+                return { title: ph.title, rows };
+            }).filter(ph => ph.rows.length);
+        }
+
+        // ---------- PDF con texto real (pdfmake): seleccionable, se ajusta a la hoja, saltos limpios ----------
+        const SC_PDF_COLORS = { plum: '#B76E88', ink: '#2A2330', soft: '#FBF0F3', line: '#EDE1E7', muted: '#7A7180', pinkOnDark: '#E7B8C8' };
+        const SC_SUPERSCRIPTS = { '¹': '1', '²': '2', '³': '3', '⁴': '4', '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9' };
+
+        // Quita emojis (la fuente del PDF no los tiene) y limpia espacios.
+        function scNoEmoji(t) {
+            return String(t || '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, '').replace(/\s{2,}/g, ' ').trim();
+        }
+        // Texto de la guía → fragmentos pdfmake: superíndices reales y la etiqueta «Disponible en Piel Spa».
+        function scRich(text) {
+            const runs = [];
+            scNoEmoji(text).split(/( · disponible en Piel Spa)/).forEach(part => {
+                if (part === ' · disponible en Piel Spa') { runs.push({ text: ' ' }, { text: '\u00A0DISPONIBLE\u00A0EN\u00A0PIEL\u00A0SPA\u00A0', style: 'badge' }); return; }
+                part.split(/([¹²³⁴⁵⁶⁷⁸⁹]|Alternativa:)/).forEach(x => {
+                    if (!x) return;
+                    if (x === 'Alternativa:') runs.push({ text: 'Alternativa:', bold: true, color: SC_PDF_COLORS.plum });
+                    else runs.push(SC_SUPERSCRIPTS[x] ? { text: SC_SUPERSCRIPTS[x], sup: true } : { text: x });
+                });
+            });
+            return runs;
+        }
+        // Foto → JPEG en base64 con fondo blanco (pdfmake solo lee JPEG/PNG; también reduce el peso).
+        function scImageData(url, maxSide = 180) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    try {
+                        const k = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+                        const c = document.createElement('canvas');
+                        c.width = Math.max(1, Math.round(img.naturalWidth * k));
+                        c.height = Math.max(1, Math.round(img.naturalHeight * k));
+                        const ctx = c.getContext('2d');
+                        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+                        ctx.drawImage(img, 0, 0, c.width, c.height);
+                        resolve(c.toDataURL('image/jpeg', 0.88));
+                    } catch (e) { resolve(null); }
+                };
+                img.onerror = () => resolve(null);
+                img.src = url;
+            });
+        }
+
+        let scPdfLibPromise = null;
+        function scLoadPdfLib() {
+            if (window.pdfMake?.vfs) return Promise.resolve();
+            const load = src => new Promise((resolve, reject) => {
+                const tag = document.createElement('script');
+                tag.src = src;
+                tag.onload = () => resolve();
+                tag.onerror = () => reject(new Error('no se pudo cargar el generador de PDF'));
+                document.head.appendChild(tag);
+            });
+            if (!scPdfLibPromise) scPdfLibPromise = load(SC_PDF_LIB).then(() => load(SC_PDF_FONTS)).catch(e => { scPdfLibPromise = null; throw e; });
+            return scPdfLibPromise;
+        }
+
+        async function scPdfDoc(routine) {
+            await scLoadPdfLib();
+            try { await scLoadCatalog(); } catch (e) { /* sin catálogo: solo las fotos guardadas en la rutina */ }
+            const C = SC_PDF_COLORS;
             const g = scParseGuide(scWithNote(routine.guide_text));
-            const esc = escapeHtml;
+            const items = (routine.items || []).map(it => ({ ...it, image_url: it.image_url || scById(it.product_id)?.image_url || null }));
+
+            // Fotos (una vez cada una) y logo.
+            const images = {};
+            const urls = [...new Set(items.map(it => it.image_url).filter(Boolean))];
+            await Promise.all(urls.map(async (u, i) => { const d = await scImageData(u); if (d) images['p' + i] = d; }));
+            const imgKey = u => { const i = urls.indexOf(u); return i >= 0 && images['p' + i] ? 'p' + i : null; };
+            const logo = await scImageData('images/logo.png', 600);
+            if (logo) images.logo = logo;
+
             const allConcerns = [...SC_FACE_CONCERNS, ...SC_EYE_CONCERNS];
             const chips = [
                 `Rutina ${routine.level === 'advanced' ? 'avanzada' : 'básica'}`,
                 `Piel ${scLabel(SC_SKIN_TYPES, routine.skin_type).toLowerCase()}${routine.sensitive && routine.skin_type !== 'sensitive' ? ' y sensible' : ''}`,
                 ...(routine.concerns || []).map(c => scLabel(allConcerns, c)),
             ];
-            // Fotos de los productos nombrados en cada paso (principal primero).
-            const items = (routine.items || []).map(it => ({ ...it, image_url: it.image_url || scById(it.product_id)?.image_url || null }));
-            const photosFor = t => items.filter(it => it.image_url && t.includes(it.name))
-                .sort((a, b) => (a.role === 'alt') - (b.role === 'alt')).slice(0, 2)
-                .map(it => `<img src="${esc(it.image_url)}" crossorigin="anonymous" style="width:46px;height:46px;object-fit:contain;background:#fff;border:1px solid #EDE1E7;border-radius:8px;${it.role === 'alt' ? 'opacity:.75;' : ''}">`).join('');
-            const stepHtml = (t, i) => {
-                const m = t.match(/^([^:]{2,90}):\s*(.*)$/);
-                const label = m ? m[1] : '';
-                const body = m ? m[2] : t;
-                const photos = photosFor(t);
-                return `<div class="pdf-avoid" style="display:flex;gap:10px;margin:0 0 10px;">
-                    <div style="flex:0 0 22px;height:22px;border-radius:50%;background:#B76E88;color:#fff;font:600 11px/22px Outfit,sans-serif;text-align:center;">${i + 1}</div>
-                    <div style="flex:1;min-width:0;">
-                        ${label ? `<div style="font:600 9px Montserrat,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#B76E88;margin:3px 0 2px;">${esc(label)}</div>` : ''}
-                        <div style="font:400 11.5px/1.5 Outfit,sans-serif;color:#2A2330;">${scPdfStockBadge(esc(body))}</div>
-                    </div>${photos ? `<div style="flex:0 0 auto;display:flex;gap:4px;align-items:flex-start;">${photos}</div>` : ''}</div>`;
-            };
-            const column = (icon, title, list) => `
-                <div style="flex:1;min-width:0;background:#FDFBFC;border:1px solid #EDE1E7;border-radius:14px;padding:16px 16px 6px;">
-                    <div style="font:italic 500 22px 'Cormorant Garamond',serif;color:#2A2330;margin-bottom:12px;">${icon} ${title}</div>
-                    ${list.map(stepHtml).join('') || '<div style="font:12px Outfit;opacity:.5;">—</div>'}
-                </div>`;
-            const why = scWhySections(routine.items);
             const date = formatDayMonthEs(scLocalDate(routine.created_at || new Date().toISOString()));
-            return `
-                <div style="width:720px;padding:8px 4px;font-family:Outfit,sans-serif;color:#2A2330;background:#fff;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #EDE1E7;padding-bottom:14px;">
-                        <img src="images/logo.png" style="height:46px;" crossorigin="anonymous">
-                        <div style="text-align:right;">
-                            <div style="font:italic 500 26px 'Cormorant Garamond',serif;color:#B76E88;">Tu rutina de skincare</div>
-                            <div style="font:600 9px Montserrat,sans-serif;letter-spacing:.15em;text-transform:uppercase;opacity:.55;margin-top:4px;">${esc(currentPatientName || '')} · ${esc(date)}</div>
-                        </div>
-                    </div>
-                    <div style="margin:14px 0 6px;">${chips.map(c => `<span style="display:inline-block;margin:0 6px 6px 0;padding:4px 10px;border-radius:999px;background:#FBF0F3;font:500 10.5px Outfit,sans-serif;">${esc(c)}</span>`).join('')}</div>
-                    ${g.intro.map(p => `<p style="font:300 12.5px/1.6 Outfit,sans-serif;margin:6px 0 14px;">${esc(p)}</p>`).join('')}
-                    ${g.cleansing ? `<div class="pdf-avoid" style="margin:0 0 14px;padding:14px 18px;border-radius:14px;background:#FBF0F3;">
-                        <div style="font:italic 500 20px 'Cormorant Garamond',serif;color:#2A2330;margin-bottom:6px;">Por qué empezamos por la limpieza</div>
-                        ${g.cleansing.lead.map(l => `<p style="font:300 11.5px/1.6 Outfit,sans-serif;margin:0 0 6px;">${esc(l)}</p>`).join('')}
-                        ${g.cleansing.bullets.map(b => `<div style="display:flex;gap:8px;font:400 11.5px/1.55 Outfit,sans-serif;margin:4px 0;"><span style="color:#B76E88;">•</span><span>${esc(b)}</span></div>`).join('')}
-                    </div>` : ''}
-                    ${g.tips.length ? `<div class="pdf-avoid" style="margin:0 0 14px;background:#2A2330;color:#fff;border-radius:14px;padding:14px 18px;">
-                        <div style="font:italic 500 20px 'Cormorant Garamond',serif;margin-bottom:6px;">Antes de empezar</div>
-                        ${g.tips.map(t => `<div style="display:flex;gap:8px;font:300 11.5px/1.55 Outfit,sans-serif;margin:4px 0;"><span style="color:#E7B8C8;">•</span><span>${esc(t)}</span></div>`).join('')}</div>` : ''}
-                    <div style="display:flex;gap:14px;align-items:flex-start;">
-                        ${column('☀️', 'Mañana', g.am)}
-                        ${g.pm.length ? column('🌙', 'Noche', g.pm) : ''}
-                    </div>
-                    ${g.nights.length ? `<div class="pdf-avoid" style="margin-top:14px;border:1px solid #B76E88;border-radius:14px;padding:12px 16px;">
-                        <div style="font:italic 500 20px 'Cormorant Garamond',serif;color:#2A2330;margin-bottom:6px;">🗓️ Tus noches <span style="font:400 11px Outfit,sans-serif;opacity:.6;">(desde la semana 3)</span></div>
-                        ${g.nights.map(t => { const m = t.match(/^([^:]{2,60}):\s*(.*)$/); return `<div style="display:flex;gap:10px;font:400 11.5px/1.55 Outfit,sans-serif;margin:3px 0;">${m ? `<span style="flex:0 0 150px;font-weight:600;color:#B76E88;">${esc(m[1])}</span><span>${esc(m[2])}</span>` : `<span>${esc(t)}</span>`}</div>`; }).join('')}</div>` : ''}
-                    ${g.weekly.length ? `<div class="pdf-avoid" style="margin-top:14px;border:1px solid #EDE1E7;border-radius:14px;padding:12px 16px;">
-                        <div style="font:600 9px Montserrat,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#B76E88;margin-bottom:4px;">🧖 Una o dos veces por semana</div>
-                        ${g.weekly.map(w => `<div style="font:400 11.5px/1.5 Outfit,sans-serif;">${scPdfStockBadge(esc(w))}</div>`).join('')}</div>` : ''}
-                    ${g.other.map(p => `<p style="font:300 12px/1.6 Outfit,sans-serif;margin:12px 0;">${esc(p)}</p>`).join('')}
-                    <div class="html2pdf__page-break"></div>
-                    <div style="font:italic 500 26px 'Cormorant Garamond',serif;color:#B76E88;margin:6px 0 4px;">Por qué cada paso</div>
-                    <p style="font:300 11.5px/1.6 Outfit,sans-serif;margin:0 0 14px;opacity:.8;">El orden va de lo más ligero a lo más denso: el tratamiento va justo después de limpiar, y el protector siempre al final de la mañana.</p>
-                    ${why.map(w => `<div class="pdf-avoid" style="border-left:3px solid #B76E88;padding:2px 0 2px 12px;margin:0 0 12px;">
-                        <div style="font:600 10px Montserrat,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2A2330;margin-bottom:3px;">${esc(w.title)}</div>
-                        <div style="font:300 11.5px/1.55 Outfit,sans-serif;">${esc(w.text)}</div>
-                        ${w.parts.map(p => `<div style="margin-top:6px;padding:8px 10px;background:#FDFBFC;border-radius:8px;"><div style="font:500 11px Outfit,sans-serif;color:#B76E88;">${esc(p.title)}</div><div style="font:300 11px/1.5 Outfit,sans-serif;">${esc(p.text)}</div></div>`).join('')}
-                    </div>`).join('')}
-                    <div class="pdf-avoid" style="margin-top:18px;padding-top:12px;border-top:1px solid #EDE1E7;font:300 10px/1.55 Outfit,sans-serif;opacity:.75;">${esc(g.note || SC_CONSENSUS_NOTE.replace(/^📚\s*/, ''))}</div>
-                    ${g.refs.length ? `<div class="pdf-avoid" style="margin-top:10px;font:300 8.5px/1.5 Outfit,sans-serif;opacity:.7;">
-                        <div style="font:600 8px Montserrat,sans-serif;letter-spacing:.14em;text-transform:uppercase;margin-bottom:3px;">Referencias</div>
-                        ${g.refs.map(r => `<div>${esc(r.replace(/^(\d+)\.\s+/, (x, n) => '¹²³⁴⁵⁶⁷⁸⁹'[Number(n) - 1] + ' '))}</div>`).join('')}</div>` : ''}
-                    <div style="margin-top:8px;font:600 8.5px Montserrat,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#B76E88;">Piel Spa · piel-spa.com</div>
-                </div>`;
+            const noLines = { hLineWidth: () => 0, vLineWidth: () => 0, paddingLeft: () => 0, paddingRight: () => 0, paddingTop: () => 0, paddingBottom: () => 0 };
+            const box = (stack, fill, border) => ({
+                table: { widths: ['*'], body: [[{ stack, fillColor: fill || null, margin: [12, 10, 12, 10] }]] },
+                layout: border ? { hLineColor: () => border, vLineColor: () => border, hLineWidth: () => 0.8, vLineWidth: () => 0.8 } : noLines,
+                margin: [0, 0, 0, 12],
+            });
+            // Nodo nuevo en cada fila: pdfmake modifica los nodos al acomodarlos (si se reutiliza, se corta).
+            const checkbox = (left = 0) => ({ canvas: [{ type: 'rect', x: 0, y: 1, w: 9, h: 9, r: 1.5, lineWidth: 1, lineColor: C.plum }], margin: [left, 0, 0, 0] });
+            const photo = (url, size) => { const k = url && imgKey(url); return k ? { image: k, fit: [size, size] } : { text: '' }; };
+
+            const content = [];
+            // Encabezado
+            content.push({
+                columns: [
+                    images.logo ? { image: 'logo', fit: [150, 48], width: 160 } : { text: 'Piel Spa', style: 'title', width: 160 },
+                    { stack: [{ text: 'Tu rutina de skincare', style: 'title', alignment: 'right' },
+                        { text: `${currentPatientName || ''} · ${date}`.toUpperCase(), style: 'meta', alignment: 'right', margin: [0, 3, 0, 0] }] },
+                ],
+                margin: [0, 0, 0, 8],
+            });
+            content.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 523, y2: 0, lineWidth: 0.8, lineColor: C.line }], margin: [0, 0, 0, 10] });
+            content.push({ text: chips.flatMap((c, i) => [{ text: ` ${c} `, background: C.soft, fontSize: 8.5 }, { text: i < chips.length - 1 ? '   ' : '' }]), margin: [0, 0, 0, 8] });
+            g.intro.forEach(p => content.push({ text: scRich(p), margin: [0, 0, 0, 10] }));
+
+            // Por qué empezamos por la limpieza
+            if (g.cleansing) content.push(box([
+                { text: 'Por qué empezamos por la limpieza', style: 'h2' },
+                ...g.cleansing.lead.map(l => ({ text: scRich(l), margin: [0, 0, 0, 4] })),
+                { ul: g.cleansing.bullets.map(b => ({ text: scRich(b), margin: [0, 1, 0, 1] })), markerColor: C.plum },
+            ], C.soft));
+
+            // Antes de empezar
+            if (g.tips.length) content.push(box([
+                { text: 'Antes de empezar', style: 'h2', color: '#fff' },
+                { ul: g.tips.map(t => ({ text: scRich(t), color: '#fff', margin: [0, 1, 0, 1] })), markerColor: C.pinkOnDark },
+            ], C.ink));
+
+            // Tu lista de productos (cada producto una vez, en el orden en que se necesita)
+            const shopping = scShoppingList(items);
+            if (shopping.length) {
+                const hasAlts = shopping.some(ph => ph.rows.some(r => r.alts.length));
+                const body = [];
+                const prodCell = (it, small) => ({
+                    columns: [
+                        { width: 12, ...checkbox() },
+                        { width: small ? 28 : 32, stack: [photo(it.image_url, small ? 26 : 30)] },
+                        { width: '*', stack: [
+                            { text: [{ text: it.name, bold: true }, ...(it.in_stock ? [{ text: ' ' }, { text: '\u00A0DISPONIBLE\u00A0EN\u00A0PIEL\u00A0SPA\u00A0', style: 'badge' }] : [])], fontSize: 9 },
+                            { text: [it.brand, it.size, it.tone ? 'tono ' + it.tone : ''].filter(Boolean).join(' · ')
+                                + (it.is_prescription ? ' · con receta: te la indica el médico' : ''), style: 'small' },
+                        ] },
+                    ],
+                    columnGap: 4,
+                });
+                body.push([
+                    { text: 'PRINCIPAL', style: 'label', color: C.muted },
+                    { text: '' },
+                    { text: hasAlts ? 'ALTERNATIVA' : '', style: 'label', color: C.muted },
+                    { text: 'PARA QUÉ', style: 'label', color: C.muted, alignment: 'right' },
+                ]);
+                shopping.forEach(ph => {
+                    ph.rows.forEach((r, i) => {
+                        const alt = r.alts[0];
+                        // El título de la etapa va dentro de su primera fila, así nunca queda solo al final de una página.
+                        const head = i === 0 ? [{ text: ph.title.toUpperCase(), style: 'label', margin: [0, 4, 0, 5] }] : [];
+                        const pad = i === 0 ? [{ text: ' ', style: 'label', margin: [0, 4, 0, 5] }] : [];
+                        body.push([
+                            { stack: [...head, prodCell(r.item, false)] },
+                            alt ? { stack: [...pad, { text: 'o', bold: true, italics: true, color: C.plum, fontSize: 12, alignment: 'center', margin: [0, 6, 0, 0] }] } : { text: '' },
+                            alt ? { stack: [...pad, prodCell(alt, true)] } : { text: '' },
+                            { stack: [...pad, { text: r.uses.join('\n'), style: 'small', alignment: 'right' }] },
+                        ]);
+                    });
+                });
+                content.push(box([
+                    { text: 'Tu lista de productos', style: 'h2' },
+                    { text: ['Cada producto aparece una sola vez, en el orden en que lo vas a necesitar. Márcalo cuando lo tengas.', ...(hasAlts ? [' Si una fila tiene ', { text: 'alternativa', bold: true, color: C.plum }, ', elige uno de los dos.'] : [])], style: 'small', margin: [0, 0, 0, 4] },
+                    { table: { widths: ['*', 14, '*', 74], body, dontBreakRows: true, headerRows: 1 },
+                      layout: { hLineWidth: (i, node) => (i === 0 || i === node.table.body.length) ? 0 : 0.5, vLineWidth: () => 0, hLineColor: () => C.line,
+                                paddingLeft: () => 2, paddingRight: () => 2, paddingTop: () => 4, paddingBottom: () => 4 } },
+                ], null, C.line));
+            }
+
+            // Mañana y noche: un paso por fila, con número, texto y fotos.
+            const stepsTable = list => ({
+                table: {
+                    widths: [16, '*', 66], dontBreakRows: true,
+                    body: list.map((t, i) => {
+                        const m = t.match(/^([^:]{2,90}):\s*(.*)$/);
+                        const label = m ? m[1] : '', bodyText = m ? m[2] : t;
+                        const pics = items.filter(it => it.image_url && imgKey(it.image_url) && t.includes(it.name))
+                            .sort((a, b) => (a.role === 'alt') - (b.role === 'alt')).slice(0, 2);
+                        return [
+                            { text: String(i + 1), bold: true, color: '#fff', fillColor: C.plum, alignment: 'center', margin: [0, 2, 0, 2] },
+                            { stack: [...(label ? [{ text: scNoEmoji(label).toUpperCase(), style: 'label' }] : []), { text: scRich(bodyText) }], margin: [6, 0, 0, 0] },
+                            pics.length ? { columns: pics.map(it => ({ image: imgKey(it.image_url), fit: [30, 30], width: 32 })), columnGap: 2, alignment: 'right' } : { text: '' },
+                        ];
+                    }),
+                },
+                layout: { hLineWidth: (i, node) => (i === 0 || i === node.table.body.length) ? 0 : 0.5, vLineWidth: () => 0, hLineColor: () => C.line,
+                          paddingLeft: () => 0, paddingRight: () => 0, paddingTop: () => 5, paddingBottom: () => 5 },
+            });
+            if (g.am.length) content.push(box([{ text: 'Mañana', style: 'h2' }, stepsTable(g.am)], null, C.line));
+            if (g.pm.length) content.push(box([{ text: 'Noche', style: 'h2' }, stepsTable(g.pm)], null, C.line));
+
+            // Tus noches
+            if (g.nights.length) content.push(box([
+                { text: [{ text: 'Tus noches ', style: 'h2' }, { text: '(desde la semana 3)', style: 'small' }], margin: [0, 0, 0, 4] },
+                { table: { widths: [150, '*'], body: g.nights.map(t => {
+                    const m = t.match(/^([^:]{2,60}):\s*(.*)$/);
+                    return m ? [{ text: m[1], bold: true, color: C.plum }, { text: scRich(m[2]) }] : [{ text: scRich(t), colSpan: 2 }, {}];
+                }) }, layout: { hLineWidth: () => 0, vLineWidth: () => 0, paddingLeft: () => 0, paddingRight: () => 6, paddingTop: () => 2, paddingBottom: () => 2 } },
+            ], null, C.plum));
+
+            if (g.weekly.length) content.push(box([{ text: 'UNA O DOS VECES POR SEMANA', style: 'label' }, ...g.weekly.map(w => ({ text: scRich(w) }))], null, C.line));
+            g.other.forEach(p => content.push({ text: scRich(p), margin: [0, 0, 0, 8] }));
+
+            // Por qué cada paso (página aparte)
+            content.push({ text: 'Por qué cada paso', style: 'title', pageBreak: 'before', margin: [0, 0, 0, 4] });
+            content.push({ text: 'El orden va de lo más ligero a lo más denso: el tratamiento va justo después de limpiar, y el protector siempre al final de la mañana.', style: 'small', margin: [0, 0, 0, 10] });
+            scWhySections(routine.items).forEach(w => content.push({
+                table: { widths: [3, '*'], body: [[{ text: '', fillColor: C.plum }, { stack: [
+                    { text: w.title.toUpperCase(), style: 'label', color: C.ink },
+                    { text: w.text },
+                    ...w.parts.map(p => ({ stack: [{ text: p.title, bold: true, color: C.plum, fontSize: 9 }, { text: p.text, fontSize: 9 }], margin: [0, 5, 0, 0] })),
+                ], margin: [8, 0, 0, 0] }]], dontBreakRows: true },
+                layout: noLines, margin: [0, 0, 0, 10],
+            }));
+
+            // Nota del consenso y referencias
+            content.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 523, y2: 0, lineWidth: 0.8, lineColor: C.line }], margin: [0, 6, 0, 8] });
+            content.push({ text: scRich(g.note || SC_CONSENSUS_NOTE), style: 'small', margin: [0, 0, 0, 8] });
+            if (g.refs.length) {
+                content.push({ text: 'REFERENCIAS', style: 'label', color: C.muted });
+                g.refs.forEach(r => {
+                    const m = r.match(/^(\d+)\.\s+(.*)$/);
+                    content.push({ text: m ? [{ text: m[1], sup: true }, { text: ' ' + m[2] }] : scRich(r), fontSize: 7.5, color: C.muted, margin: [0, 1, 0, 0] });
+                });
+            }
+
+            return {
+                pageSize: 'A4',
+                pageMargins: [36, 36, 36, 44],
+                info: { title: 'Tu rutina de skincare · Piel Spa', author: 'Piel Spa' },
+                images,
+                content,
+                footer: (page, pages) => ({
+                    columns: [{ text: 'PIEL SPA · PIEL-SPA.COM', style: 'meta', color: C.plum }, { text: `${page} / ${pages}`, style: 'meta', alignment: 'right' }],
+                    margin: [36, 14, 36, 0],
+                }),
+                defaultStyle: { font: 'Roboto', fontSize: 9.5, color: C.ink, lineHeight: 1.2 },
+                styles: {
+                    title: { fontSize: 20, italics: true, color: C.plum },
+                    h2: { fontSize: 14, italics: true, color: C.ink, margin: [0, 0, 0, 5] },
+                    meta: { fontSize: 7.5, color: C.muted, characterSpacing: 1 },
+                    label: { fontSize: 7.5, bold: true, color: C.plum, characterSpacing: 0.8, margin: [0, 0, 0, 1] },
+                    small: { fontSize: 8, color: C.muted },
+                    badge: { fontSize: 6.5, bold: true, color: '#fff', background: C.plum },
+                },
+            };
         }
 
-        async function scPdfWorker(routine) {
-            await scLoadPdfLib();
-            try { await scLoadCatalog(); } catch (e) { /* sin catálogo: solo las fotos guardadas en la rutina */ }
-            const holder = document.createElement('div');
-            holder.style.cssText = 'position:fixed;left:-10000px;top:0;';
-            holder.innerHTML = scPdfHtml(routine);
-            document.body.appendChild(holder);
-            const imgs = [...holder.querySelectorAll('img')];
-            await Promise.all(imgs.map(img => img.complete ? null : new Promise(r => { img.onload = img.onerror = r; })));
-            if (document.fonts?.ready) await document.fonts.ready;
-            const worker = window.html2pdf().set({
-                margin: [12, 12, 14, 12],
-                filename: SC_PDF_FILENAME,
-                image: { type: 'jpeg', quality: 0.95 },
-                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak: { mode: ['css', 'legacy'], avoid: '.pdf-avoid' },
-            }).from(holder.firstElementChild);
-            return { worker, cleanup: () => holder.remove() };
-        }
         async function scBuildPdfBlob(routine) {
-            const { worker, cleanup } = await scPdfWorker(routine);
-            try { return await worker.outputPdf('blob'); } finally { cleanup(); }
+            const doc = await scPdfDoc(routine);
+            return new Promise(resolve => window.pdfMake.createPdf(doc).getBlob(resolve));
         }
         async function scDownloadPdf(routine) {
-            try {
-                const { worker, cleanup } = await scPdfWorker(routine);
-                try { await worker.save(); } finally { cleanup(); }
-            } catch (e) { alert('No se pudo generar el PDF: ' + e.message); }
+            try { window.pdfMake.createPdf(await scPdfDoc(routine)).download(SC_PDF_FILENAME); }
+            catch (e) { alert('No se pudo generar el PDF: ' + e.message); }
         }
     </script>
     <script src="admin-contabilidad.js"></script>

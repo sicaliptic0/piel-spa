@@ -118,6 +118,34 @@
                         <button onclick="document.getElementById('intake-modal').classList.add('hidden')" class="mt-3 text-[10px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100" data-en="Later" data-es="Más tarde">Later</button>
                     </div>
                 </div>
+                <!-- Mi rutina de skincare: lista de productos desplegable + rutina de mañana y noche -->
+                <div id="skincare-card" class="hidden bg-white rounded-2xl border border-[#EDE1E7] shadow-sm overflow-hidden">
+                    <div class="px-5 md:px-6 pt-5 flex items-start justify-between gap-3">
+                        <div>
+                            <h3 class="text-2xl italic text-[#2A2330]" data-en="My skincare routine" data-es="Mi rutina de skincare">My skincare routine</h3>
+                            <p id="skincare-card-date" class="text-[10px] uppercase tracking-widest opacity-50 mt-1"></p>
+                        </div>
+                        <button onclick="openSkincareGuideModal()" class="mt-2 text-[10px] uppercase tracking-widest font-bold text-[#B76E88] whitespace-nowrap hover:underline" data-en="Full guide →" data-es="Guía completa →">Full guide →</button>
+                    </div>
+
+                    <div class="px-5 md:px-6 mt-4">
+                        <button id="sc-list-toggle" onclick="toggleSkincareList()" class="w-full flex items-center justify-between gap-3 bg-[#FBF0F3] rounded-xl px-4 py-3 text-left">
+                            <span class="font-semibold text-sm text-[#2A2330]"><span data-en="🛍️ Your product list" data-es="🛍️ Tu lista de productos">🛍️ Your product list</span>
+                                <span id="sc-list-progress" class="ml-2 text-[11px] font-normal opacity-60"></span></span>
+                            <span id="sc-list-chevron" class="text-[#B76E88] text-lg leading-none transition-transform">▾</span>
+                        </button>
+                        <div id="sc-list" class="mt-2"></div>
+                    </div>
+
+                    <div class="px-5 md:px-6 mt-5 pb-6">
+                        <div class="flex gap-2 mb-3" role="tablist">
+                            <button id="sc-tab-am" onclick="setSkincareTab('am')" class="flex-1 py-2.5 rounded-full text-[11px] uppercase tracking-widest font-bold border" data-en="☀️ Morning" data-es="☀️ Mañana">☀️ Morning</button>
+                            <button id="sc-tab-pm" onclick="setSkincareTab('pm')" class="flex-1 py-2.5 rounded-full text-[11px] uppercase tracking-widest font-bold border" data-en="🌙 Night" data-es="🌙 Noche">🌙 Night</button>
+                        </div>
+                        <div id="sc-routine-steps" class="space-y-2"></div>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="bg-white border-l-4 border-[#B76E88] p-6 shadow-sm rounded-r-lg">
                         <h3 class="uppercase text-[10px] tracking-widest text-[#B76E88] font-bold mb-2" data-en="Follow-up Reminder" data-es="Recordatorio de Seguimiento">Follow-up Reminder</h3>
@@ -143,15 +171,6 @@
                             <div id="upcoming-list" class="space-y-2 text-xs opacity-80"></div>
                         </div>
                     </div>
-                </div>
-
-                <div id="skincare-card" class="hidden bg-white p-6 rounded-xl border border-[#EDE1E7] shadow-sm">
-                    <div class="flex items-center justify-between gap-3 mb-4">
-                        <h3 class="uppercase text-[10px] tracking-widest text-[#B76E88] font-bold" data-en="My Skincare Routine" data-es="Mi Rutina de Skincare">My Skincare Routine</h3>
-                        <span id="skincare-card-date" class="text-[10px] uppercase tracking-widest opacity-40"></span>
-                    </div>
-                    <div id="skincare-card-summary" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm"></div>
-                    <button onclick="openSkincareGuideModal()" class="mt-5 btn-gold px-6 py-3 uppercase text-[10px] tracking-widest" data-en="View Full Routine" data-es="Ver Rutina Completa">View Full Routine</button>
                 </div>
 
                 <div class="bg-white p-6 rounded-xl border border-[#EDE1E7] shadow-sm">
@@ -621,8 +640,28 @@
             return html.join('');
         }
 
-        // ---------- Mi rutina de skincare (la más reciente que dio la clínica) ----------
+        // ---------- Mi rutina de skincare (la más reciente que publicó la clínica) ----------
         let currentSkincareRoutine = null;
+        let skincareOwned = new Set();          // product_id marcados como «Ya lo tengo»
+        let skincareTab = new Date().getHours() < 15 ? 'am' : 'pm';
+        const SC_SLOT_ORDER = ['double_cleanse', 'cleanser', 'serum_am', 'active_am', 'serum', 'active_one', 'eye', 'active_pm', 'retinoid', 'moisturizer', 'repair', 'spf', 'weekly'];
+        const SC_SLOT_NAMES = {
+            double_cleanse: ['Makeup remover', 'Desmaquillante'], cleanser: ['Cleanser', 'Limpiador'], serum_am: ['Serum', 'Sérum'],
+            active_am: ['Serum', 'Sérum'], serum: ['Serum', 'Sérum'], active_one: ['Treatment', 'Tratamiento'], eye: ['Eye contour', 'Contorno de ojos'],
+            active_pm: ['Treatment', 'Tratamiento'], retinoid: ['Retinoid', 'Retinoide'], moisturizer: ['Moisturizer', 'Hidratante'],
+            repair: ['Repair balm', 'Reparador'], spf: ['Sunscreen', 'Protector solar'], weekly: ['Mask', 'Mascarilla'],
+        };
+        const SC_PHASES = [
+            { en: 'To start (week 1)', es: 'Para empezar (semana 1)', slots: ['double_cleanse', 'cleanser', 'moisturizer', 'spf'] },
+            { en: 'From week 3', es: 'Desde la semana 3', slots: ['serum_am', 'active_am', 'serum', 'active_one', 'active_pm', 'retinoid'] },
+            { en: 'Extras', es: 'Complementos', slots: ['eye', 'repair'] },
+            { en: 'Once or twice a week', es: 'Una o dos veces por semana', slots: ['weekly'] },
+        ];
+        const scEn = () => currentLang === 'en';
+        const scSlotName = slot => (SC_SLOT_NAMES[slot] || ['', ''])[scEn() ? 0 : 1];
+        const scWhen = t => scEn()
+            ? (t === 'am' ? 'morning' : t === 'pm' ? 'night' : t === 'weekly' ? '1–2× a week' : 'morning & night')
+            : (t === 'am' ? 'mañana' : t === 'pm' ? 'noche' : t === 'weekly' ? '1–2 veces por semana' : 'mañana y noche');
 
         async function loadSkincareRoutine() {
             const { data: { user }, error: authError } = await _supabase.auth.getUser();
@@ -638,27 +677,172 @@
             currentSkincareRoutine = (!error && data && data[0]) ? data[0] : null;
             if (!card) return;
             if (!currentSkincareRoutine) { card.classList.add('hidden'); return; }
+            const { data: owned } = await _supabase.from('skincare_purchases').select('product_id').eq('routine_id', currentSkincareRoutine.id);
+            skincareOwned = new Set((owned || []).map(o => o.product_id));
             renderSkincareCard();
             card.classList.remove('hidden');
+        }
+
+        // Cada producto una sola vez, en el orden en que se necesita; la alternativa va al lado.
+        function skincareShoppingList(items) {
+            const seen = new Map();
+            return SC_PHASES.map(ph => {
+                const rows = [];
+                ph.slots.forEach(slot => {
+                    const inSlot = (items || []).filter(it => it.slot === slot);
+                    const mains = inSlot.filter(it => it.role !== 'alt');
+                    const alts = inSlot.filter(it => it.role === 'alt');
+                    mains.forEach((it, i) => {
+                        const use = `${scSlotName(slot)} · ${scWhen(it.time)}`;
+                        if (seen.has(it.product_id)) { const r = seen.get(it.product_id); if (!r.uses.includes(use)) r.uses.push(use); return; }
+                        const row = { item: it, uses: [use], alt: i === 0 ? alts.find(a => !seen.has(a.product_id)) || null : null };
+                        seen.set(it.product_id, row);
+                        if (row.alt) seen.set(row.alt.product_id, row);
+                        rows.push(row);
+                    });
+                });
+                return { title: scEn() ? ph.en : ph.es, rows };
+            }).filter(ph => ph.rows.length);
+        }
+
+        function scProductHtml(it, compact) {
+            const owned = skincareOwned.has(it.product_id);
+            const img = it.image_url
+                ? `<img src="${escapeHtmlMsg(it.image_url)}" alt="" loading="lazy" class="w-11 h-11 object-contain bg-white border border-[#EDE1E7] rounded-lg flex-shrink-0">`
+                : `<div class="w-11 h-11 rounded-lg bg-[#FBF0F3] flex items-center justify-center flex-shrink-0">🧴</div>`;
+            return `<label class="flex items-start gap-3 cursor-pointer select-none min-w-0 ${compact ? '' : 'flex-1'}">
+                <input type="checkbox" ${owned ? 'checked' : ''} onchange="toggleSkincareOwned('${escapeHtmlMsg(it.product_id)}', this.checked)" class="w-5 h-5 mt-3 accent-[#B76E88] flex-shrink-0">
+                ${img}
+                <span class="min-w-0">
+                    <span class="block text-sm font-semibold text-[#2A2330] leading-snug ${owned ? 'line-through opacity-50' : ''}">${escapeHtmlMsg(it.name)}</span>
+                    <span class="block text-[11px] opacity-60">${escapeHtmlMsg([it.brand, it.size].filter(Boolean).join(' · '))}</span>
+                    ${it.in_stock ? `<span class="inline-block mt-1 text-[9px] uppercase tracking-widest font-bold text-white bg-[#B76E88] rounded-full px-2 py-0.5">${scEn() ? 'Available at Piel Spa' : 'Disponible en Piel Spa'}</span>` : ''}
+                    ${it.is_prescription ? `<span class="block text-[11px] mt-1 opacity-70">${scEn() ? 'Prescription: your doctor provides it' : 'Con receta: te la indica el médico'}</span>` : ''}
+                    ${owned ? `<span class="block text-[11px] mt-1 font-semibold text-[#5A8A6A]">✓ ${scEn() ? 'I have it' : 'Ya lo tengo'}</span>` : ''}
+                </span>
+            </label>`;
+        }
+
+        function renderSkincareList() {
+            const r = currentSkincareRoutine;
+            const el = document.getElementById('sc-list');
+            if (!r || !el) return;
+            const phases = skincareShoppingList(r.items);
+            const rows = phases.flatMap(ph => ph.rows);
+            const done = rows.filter(x => skincareOwned.has(x.item.product_id) || (x.alt && skincareOwned.has(x.alt.product_id))).length;
+            document.getElementById('sc-list-progress').textContent = `${done}/${rows.length} ${scEn() ? 'ready' : 'listos'}`;
+            const hasAlts = rows.some(x => x.alt);
+            el.innerHTML = `
+                <p class="text-[11px] opacity-60 px-1 mb-2">${scEn()
+                    ? 'Each product appears once, in the order you will need it. Check it when you have it.' + (hasAlts ? ' When a row says <b>or</b>, choose one of the two.' : '')
+                    : 'Cada producto aparece una sola vez, en el orden en que lo vas a necesitar. Márcalo cuando lo tengas.' + (hasAlts ? ' Donde dice <b>o</b>, elige uno de los dos.' : '')}</p>
+                ${phases.map(ph => `
+                    <p class="text-[10px] uppercase tracking-widest font-bold text-[#B76E88] mt-3 mb-1 px-1">${escapeHtmlMsg(ph.title)}</p>
+                    ${ph.rows.map(x => `
+                        <div class="border border-[#EDE1E7] rounded-xl p-3 mb-2 bg-white">
+                            <div class="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">
+                                ${scProductHtml(x.item)}
+                                ${x.alt ? `<span class="text-[#B76E88] italic font-bold text-sm md:mt-3 pl-8 md:pl-0">${scEn() ? 'or' : 'o'}</span>${scProductHtml(x.alt)}` : ''}
+                            </div>
+                            <p class="text-[10px] uppercase tracking-widest opacity-50 mt-2 pl-8">${x.uses.map(escapeHtmlMsg).join(' · ')}</p>
+                        </div>`).join('')}`).join('')}`;
+            const open = scListOpen();
+            el.classList.toggle('hidden', !open);
+            document.getElementById('sc-list-chevron').textContent = open ? '▴' : '▾';
+        }
+
+        // Abierta por defecto mientras falte algo; cerrada cuando ya tiene todo (el paciente puede cambiarlo).
+        function scListOpen() {
+            try { const v = localStorage.getItem('sc-list-open'); if (v === '1') return true; if (v === '0') return false; } catch (e) {}
+            const rows = skincareShoppingList(currentSkincareRoutine?.items).flatMap(ph => ph.rows);
+            return rows.some(x => !skincareOwned.has(x.item.product_id) && !(x.alt && skincareOwned.has(x.alt.product_id)));
+        }
+        function toggleSkincareList() {
+            const open = !scListOpen();
+            try { localStorage.setItem('sc-list-open', open ? '1' : '0'); } catch (e) {}
+            renderSkincareList();
+        }
+
+        async function toggleSkincareOwned(productId, owned) {
+            const r = currentSkincareRoutine;
+            if (!r) return;
+            if (owned) skincareOwned.add(productId); else skincareOwned.delete(productId);
+            renderSkincareCard();
+            const { error } = owned
+                ? await _supabase.from('skincare_purchases').upsert({ routine_id: r.id, product_id: productId }, { onConflict: 'routine_id,product_id' })
+                : await _supabase.from('skincare_purchases').delete().eq('routine_id', r.id).eq('product_id', productId);
+            if (error) {
+                console.error('skincare purchase:', error.message);
+                if (owned) skincareOwned.delete(productId); else skincareOwned.add(productId);
+                renderSkincareCard();
+                alert(scEn() ? 'Could not save. Please try again.' : 'No se pudo guardar. Inténtalo de nuevo.');
+            }
+        }
+
+        function setSkincareTab(tab) { skincareTab = tab; renderSkincareRoutine(); }
+
+        // Rutina del momento: si ya marcó cuál tiene, solo ese; si no, el principal y la alternativa.
+        function renderSkincareRoutine() {
+            const r = currentSkincareRoutine;
+            const el = document.getElementById('sc-routine-steps');
+            if (!r || !el) return;
+            ['am', 'pm'].forEach(t => {
+                const b = document.getElementById('sc-tab-' + t);
+                b.className = 'flex-1 py-2.5 rounded-full text-[11px] uppercase tracking-widest font-bold border '
+                    + (skincareTab === t ? 'bg-[#2A2330] text-white border-[#2A2330]' : 'bg-white text-[#2A2330] border-[#EDE1E7]');
+            });
+            const items = r.items || [];
+            const inTab = it => skincareTab === 'am' ? ['am', 'ampm', 'both'].includes(it.time) : ['pm', 'ampm', 'both'].includes(it.time);
+            const steps = [];
+            SC_SLOT_ORDER.filter(slot => slot !== 'weekly').forEach(slot => {
+                const inSlot = items.filter(it => it.slot === slot && inTab(it));
+                if (!inSlot.length) return;
+                const owned = inSlot.filter(it => skincareOwned.has(it.product_id));
+                if (owned.length) steps.push({ slot, show: owned, mains: owned, alts: [] });
+                else steps.push({ slot, show: inSlot, mains: inSlot.filter(it => it.role !== 'alt'), alts: inSlot.filter(it => it.role === 'alt') });
+            });
+            const prod = it => `<span class="flex items-center gap-2 min-w-0">
+                ${it.image_url ? `<img src="${escapeHtmlMsg(it.image_url)}" alt="" loading="lazy" class="w-9 h-9 object-contain bg-white border border-[#EDE1E7] rounded-md flex-shrink-0">` : ''}
+                <span class="min-w-0"><span class="block text-sm text-[#2A2330] leading-snug">${escapeHtmlMsg(it.name)}</span>
+                <span class="block text-[11px] opacity-60">${escapeHtmlMsg(it.brand || '')}${skincareOwned.has(it.product_id) ? ` · <b class="text-[#5A8A6A]">✓ ${scEn() ? 'you have it' : 'lo tienes'}</b>` : ''}</span></span></span>`;
+            el.innerHTML = steps.map((s, i) => {
+                const main = s.mains[0];
+                const extraMains = s.mains.slice(1);
+                const usage = (s.show.find(it => it.usage) || {}).usage;
+                const calendar = ['active_pm', 'retinoid'].includes(s.slot) && skincareNights().length;
+                return `<div class="flex gap-3 border border-[#EDE1E7] rounded-xl p-3">
+                    <span class="w-6 h-6 rounded-full bg-[#B76E88] text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0 mt-1">${i + 1}</span>
+                    <div class="min-w-0 flex-1 space-y-2">
+                        <p class="text-[10px] uppercase tracking-widest font-bold text-[#B76E88]">${escapeHtmlMsg(scSlotName(s.slot))}${calendar ? ` <span class="normal-case tracking-normal font-normal opacity-70">(${scEn() ? 'see «Your nights»' : 'ver «Tus noches»'})</span>` : ''}</p>
+                        ${prod(main)}
+                        ${extraMains.map(it => `<p class="text-[10px] uppercase tracking-widest opacity-50">${scEn() ? 'and' : 'y'}</p>${prod(it)}`).join('')}
+                        ${s.alts.map(it => `<p class="text-[11px] font-bold text-[#B76E88]">${scEn() ? 'Alternative (choose one)' : 'Alternativa (elige uno)'}</p>${prod(it)}`).join('')}
+                        ${usage ? `<p class="text-[11px] opacity-60 leading-relaxed">${escapeHtmlMsg(usage)}</p>` : ''}
+                    </div>
+                </div>`;
+            }).join('') || `<p class="text-sm opacity-50">—</p>`;
+            if (skincareTab === 'pm') {
+                const nights = skincareNights();
+                const mask = items.filter(it => it.slot === 'weekly' && it.role !== 'alt');
+                if (nights.length) el.innerHTML += `<div class="border border-[#B76E88] rounded-xl p-4 mt-3">
+                    <p class="text-lg italic text-[#2A2330] mb-2">🗓️ ${scEn() ? 'Your nights' : 'Tus noches'} <span class="text-[11px] not-italic opacity-60">(${scEn() ? 'from week 3' : 'desde la semana 3'})</span></p>
+                    ${nights.map(n => { const m = n.match(/^([^:]{2,60}):\s*(.*)$/); return `<p class="text-[13px] leading-snug mb-1.5">${m ? `<b class="text-[#B76E88]">${escapeHtmlMsg(m[1])}:</b> ${escapeHtmlMsg(m[2])}` : escapeHtmlMsg(n)}</p>`; }).join('')}
+                </div>`;
+                if (mask.length) el.innerHTML += `<p class="text-[12px] mt-3 opacity-80">🧖 <b>${scEn() ? 'Once or twice a week' : 'Una o dos veces por semana'}:</b> ${mask.map(it => escapeHtmlMsg(it.name)).join(', ')}</p>`;
+            }
+        }
+        // «Tus noches» viene en la guía (bloque que empieza con 🗓️ TUS NOCHES).
+        function skincareNights() {
+            const block = String(currentSkincareRoutine?.guide_text || '').split(/\n\s*\n/).find(b => b.trim().startsWith('🗓️ TUS NOCHES'));
+            return block ? block.split('\n').slice(1).map(l => l.trim().replace(/^[-*]\s+/, '')).filter(Boolean) : [];
         }
 
         function renderSkincareCard() {
             const r = currentSkincareRoutine;
             if (!r) return;
-            const en = currentLang === 'en';
-            const main = (r.items || []).filter(it => it.role !== 'alt');
-            const column = (icon, title, list) => `
-                <div class="p-4 bg-[#FDFBFC] border border-[#EDE1E7] rounded-lg">
-                    <p class="text-[10px] uppercase tracking-widest opacity-60 font-semibold mb-2">${icon} ${title}</p>
-                    ${list.length ? `<ol class="space-y-1 text-xs opacity-80 list-decimal pl-4">${list.map(it =>
-                        `<li><span class="opacity-60">${escapeHtmlMsg(it.step_label || '')}:</span> ${escapeHtmlMsg(it.name)}</li>`).join('')}</ol>`
-                        : `<p class="text-xs opacity-50">—</p>`}
-                </div>`;
-            const am = main.filter(it => ['am', 'ampm', 'both'].includes(it.time));
-            const pm = main.filter(it => ['pm', 'ampm', 'both'].includes(it.time));
-            document.getElementById('skincare-card-summary').innerHTML =
-                column('☀️', en ? 'Morning' : 'Mañana', am) + column('🌙', en ? 'Night' : 'Noche', pm);
             document.getElementById('skincare-card-date').textContent = formatDate(String(r.created_at).split('T')[0]);
+            renderSkincareList();
+            renderSkincareRoutine();
         }
 
         function openSkincareGuideModal() {
