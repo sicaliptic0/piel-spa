@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Nuevo gasto | Piel Spa</title>
+    <meta name="robots" content="noindex">
+    <!-- "Agregar a pantalla de inicio" on the iPhone opens this page as its own app -->
+    <link rel="manifest" href="gasto-manifest.webmanifest">
+    <meta name="theme-color" content="#FDFBFC">
+    <link rel="apple-touch-icon" href="images/icon-180.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Gasto Piel">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', sans-serif; background: #FDFBFC; color: #2A2330; padding-bottom: env(safe-area-inset-bottom); }
+        h1, .serif { font-family: 'Cormorant Garamond', serif; }
+        .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; color: #B76E88; }
+        input, select { border: 1px solid #EDE1E7; background: #fff; padding: 12px; border-radius: 12px; outline-color: #B76E88; width: 100%; font-size: 16px; }
+        .chip { border: 1px solid #EDE1E7; background: #fff; padding: 9px 12px; border-radius: 99px; font-size: 13px; white-space: nowrap; }
+        .chip.on { background: #2A2330; color: #fff; border-color: #2A2330; }
+        .seg { flex: 1; padding: 11px 0; font-size: 14px; border: 1px solid #EDE1E7; background: #fff; }
+        .seg:first-child { border-radius: 12px 0 0 12px; } .seg:last-child { border-radius: 0 12px 12px 0; }
+        .seg.on { background: #B76E88; color: #fff; border-color: #B76E88; font-weight: 600; }
+    </style>
+</head>
+<body>
+<div class="max-w-md mx-auto px-4 pt-6 pb-10">
+    <div class="flex items-end justify-between mb-4">
+        <div><p class="lbl">Piel Spa</p><h1 class="text-4xl italic leading-none">Nuevo gasto</h1></div>
+        <a href="admin.html" class="text-xs text-[#B76E88] underline">Abrir admin</a>
+    </div>
+    <p id="loading" class="text-sm opacity-60">Cargando…</p>
+
+    <form id="f" class="space-y-4 hidden">
+        <div class="bg-white border border-[#EDE1E7] rounded-2xl p-4 text-center">
+            <label for="monto" class="lbl">Monto</label>
+            <div class="flex items-center justify-center gap-1">
+                <span class="text-4xl opacity-40 font-semibold">$</span>
+                <input id="monto" inputmode="decimal" placeholder="0.00" autocomplete="off" required
+                    style="border:none;font-size:3rem;font-weight:600;text-align:center;padding:0;max-width:14rem;background:transparent">
+            </div>
+        </div>
+        <div><label for="desc" class="lbl">¿Qué compraste?</label><input id="desc" placeholder="Ej. jeringas 1cc, Uber a NJ" required autocomplete="off"></div>
+        <div>
+            <p class="lbl mb-1">Categoría</p>
+            <div class="flex flex-wrap gap-2" id="chips"></div>
+            <select id="cat" class="mt-2 hidden" aria-label="Otra categoría"></select>
+        </div>
+        <div>
+            <p class="lbl mb-1">¿Quién pagó?</p>
+            <div class="flex" id="pag">
+                <button type="button" class="seg" data-v="Freddy">Freddy</button>
+                <button type="button" class="seg" data-v="Samuel">Samuel</button>
+                <button type="button" class="seg" data-v="LLC">La LLC</button>
+            </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+            <div><label for="cuenta" class="lbl">Tarjeta / cuenta</label><select id="cuenta"></select></div>
+            <div><label for="fecha" class="lbl">Fecha</label><input type="date" id="fecha" required></div>
+        </div>
+        <div><label for="prov" class="lbl">Proveedor (opcional)</label><input id="prov" placeholder="Amazon, Uber, Galderma…" autocomplete="off"></div>
+        <div>
+            <label for="foto" class="lbl">Foto del recibo</label>
+            <input type="file" id="foto" accept="image/*,application/pdf">
+            <img id="prev" class="hidden mt-2 rounded-xl max-h-40" alt="Vista previa del recibo">
+        </div>
+        <button id="guardar" class="w-full bg-[#2A2330] text-white py-4 rounded-2xl uppercase text-xs tracking-widest font-bold disabled:opacity-50">Guardar gasto</button>
+    </form>
+
+    <div id="ok" class="hidden mt-4 bg-[#D1FAE5] text-[#065F46] text-sm rounded-xl px-4 py-3"></div>
+    <h2 class="serif italic text-2xl mt-8 mb-2">Últimos que agregaste</h2>
+    <div id="ultimos" class="space-y-2 text-sm"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    const SUPABASE_URL = 'https://qkjmrnqkoipdltauweub.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFram1ybnFrb2lwZGx0YXV3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTkyMjgsImV4cCI6MjA4OTA5NTIyOH0.EGqgJ9RNY9vYfuVeeEcGoMu_cIaygRq0hnyT-iE7zTw';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const money = n => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+    const CUENTAS = ['Chase Ink Business', 'Amex Business', 'Débito Chase Business', 'Cuenta LLC (Zelle/cheque)', 'Tarjeta Chase', 'BofA Mastercard',
+        'BofA Travel', 'Visa (sin identificar)', 'Tarjeta personal', 'Zelle / transferencia personal', 'Efectivo', 'Cheque'];
+    const RAPIDAS = ['Insumos y productos de tratamiento', 'Envíos y aranceles de importación', 'Transporte', 'Comidas de negocio (50%)',
+        'Equipo menor y mobiliario', 'Software y suscripciones', 'Limpieza y suministros', 'Producto para reventa'];
+    const CORTO = { 'Insumos y productos de tratamiento': 'Insumos', 'Envíos y aranceles de importación': 'Envíos', 'Comidas de negocio (50%)': 'Comidas',
+        'Equipo menor y mobiliario': 'Equipo menor', 'Software y suscripciones': 'Software', 'Limpieza y suministros': 'Limpieza', 'Producto para reventa': 'Reventa' };
+    // Last card used by each partner, remembered on this phone only.
+    let pref = {}; try { pref = JSON.parse(localStorage.getItem('gasto-pref') || '{}'); } catch (e) {}
+    let cat = RAPIDAS[0], pagador = pref.pagador || 'Freddy', user = null;
+
+    function chips() {
+        $('chips').innerHTML = RAPIDAS.map(c => `<button type="button" class="chip ${c === cat ? 'on' : ''}" data-c="${esc(c)}">${esc(CORTO[c] || c)}</button>`).join('') +
+            `<button type="button" class="chip ${RAPIDAS.includes(cat) ? '' : 'on'}" data-c="__otra">Otra…</button>`;
+        $('chips').querySelectorAll('.chip').forEach(b => b.onclick = () => {
+            if (b.dataset.c === '__otra') { $('cat').classList.remove('hidden'); cat = $('cat').value; }
+            else { $('cat').classList.add('hidden'); cat = b.dataset.c; }
+            chips();
+        });
+    }
+    function segs() {
+        $('pag').querySelectorAll('.seg').forEach(b => b.classList.toggle('on', b.dataset.v === pagador));
+        $('cuenta').value = (pref.cuenta || {})[pagador] || (pagador === 'LLC' ? 'Débito Chase Business' : 'Chase Ink Business');
+    }
+    async function ultimos() {
+        const { data } = await _supabase.from('acct_expenses').select('spent_on, description, amount, paid_by, category')
+            .eq('source', 'telefono').eq('created_by', user.id).is('deleted_at', null).order('created_at', { ascending: false }).limit(5);
+        $('ultimos').innerHTML = (data || []).length ? data.map(g => `<div class="bg-white border border-[#EDE1E7] rounded-xl px-3 py-2 flex justify-between gap-3">
+            <div><div>${esc(g.description)}</div><div class="text-[11px] opacity-60">${esc(g.spent_on.split('-').reverse().join('/'))} · ${esc(g.paid_by)} · ${esc(CORTO[g.category] || g.category)}</div></div>
+            <div class="font-semibold whitespace-nowrap">${money(g.amount)}</div></div>`).join('') : '<p class="opacity-60 text-sm">Todavía no has agregado gastos desde aquí.</p>';
+    }
+    async function guardar(ev) {
+        ev.preventDefault();
+        const monto = Number(String($('monto').value).replace(/[$,\s]/g, ''));
+        if (!Number.isFinite(monto) || monto <= 0) { alert('Escribe el monto.'); return; }
+        const btn = $('guardar'); btn.disabled = true; btn.textContent = 'Guardando…';
+        try {
+            let receipt_path = null;
+            const file = $('foto').files[0];
+            if (file) {
+                const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+                receipt_path = `${today().slice(0, 7)}/${crypto.randomUUID()}.${ext}`;
+                const up = await _supabase.storage.from('receipts').upload(receipt_path, file, { contentType: file.type || undefined });
+                if (up.error) throw up.error;
+            }
+            const row = { spent_on: $('fecha').value, amount: Math.round(monto * 100) / 100, description: $('desc').value.trim(), vendor: $('prov').value.trim() || null,
+                category: cat, account: $('cuenta').value, paid_by: pagador, reimb_status: pagador === 'LLC' ? 'No aplica (pagó la LLC)' : 'Pendiente',
+                ledger: 'LLC', receipt_path, source: 'telefono', created_by: user.id };
+            const { error } = await _supabase.from('acct_expenses').insert(row);
+            if (error) throw error;
+            pref.pagador = pagador; pref.cuenta = { ...(pref.cuenta || {}), [pagador]: $('cuenta').value };
+            try { localStorage.setItem('gasto-pref', JSON.stringify(pref)); } catch (e) {}
+            $('ok').textContent = `Guardado: ${money(row.amount)} · ${row.description}`; $('ok').classList.remove('hidden');
+            $('monto').value = ''; $('desc').value = ''; $('prov').value = ''; $('foto').value = ''; $('prev').classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            ultimos();
+        } catch (err) {
+            alert(/row-level security|permission/i.test(err.message || '') ? 'Tu cuenta no tiene permiso de administrador para guardar gastos.' : 'No se pudo guardar: ' + err.message);
+        } finally { btn.disabled = false; btn.textContent = 'Guardar gasto'; }
+    }
+
+    (async () => {
+        const { data } = await _supabase.auth.getUser();
+        user = data.user;
+        if (!user) { window.location.href = 'admin-login.html#gasto'; return; }
+        const { data: cats } = await _supabase.from('acct_categories').select('name').order('sort');
+        $('cat').innerHTML = (cats || []).map(c => `<option>${esc(c.name)}</option>`).join('');
+        $('cat').onchange = () => cat = $('cat').value;
+        $('cuenta').innerHTML = CUENTAS.map(c => `<option>${esc(c)}</option>`).join('');
+        $('pag').querySelectorAll('.seg').forEach(b => b.onclick = () => { pagador = b.dataset.v; segs(); });
+        $('fecha').value = today();
+        $('foto').onchange = () => { const f = $('foto').files[0]; if (!f || !f.type.startsWith('image/')) return; $('prev').src = URL.createObjectURL(f); $('prev').classList.remove('hidden'); };
+        $('f').addEventListener('submit', guardar);
+        chips(); segs();
+        $('loading').classList.add('hidden'); $('f').classList.remove('hidden');
+        ultimos();
+    })();
+</script>
+</body>
+</html>

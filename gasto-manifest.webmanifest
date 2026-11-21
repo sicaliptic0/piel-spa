@@ -1,0 +1,16 @@
+{
+  "name": "Piel Spa · Nuevo gasto",
+  "short_name": "Gasto Piel",
+  "description": "Registrar un gasto de Piel Spa desde el teléfono.",
+  "id": "/gasto.html",
+  "start_url": "/gasto.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FDFBFC",
+  "theme_color": "#FDFBFC",
+  "icons": [
+    { "src": "/images/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/images/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/images/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

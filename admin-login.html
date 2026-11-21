@@ -88,7 +88,8 @@
             } else {
                 // Staff go to the admin (not the patient dashboard), keeping where
                 // they were headed, e.g. #mensajes from the home-screen app.
-                window.location.href = 'admin.html' + window.location.hash;
+                // The phone expense page sends people here with #gasto and gets them back.
+                window.location.href = window.location.hash === '#gasto' ? 'gasto.html' : 'admin.html' + window.location.hash;
             }
         });
     </script>
