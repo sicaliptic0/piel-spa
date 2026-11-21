@@ -7732,7 +7732,19 @@
             texture:     { am: ['meso_brightening_concentrate', 'meso_aox_ferulic', 'lrp_vitc10'], pm: ['meso_ultimate_micropeel', 'to_mandelic', 'meso_skinretin', 'isdin_night_peel'] },
             dehydration: { am: [], pm: [] },
         };
-        const SC_CONSENSUS_NOTE = '📚 Esta rutina sigue el orden recomendado por la Academia Americana de Dermatología (AAD) y el consenso de expertos publicado en el Journal of Cosmetic Dermatology (2023): limpieza, tratamiento, hidratación y fotoprotección. Los productos y activos fueron seleccionados para tu tipo de piel por el equipo de Piel Spa.';
+        const SC_CONSENSUS_NOTE = '📚 Esta rutina sigue el orden recomendado por la Academia Americana de Dermatología (AAD) y el consenso de expertos publicado en el Journal of Cosmetic Dermatology (2023)⁴: limpieza, tratamiento, hidratación y fotoprotección. Los productos y activos fueron seleccionados para tu tipo de piel por el equipo de Piel Spa.';
+        // Inicio fijo de toda guía (mensaje, portal y PDF): por qué limpiar y con qué frecuencia.
+        const SC_CLEANSING_TITLE = '🫧 POR QUÉ EMPEZAMOS POR LA LIMPIEZA';
+        const SC_CLEANSING_INTRO = SC_CLEANSING_TITLE + '\n'
+            + 'Limpiar la piel retira el sebo, el sudor, la contaminación, el maquillaje y el protector acumulados. Así los poros no se obstruyen, la piel tolera mejor los tratamientos y los activos que aplicas después funcionan mejor.\n'
+            + '- En casa: la Academia Americana de Dermatología recomienda lavar el rostro dos veces al día (mañana y noche) y después de sudar, con un limpiador suave y agua tibia, sin frotar¹.\n'
+            + '- En la clínica: la capa externa de la piel se renueva aproximadamente cada 4 semanas² y este ciclo se vuelve más lento con la edad³. Por eso, en estética recomendamos una limpieza facial profesional cada 4 a 6 semanas.';
+        const SC_REFERENCES = 'Referencias\n'
+            + '1. American Academy of Dermatology. Face washing 101. aad.org (consultado en 2026).\n'
+            + '2. Weinstein GD, Van Scott EJ. Autoradiographic analysis of turnover times of normal and psoriatic epidermis. J Invest Dermatol. 1965;45:257-62.\n'
+            + '3. Grove GL, Kligman AM. Age-associated changes in human epidermal cell renewal. J Gerontol. 1983;38:137-42.\n'
+            + '4. Goh CL, et al. Expert consensus on holistic skin care routine: focus on acne, rosacea, atopic dermatitis, and sensitive skin syndrome. J Cosmet Dermatol. 2023;22:45-54.\n'
+            + 'La frecuencia de la limpieza profesional es una recomendación de práctica estética basada en el ciclo de renovación de la piel; no la fija una guía oficial.';
         const SC_PDF_LIB = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
         const SC_PDF_FILENAME = 'Rutina-skincare-Piel-Spa.pdf';
 
@@ -7753,8 +7765,16 @@
         }
         function scLocalDate(ts) { return new Date(ts).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); }
         function scWithNote(text) {
-            const t = String(text || '').trim();
-            return t.includes('Academia Americana de Dermatología') ? t : t + '\n\n' + SC_CONSENSUS_NOTE;
+            let t = String(text || '').trim();
+            if (!t.includes(SC_CLEANSING_TITLE)) {
+                const blocks = t.split(/\n\s*\n/);
+                const at = blocks.length && /^Hola/.test(blocks[0]) ? 1 : 0;
+                blocks.splice(at, 0, SC_CLEANSING_INTRO);
+                t = blocks.join('\n\n');
+            }
+            if (!t.includes('📚')) t += '\n\n' + SC_CONSENSUS_NOTE;
+            if (!/(^|\n)Referencias\n/.test(t)) t += '\n\n' + SC_REFERENCES;
+            return t;
         }
 
         async function scLoadCatalog() {
@@ -8263,7 +8283,7 @@
                 if (sl.time === 'auto') time = p.time_of_day === 'am' ? 'am' : 'pm';
                 items.push({ slot: sl.id, step_label: sl.label, role: x.role, time, product_id: p.id, name: p.name, brand: p.brand,
                     tone: x.tone || null, usage: p.usage || null, classes: p.classes || [], is_prescription: p.is_prescription, tinted: !!p.tinted,
-                    in_stock: !!p.in_stock, format: p.format || null });
+                    in_stock: !!p.in_stock, format: p.format || null, image_url: p.image_url || null });
             }));
             return items;
         }
@@ -8342,11 +8362,13 @@
             const numbered = arr => arr.map((t, i) => `${i + 1}. ${t}`).join('\n');
             return [
                 header,
+                SC_CLEANSING_INTRO,
                 '☀️ MAÑANA\n' + numbered(am),
                 pm.length ? '🌙 NOCHE\n' + numbered(pm) : '',
                 weekly ? '🗓️ UNA O DOS VECES POR SEMANA\n- ' + weekly : '',
                 'Indicaciones\n' + tips.map(t => '- ' + t).join('\n'),
                 SC_CONSENSUS_NOTE,
+                SC_REFERENCES,
             ].filter(Boolean).join('\n\n');
         }
 
@@ -8357,7 +8379,7 @@
                     <div>
                         <label class="text-[10px] uppercase font-bold opacity-50 mb-1 block">Guía (puedes editarla)</label>
                         <textarea id="sc-guide-text" rows="22" oninput="scState.guideText = this.value; scState.dirty = true; document.getElementById('sc-guide-preview').innerHTML = renderRecommendationBody(this.value);" style="padding:10px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;resize:vertical;font-family:monospace;">${escapeHtml(scState.guideText)}</textarea>
-                        <p class="text-[10px] opacity-50 mt-1">La nota del consenso (AAD / J Cosmet Dermatol) se agrega siempre al enviar, aunque la borres aquí.</p>
+                        <p class="text-[10px] opacity-50 mt-1">La introducción sobre la limpieza, la nota del consenso y las referencias se agregan siempre al enviar, aunque las borres aquí.</p>
                     </div>
                     <div>
                         <label class="text-[10px] uppercase font-bold opacity-50 mb-1 block">Así la verá el paciente</label>
@@ -8762,12 +8784,14 @@
         // Convierte el texto de la guía (editable) en bloques para el PDF.
         function scParseGuide(text) {
             const blocks = String(text || '').split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
-            const out = { intro: [], am: [], pm: [], weekly: [], tips: [], note: '', other: [] };
+            const out = { intro: [], cleansing: null, am: [], pm: [], weekly: [], tips: [], note: '', refs: [], other: [] };
             blocks.forEach(b => {
                 const lines = b.split('\n').map(l => l.trim()).filter(Boolean);
                 const head = lines[0];
                 const rest = lines.slice(1).map(l => l.replace(/^(\d+\.|[-*])\s+/, ''));
-                if (/^☀️|^MAÑANA/i.test(head)) out.am.push(...rest);
+                if (head.startsWith('🫧')) out.cleansing = { lead: rest.filter(l => !/^(En casa|En la clínica)/.test(l)), bullets: lines.slice(1).filter(l => /^[-*]\s+/.test(l)).map(l => l.replace(/^[-*]\s+/, '')) };
+                else if (/^Referencias$/i.test(head)) out.refs.push(...lines.slice(1));
+                else if (/^☀️|^MAÑANA/i.test(head)) out.am.push(...rest);
                 else if (/^🌙|^NOCHE/i.test(head)) out.pm.push(...rest);
                 else if (/^🗓️/.test(head)) out.weekly.push(...rest);
                 else if (/^Indicaciones/i.test(head)) out.tips.push(...rest);
@@ -8787,16 +8811,22 @@
                 `Piel ${scLabel(SC_SKIN_TYPES, routine.skin_type).toLowerCase()}${routine.sensitive && routine.skin_type !== 'sensitive' ? ' y sensible' : ''}`,
                 ...(routine.concerns || []).map(c => scLabel(allConcerns, c)),
             ];
+            // Fotos de los productos nombrados en cada paso (principal primero).
+            const items = (routine.items || []).map(it => ({ ...it, image_url: it.image_url || scById(it.product_id)?.image_url || null }));
+            const photosFor = t => items.filter(it => it.image_url && t.includes(it.name))
+                .sort((a, b) => (a.role === 'alt') - (b.role === 'alt')).slice(0, 2)
+                .map(it => `<img src="${esc(it.image_url)}" crossorigin="anonymous" style="width:46px;height:46px;object-fit:contain;background:#fff;border:1px solid #EDE1E7;border-radius:8px;${it.role === 'alt' ? 'opacity:.75;' : ''}">`).join('');
             const stepHtml = (t, i) => {
                 const m = t.match(/^([^:]{2,90}):\s*(.*)$/);
                 const label = m ? m[1] : '';
                 const body = m ? m[2] : t;
+                const photos = photosFor(t);
                 return `<div class="pdf-avoid" style="display:flex;gap:10px;margin:0 0 10px;">
                     <div style="flex:0 0 22px;height:22px;border-radius:50%;background:#B76E88;color:#fff;font:600 11px/22px Outfit,sans-serif;text-align:center;">${i + 1}</div>
                     <div style="flex:1;min-width:0;">
                         ${label ? `<div style="font:600 9px Montserrat,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#B76E88;margin:3px 0 2px;">${esc(label)}</div>` : ''}
                         <div style="font:400 11.5px/1.5 Outfit,sans-serif;color:#2A2330;">${scPdfStockBadge(esc(body))}</div>
-                    </div></div>`;
+                    </div>${photos ? `<div style="flex:0 0 auto;display:flex;gap:4px;align-items:flex-start;">${photos}</div>` : ''}</div>`;
             };
             const column = (icon, title, list) => `
                 <div style="flex:1;min-width:0;background:#FDFBFC;border:1px solid #EDE1E7;border-radius:14px;padding:16px 16px 6px;">
@@ -8816,6 +8846,11 @@
                     </div>
                     <div style="margin:14px 0 6px;">${chips.map(c => `<span style="display:inline-block;margin:0 6px 6px 0;padding:4px 10px;border-radius:999px;background:#FBF0F3;font:500 10.5px Outfit,sans-serif;">${esc(c)}</span>`).join('')}</div>
                     ${g.intro.map(p => `<p style="font:300 12.5px/1.6 Outfit,sans-serif;margin:6px 0 14px;">${esc(p)}</p>`).join('')}
+                    ${g.cleansing ? `<div class="pdf-avoid" style="margin:0 0 14px;padding:14px 18px;border-radius:14px;background:#FBF0F3;">
+                        <div style="font:italic 500 20px 'Cormorant Garamond',serif;color:#2A2330;margin-bottom:6px;">Por qué empezamos por la limpieza</div>
+                        ${g.cleansing.lead.map(l => `<p style="font:300 11.5px/1.6 Outfit,sans-serif;margin:0 0 6px;">${esc(l)}</p>`).join('')}
+                        ${g.cleansing.bullets.map(b => `<div style="display:flex;gap:8px;font:400 11.5px/1.55 Outfit,sans-serif;margin:4px 0;"><span style="color:#B76E88;">•</span><span>${esc(b)}</span></div>`).join('')}
+                    </div>` : ''}
                     <div style="display:flex;gap:14px;align-items:flex-start;">
                         ${column('☀️', 'Mañana', g.am)}
                         ${g.pm.length ? column('🌙', 'Noche', g.pm) : ''}
@@ -8836,12 +8871,16 @@
                         ${w.parts.map(p => `<div style="margin-top:6px;padding:8px 10px;background:#FDFBFC;border-radius:8px;"><div style="font:500 11px Outfit,sans-serif;color:#B76E88;">${esc(p.title)}</div><div style="font:300 11px/1.5 Outfit,sans-serif;">${esc(p.text)}</div></div>`).join('')}
                     </div>`).join('')}
                     <div class="pdf-avoid" style="margin-top:18px;padding-top:12px;border-top:1px solid #EDE1E7;font:300 10px/1.55 Outfit,sans-serif;opacity:.75;">${esc(g.note || SC_CONSENSUS_NOTE.replace(/^📚\s*/, ''))}</div>
+                    ${g.refs.length ? `<div class="pdf-avoid" style="margin-top:10px;font:300 8.5px/1.5 Outfit,sans-serif;opacity:.7;">
+                        <div style="font:600 8px Montserrat,sans-serif;letter-spacing:.14em;text-transform:uppercase;margin-bottom:3px;">Referencias</div>
+                        ${g.refs.map(r => `<div>${esc(r.replace(/^(\d+)\.\s+/, (x, n) => '¹²³⁴⁵⁶⁷⁸⁹'[Number(n) - 1] + ' '))}</div>`).join('')}</div>` : ''}
                     <div style="margin-top:8px;font:600 8.5px Montserrat,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#B76E88;">Piel Spa · piel-spa.com</div>
                 </div>`;
         }
 
         async function scPdfWorker(routine) {
             await scLoadPdfLib();
+            try { await scLoadCatalog(); } catch (e) { /* sin catálogo: solo las fotos guardadas en la rutina */ }
             const holder = document.createElement('div');
             holder.style.cssText = 'position:fixed;left:-10000px;top:0;';
             holder.innerHTML = scPdfHtml(routine);
