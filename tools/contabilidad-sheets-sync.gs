@@ -204,13 +204,12 @@ function writeTable(name, header, rows, fmt, stamp) {
   sh.setFrozenRows(2);
   if (sh.getFilter()) sh.getFilter().remove();
   sh.getRange(2, 1, Math.max(rows.length, 1) + 1, header.length).createFilter();
-  // Pending reimbursements: light red row (a rule, so it follows the filter and sorting).
+  // Only the "Pendiente" cell of the reimbursement status turns red (a rule, so it follows the filter and sorting).
   sh.clearConditionalFormatRules();
   if (fmt.redWhen && rows.length) {
-    const letter = String.fromCharCode(64 + fmt.redWhen.col);
     sh.setConditionalFormatRules([SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=$' + letter + '3="' + fmt.redWhen.value + '"').setBackground('#F8D4D4').setFontColor('#7A1F1F')
-      .setRanges([sh.getRange(3, 1, rows.length, header.length)]).build()]);
+      .whenTextEqualTo(fmt.redWhen.value).setBackground('#F8D4D4').setFontColor('#7A1F1F')
+      .setRanges([sh.getRange(3, fmt.redWhen.col, rows.length, 1)]).build()]);
   }
   fitColumns(sh, header, rows, fmt);
 }
