@@ -145,6 +145,15 @@
                     </div>
                 </div>
 
+                <div id="skincare-card" class="hidden bg-white p-6 rounded-xl border border-[#EDE1E7] shadow-sm">
+                    <div class="flex items-center justify-between gap-3 mb-4">
+                        <h3 class="uppercase text-[10px] tracking-widest text-[#B76E88] font-bold" data-en="My Skincare Routine" data-es="Mi Rutina de Skincare">My Skincare Routine</h3>
+                        <span id="skincare-card-date" class="text-[10px] uppercase tracking-widest opacity-40"></span>
+                    </div>
+                    <div id="skincare-card-summary" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm"></div>
+                    <button onclick="openSkincareGuideModal()" class="mt-5 btn-gold px-6 py-3 uppercase text-[10px] tracking-widest" data-en="View Full Routine" data-es="Ver Rutina Completa">View Full Routine</button>
+                </div>
+
                 <div class="bg-white p-6 rounded-xl border border-[#EDE1E7] shadow-sm">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="uppercase text-[10px] tracking-widest text-[#B76E88] font-bold" data-en="Recent Messages" data-es="Mensajes Recientes">Recent Messages</h3>
@@ -283,6 +292,20 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Mi rutina de skincare: guía completa -->
+    <div id="skincare-guide-modal" class="fixed inset-0 z-[80] hidden bg-black/40 backdrop-blur-sm items-center justify-center p-0 md:p-4" onclick="if (event.target === this) closeSkincareGuideModal()">
+        <div class="bg-white w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] overflow-y-auto md:rounded-2xl shadow-2xl p-6 md:p-8">
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <h3 class="text-2xl italic text-[#2A2330]" data-en="My Skincare Routine" data-es="Mi Rutina de Skincare">My Skincare Routine</h3>
+                <button onclick="closeSkincareGuideModal()" class="text-2xl opacity-40 hover:opacity-100" aria-label="Close">&times;</button>
+            </div>
+            <div id="skincare-guide-body" class="text-sm font-light leading-relaxed opacity-90"></div>
+            <div class="flex justify-end gap-2 pt-6">
+                <button onclick="window.print()" class="px-5 py-3 uppercase text-[10px] tracking-widest font-bold border border-[#EDE1E7] rounded-lg hover:border-[#B76E88] print:hidden" data-en="Print" data-es="Imprimir">Print</button>
+                <button onclick="closeSkincareGuideModal()" class="btn-gold px-6 py-3 uppercase text-[10px] tracking-widest" data-en="Close" data-es="Cerrar">Close</button>
+            </div>
+        </div>
+    </div>
     <script>
         // 1. CONFIGURATION
         const SUPABASE_URL = 'https://qkjmrnqkoipdltauweub.supabase.co';
@@ -573,7 +596,7 @@
                 if (para.length) { html.push('<p style="margin:6px 0;">' + para.map(escapeHtmlMsg).join('<br>') + '</p>'); para = []; }
             };
             const flushList = () => {
-                if (list) { html.push(`<${list.type} style="margin:6px 0; padding-left:20px;">` + list.items.map(i => `<li>${escapeHtmlMsg(i)}</li>`).join('') + `</${list.type}>`); list = null; }
+                if (list) { html.push(`<${list.type} style="margin:6px 0; padding-left:20px; list-style:${list.type === 'ol' ? 'decimal' : 'disc'};">` + list.items.map(i => `<li>${escapeHtmlMsg(i)}</li>`).join('') + `</${list.type}>`); list = null; }
             };
             lines.forEach(rawLine => {
                 const line = rawLine.trim();
@@ -596,6 +619,60 @@
             flushPara();
             flushList();
             return html.join('');
+        }
+
+        // ---------- Mi rutina de skincare (la más reciente que dio la clínica) ----------
+        let currentSkincareRoutine = null;
+
+        async function loadSkincareRoutine() {
+            const { data: { user }, error: authError } = await _supabase.auth.getUser();
+            if (authError || !user) return;
+            const { data, error } = await _supabase
+                .from('skincare_routines')
+                .select('id, items, guide_title, guide_text, created_at')
+                .eq('patient_id', user.id)
+                .eq('published', true)
+                .order('created_at', { ascending: false })
+                .limit(1);
+            const card = document.getElementById('skincare-card');
+            currentSkincareRoutine = (!error && data && data[0]) ? data[0] : null;
+            if (!card) return;
+            if (!currentSkincareRoutine) { card.classList.add('hidden'); return; }
+            renderSkincareCard();
+            card.classList.remove('hidden');
+        }
+
+        function renderSkincareCard() {
+            const r = currentSkincareRoutine;
+            if (!r) return;
+            const en = currentLang === 'en';
+            const main = (r.items || []).filter(it => it.role !== 'alt');
+            const column = (icon, title, list) => `
+                <div class="p-4 bg-[#FDFBFC] border border-[#EDE1E7] rounded-lg">
+                    <p class="text-[10px] uppercase tracking-widest opacity-60 font-semibold mb-2">${icon} ${title}</p>
+                    ${list.length ? `<ol class="space-y-1 text-xs opacity-80 list-decimal pl-4">${list.map(it =>
+                        `<li><span class="opacity-60">${escapeHtmlMsg(it.step_label || '')}:</span> ${escapeHtmlMsg(it.name)}</li>`).join('')}</ol>`
+                        : `<p class="text-xs opacity-50">—</p>`}
+                </div>`;
+            const am = main.filter(it => ['am', 'ampm', 'both'].includes(it.time));
+            const pm = main.filter(it => ['pm', 'ampm', 'both'].includes(it.time));
+            document.getElementById('skincare-card-summary').innerHTML =
+                column('☀️', en ? 'Morning' : 'Mañana', am) + column('🌙', en ? 'Night' : 'Noche', pm);
+            document.getElementById('skincare-card-date').textContent = formatDate(String(r.created_at).split('T')[0]);
+        }
+
+        function openSkincareGuideModal() {
+            const r = currentSkincareRoutine;
+            if (!r) return;
+            document.getElementById('skincare-guide-body').innerHTML = renderRecommendationBody(r.guide_text);
+            const m = document.getElementById('skincare-guide-modal');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+        }
+        function closeSkincareGuideModal() {
+            const m = document.getElementById('skincare-guide-modal');
+            m.classList.add('hidden');
+            m.classList.remove('flex');
         }
 
         async function loadMessages() {
@@ -885,6 +962,7 @@
             syncTreatmentsSelectedSummary();
             syncNextVisitDisplay();
             syncFollowUpReminderDisplay();
+            renderSkincareCard();
         }
 
         // 4. MODAL LOGIC
@@ -1261,6 +1339,7 @@
             loadPatientProfile();
             loadAppointmentsOverview();
             loadMessages();
+            loadSkincareRoutine();
             document.getElementById('book-date').addEventListener('change', updateAvailableTimes);
             document.getElementById('profile-form').addEventListener('submit', async (event) => {
                 event.preventDefault();
@@ -1301,4 +1380,4 @@
         });
     </script>
 </body>
-</html>
+</html>

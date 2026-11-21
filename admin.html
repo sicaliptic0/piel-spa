@@ -568,6 +568,20 @@
         </div>
     </main>
 
+    <!-- ===== SKINCARE ROUTINE MODAL (3 pasos: capas → productos → guía) ===== -->
+    <div id="skincare-modal" class="fixed inset-0 z-[75] hidden bg-black/40 backdrop-blur-sm items-center justify-center p-0 md:p-4">
+        <div class="bg-white w-full max-w-4xl h-full md:h-auto md:max-h-[92vh] flex flex-col md:rounded-2xl shadow-2xl overflow-hidden">
+            <div class="flex items-center justify-between gap-3 px-5 md:px-8 pt-5 md:pt-7 pb-3 border-b border-[#EDE1E7] flex-shrink-0">
+                <div>
+                    <h3 id="sc-title" class="text-2xl italic">Rutina de skincare</h3>
+                    <p id="sc-stepper" class="text-[10px] uppercase tracking-widest opacity-50 mt-1"></p>
+                </div>
+                <button onclick="closeSkincareModal()" class="text-2xl opacity-40 hover:opacity-100" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="overflow-y-auto flex-1 px-5 md:px-8"><div id="sc-body" class="pt-4 pb-5"></div></div>
+        </div>
+    </div>
+
     <!-- ===== RECOMMENDATION TEMPLATE EDITOR MODAL ===== -->
     <div id="recommendation-editor-modal" class="fixed inset-0 z-[70] hidden bg-black/40 backdrop-blur-sm items-center justify-center p-4">
         <div class="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl p-6 md:p-8">
@@ -1014,7 +1028,10 @@
             <div class="flex flex-col relative z-10 flex-shrink-0">
                 <div class="flex justify-between items-center mb-6 gap-2 flex-wrap">
                     <button id="add-note-btn" onclick="toggleSoapForm(true)" class="bg-[#B76E88] text-white px-6 py-2 text-[10px] uppercase tracking-widest font-bold rounded-full shadow-sm hover:bg-[#9C5570] transition">+ Nuevo encuentro</button>
+                    <button id="add-skincare-btn" onclick="openSkincareModal()" class="admin-only border border-[#B76E88] text-[#B76E88] px-6 py-2 text-[10px] uppercase tracking-widest font-bold rounded-full hover:bg-[#FBF0F3] transition">🧴 Agregar rutina de skincare</button>
                 </div>
+
+                <div id="skincare-routines-list" class="admin-only space-y-3 mb-6"></div>
 
                 <div id="notes-container" class="pr-2 md:pr-4 space-y-6 pb-10"></div>
 
@@ -3413,7 +3430,7 @@
                 if (para.length) { html.push('<p style="margin:6px 0;">' + para.map(escapeHtml).join('<br>') + '</p>'); para = []; }
             };
             const flushList = () => {
-                if (list) { html.push(`<${list.type} style="margin:6px 0; padding-left:20px;">` + list.items.map(i => `<li>${escapeHtml(i)}</li>`).join('') + `</${list.type}>`); list = null; }
+                if (list) { html.push(`<${list.type} style="margin:6px 0; padding-left:20px; list-style:${list.type === 'ol' ? 'decimal' : 'disc'};">` + list.items.map(i => `<li>${escapeHtml(i)}</li>`).join('') + `</${list.type}>`); list = null; }
             };
             lines.forEach(rawLine => {
                 const line = rawLine.trim();
@@ -5143,6 +5160,7 @@
             document.getElementById('history-modal').classList.add('modal-open');
             loadAdmissionHistory(patientId);
             loadNotes();
+            loadSkincareRoutines();
         }
 
         // Consent to receive promotions by WhatsApp: null = never asked, 'yes', 'no'.
@@ -7653,6 +7671,1204 @@
 
         async function logout() { await _supabase.auth.signOut(); window.location.href = 'index.html'; }
         window.onload = checkAdmin;
+    </script>
+    <script>
+        // ===== RUTINA DE SKINCARE =====
+        // Protocolo (AAD + consenso de expertos J Cosmet Dermatol 2023): limpiar → tratar →
+        // hidratar → proteger (mañana) y limpiar → tratar → hidratar (noche).
+        // Motor por capas: 0 seguridad (excluye) → 1 nivel (pasos del protocolo) → 2 tipo de
+        // piel (base) → 3 condiciones por jerarquía (activo de primera línea sugerido) →
+        // 4 validación (un solo retinoide, ácidos en otras noches, zonas) → receta (médico).
+        // El catálogo vive en skincare_products; la rutina guarda una copia de los productos
+        // elegidos en skincare_routines.items.
+        const SC_SKIN_TYPES = [
+            { id: 'normal', label: 'Normal' }, { id: 'combination', label: 'Mixta' }, { id: 'oily', label: 'Grasa' },
+            { id: 'dry', label: 'Seca' }, { id: 'sensitive', label: 'Sensible' },
+        ];
+        const SC_FACE_CONCERNS = [
+            { id: 'wrinkles', label: 'Arrugas finas' }, { id: 'spots', label: 'Manchas' }, { id: 'melasma', label: 'Melasma' },
+            { id: 'acne', label: 'Acné' }, { id: 'shine', label: 'Brillo / poros' }, { id: 'redness', label: 'Rojez / rosácea' },
+            { id: 'dehydration', label: 'Deshidratación' }, { id: 'texture', label: 'Textura / piel opaca' },
+        ];
+        // Jerarquía: primero lo médico (melasma, acné, rosácea), luego lo estético.
+        const SC_HIERARCHY = ['melasma', 'acne', 'redness', 'spots', 'wrinkles', 'shine', 'texture', 'dehydration'];
+        const SC_EYE_CONCERNS = [
+            { id: 'eye_pigment', label: 'Ojeras por hiperpigmentación' }, { id: 'eye_vascular', label: 'Ojeras vasculares / bolsas' },
+            { id: 'eye_wrinkles', label: 'Arrugas perioculares' },
+        ];
+        const SC_SAFETY = [
+            { id: 'pregnancy', label: 'Embarazo o lactancia' },
+            { id: 'planning', label: 'Planea embarazo' },
+            { id: 'isotretinoin', label: 'Isotretinoína oral (últimos 6–12 meses)' },
+            { id: 'procedure', label: 'Procedimiento reciente (peeling, láser, microneedling)' },
+        ];
+        // Pasos del protocolo en el orden en que se aplican. time: cuándo se usa
+        // ('auto' = según el producto: de mañana o de noche).
+        const SC_SLOTS = [
+            { id: 'cleanser',       steps: ['cleanser'],               label: 'Limpiador',            time: 'ampm' },
+            { id: 'double_cleanse', steps: ['double_cleanse'],         label: 'Doble limpieza',       time: 'pm' },
+            { id: 'serum',          steps: ['serum'],                  label: 'Sérum hidratante',     time: 'am' },
+            { id: 'active_am',      steps: ['active_am'],              label: 'Activo de mañana',     time: 'am' },
+            { id: 'active_one',     steps: ['active_pm', 'active_am'], label: 'Activo',               time: 'auto' },
+            { id: 'eye',            steps: ['eye'],                    label: 'Contorno de ojos',     time: 'ampm' },
+            { id: 'active_pm',      steps: ['active_pm'],              label: 'Activo de noche',      time: 'pm' },
+            { id: 'moisturizer',    steps: ['moisturizer'],            label: 'Hidratante',           time: 'ampm' },
+            { id: 'repair',         steps: ['repair'],                 label: 'Reparador / barrera',  time: 'pm' },
+            { id: 'spf',            steps: ['spf'],                    label: 'Protector solar',      time: 'am' },
+            { id: 'weekly',         steps: ['weekly'],                 label: 'Mascarilla semanal',   time: 'weekly' },
+        ];
+        const SC_ACTIVE_SLOTS = ['active_am', 'active_pm', 'active_one'];
+        const SC_ROLES = { main: 'Principal', alt: 'Alternativa', plus: 'Además' };
+        const SC_ACID = ['aha', 'bha'];
+        // Activo de primera línea por condición (en orden de preferencia; se toma el primero
+        // que no esté bloqueado y sirva para el tipo de piel).
+        const SC_FIRST_LINE = {
+            melasma:     { am: ['meso_tran3x_concentrate', 'lrp_mela_b3', 'pc_azelaic'],       pm: ['meso_tran3x_gelcream', 'azelaic_rx', 'pc_azelaic'] },
+            acne:        { am: ['lrp_niacinamide10', 'pc_niacinamide', 'to_niacinamide'],    pm: ['meso_blemiderm', 'differin_adapalene', 'azelaic_rx', 'pc_azelaic'] },
+            redness:     { am: ['pc_azelaic', 'azelaic_rx'],                                 pm: ['pc_azelaic', 'azelaic_rx'] },
+            spots:       { am: ['meso_tran3x_concentrate', 'lrp_vitc10', 'isdin_flavoc'],    pm: ['meso_tran3x_gelcream', 'pc_azelaic'] },
+            wrinkles:    { am: ['meso_aox_ferulic', 'lrp_vitc10', 'isdin_flavoc', 'sc_ce_ferulic'],              pm: ['tretinoin_0025', 'meso_skinretin', 'inkey_bakuchiol'] },
+            shine:       { am: ['lrp_niacinamide10', 'pc_niacinamide', 'to_niacinamide'],    pm: ['meso_blemiderm_resurfacing', 'pc_bha'] },
+            texture:     { am: ['meso_brightening_concentrate', 'meso_aox_ferulic', 'lrp_vitc10'], pm: ['meso_ultimate_micropeel', 'to_mandelic', 'meso_skinretin', 'isdin_night_peel'] },
+            dehydration: { am: [], pm: [] },
+        };
+        const SC_CONSENSUS_NOTE = '📚 Esta rutina sigue el orden recomendado por la Academia Americana de Dermatología (AAD) y el consenso de expertos publicado en el Journal of Cosmetic Dermatology (2023): limpieza, tratamiento, hidratación y fotoprotección. Los productos y activos fueron seleccionados para tu tipo de piel por el equipo de Piel Spa.';
+        const SC_PDF_LIB = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        const SC_PDF_FILENAME = 'Rutina-skincare-Piel-Spa.pdf';
+
+        let scProducts = null;     // catálogo (se carga una vez)
+        let scState = null;        // configuración + selección del modal abierto
+        let scRoutines = [];       // rutinas del paciente abierto
+
+        function scLabel(list, id) { return (list.find(x => x.id === id) || {}).label || id || '—'; }
+        function scHas(p, cls) { return (p.classes || []).includes(cls); }
+        function scIsRetinoid(p) { return scHas(p, 'retinoid'); }
+        function scIsAcid(p) { return SC_ACID.some(c => scHas(p, c)); }
+        function scBrandRank(p, step) {
+            const order = step === 'spf'
+                ? ['Colorescience', 'mesoestetic', 'La Roche-Posay', 'Eucerin', 'ISDIN']
+                : ['mesoestetic', 'Colorescience', 'La Roche-Posay', 'Eucerin', 'ISDIN'];
+            const i = order.indexOf(p.brand);
+            return i === -1 ? order.length : i;
+        }
+        function scLocalDate(ts) { return new Date(ts).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); }
+        function scWithNote(text) {
+            const t = String(text || '').trim();
+            return t.includes('Academia Americana de Dermatología') ? t : t + '\n\n' + SC_CONSENSUS_NOTE;
+        }
+
+        async function scLoadCatalog() {
+            if (scProducts) return scProducts;
+            const { data, error } = await _supabase.from('skincare_products').select('*').eq('active', true);
+            if (error) throw new Error(error.message);
+            scProducts = data || [];
+            return scProducts;
+        }
+
+        // ---------- Historia del paciente: lista de rutinas ----------
+        async function loadSkincareRoutines() {
+            const el = document.getElementById('skincare-routines-list');
+            if (!el) return;
+            const patientId = currentPatientId;
+            el.innerHTML = '';
+            const { data, error } = await _supabase.from('skincare_routines')
+                .select('*').eq('patient_id', patientId).order('created_at', { ascending: false });
+            if (patientId !== currentPatientId) return;
+            if (error) { el.innerHTML = `<p class="text-xs text-red-500">No se pudieron cargar las rutinas: ${escapeHtml(error.message)}</p>`; return; }
+            scRoutines = data || [];
+            if (!scRoutines.length) return;
+            const allConcerns = [...SC_FACE_CONCERNS, ...SC_EYE_CONCERNS];
+            el.innerHTML = `<p class="text-[10px] uppercase tracking-widest font-bold text-[#B76E88]">🧴 Rutinas de skincare</p>` + scRoutines.map((r, i) => `
+                <div class="border border-[#EDE1E7] rounded-xl p-4 bg-[#FDFBFC] ${i ? 'opacity-70' : ''}">
+                    <div class="flex items-start justify-between gap-3 flex-wrap">
+                        <div class="min-w-0">
+                            <p class="text-sm italic text-[#2A2330]">Rutina ${r.level === 'advanced' ? 'avanzada' : 'básica'} · Piel ${escapeHtml(scLabel(SC_SKIN_TYPES, r.skin_type))}${r.sensitive && r.skin_type !== 'sensitive' ? ', sensible' : ''}${i === 0 ? ' <span class="text-[9px] uppercase tracking-widest not-italic font-bold text-[#B76E88] ml-1">Actual</span>' : ''}</p>
+                            <p class="text-[10px] uppercase tracking-widest opacity-50 mt-1">${escapeHtml(formatDayMonthEs(scLocalDate(r.created_at)))} · ${r.published ? 'visible en el portal' : 'no publicada en el portal'}</p>
+                            ${r.concerns?.length ? `<p class="text-xs opacity-70 mt-1">${r.concerns.map(c => escapeHtml(scLabel(allConcerns, c))).join(' · ')}</p>` : ''}
+                            <p class="text-xs opacity-70 mt-2">${escapeHtml(scSummaryLine(r.items))}</p>
+                        </div>
+                        <div class="flex gap-3 flex-shrink-0">
+                            <button onclick="openSkincareGuide('${r.id}')" class="text-[10px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline">Ver guía</button>
+                            <button onclick="deleteSkincareRoutine('${r.id}')" class="text-[10px] uppercase tracking-widest font-bold text-red-400 hover:text-red-600">Borrar</button>
+                        </div>
+                    </div>
+                </div>`).join('');
+        }
+
+        function scSummaryLine(items) {
+            const main = (items || []).filter(it => it.role !== 'alt');
+            const am = main.filter(it => ['am', 'ampm', 'both'].includes(it.time)).map(it => it.name);
+            const pm = main.filter(it => ['pm', 'ampm', 'both'].includes(it.time)).map(it => it.name);
+            return [am.length ? '☀️ ' + am.join(', ') : '', pm.length ? '🌙 ' + pm.join(', ') : ''].filter(Boolean).join('   ');
+        }
+
+        async function deleteSkincareRoutine(id) {
+            const r = scRoutines.find(x => x.id === id);
+            if (!r) return;
+            if (!confirm('¿Borrar esta rutina? ' + (r.message_id ? 'También se quitará la guía del portal del paciente. ' : '') + 'No se puede deshacer.')) return;
+            if (r.message_id) {
+                const { error: msgError } = await _supabase.rpc('admin_delete_patient_messages', { p_ids: [r.message_id] });
+                if (msgError) { alert('No se pudo quitar la guía del portal: ' + msgError.message); return; }
+            }
+            const { error } = await _supabase.from('skincare_routines').delete().eq('id', id);
+            if (error) { alert('No se pudo borrar: ' + error.message); return; }
+            loadSkincareRoutines();
+            loadNotes();
+        }
+
+        // ---------- Modal ----------
+        function scShowModal(show) {
+            const m = document.getElementById('skincare-modal');
+            m.classList.toggle('hidden', !show);
+            m.classList.toggle('flex', show);
+        }
+        function closeSkincareModal() {
+            if (scState?.dirty && !confirm('¿Cerrar sin guardar la rutina?')) return;
+            scState = null;
+            scShowModal(false);
+        }
+
+        async function openSkincareModal() {
+            if (!currentPatientId) return;
+            try { await scLoadCatalog(); } catch (e) { alert('No se pudo cargar el catálogo de productos: ' + e.message); return; }
+            // Prellenado desde la historia de ingreso.
+            const intake = currentAdmissionData || {};
+            const intakeSkin = intake.skin_type || '';
+            const safety = {};
+            if (intake.pregnancy_or_nursing === 'yes') safety.pregnancy = true;
+            if (intake.retinoid_isotretinoin_recent) safety.isotretinoin = true;
+            scState = {
+                stage: 1, dirty: false,
+                level: 'basic',
+                skin: intakeSkin,
+                sensitive: intakeSkin === 'sensitive',
+                concerns: [],
+                eye: false,
+                safety,
+                picks: {},           // slotId → [{ id, role, tone }]
+                suggested: {},       // slotId → [ids] que propuso el protocolo
+                configKey: '',       // configuración con la que se calcularon las sugerencias
+                guideText: '',
+                fromIntake: { skin: !!intakeSkin, pregnancy: !!safety.pregnancy, isotretinoin: !!safety.isotretinoin },
+            };
+            document.getElementById('sc-title').innerText = 'Rutina de skincare · ' + (currentPatientName || '');
+            scRender();
+            scShowModal(true);
+        }
+
+        function scRender() {
+            const names = scState.stage === 'catalog' ? ['Catálogo de productos'] : ['1 · Capas', '2 · Productos', '3 · Guía'];
+            document.getElementById('sc-stepper').innerHTML = names.map((n, i) =>
+                `<span class="${scState.stage === i + 1 ? 'text-[#B76E88] font-bold' : ''}">${n}</span>`).join('  →  ');
+            const body = document.getElementById('sc-body');
+            const scroller = body.parentElement;
+            const keep = scroller.scrollTop;
+            if (scState.stage === 'catalog') body.innerHTML = scRenderCatalog();
+            else if (scState.stage === 1) body.innerHTML = scRenderConfig();
+            else if (scState.stage === 2) body.innerHTML = scRenderPicker();
+            else body.innerHTML = scRenderGuideEditor();
+            scroller.scrollTop = scState.keepScroll ? keep : 0;
+            scState.keepScroll = false;
+        }
+        // Re-render del mismo paso sin saltar arriba (al marcar casillas).
+        function scRerender() { scState.keepScroll = true; scRender(); }
+
+        const scChip = (checked, onchange, label, extra = '') =>
+            `<label class="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer text-xs select-none ${checked ? 'border-[#B76E88] bg-[#FBF0F3]' : 'border-[#EDE1E7] hover:border-[#B76E88]'}">
+                <input type="checkbox" ${checked ? 'checked' : ''} onchange="${onchange}" class="accent-[#B76E88]"> <span>${label}${extra}</span></label>`;
+        const scRadio = (name, checked, onchange, label) =>
+            `<label class="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer text-xs select-none ${checked ? 'border-[#B76E88] bg-[#FBF0F3]' : 'border-[#EDE1E7] hover:border-[#B76E88]'}">
+                <input type="radio" name="${name}" ${checked ? 'checked' : ''} onchange="${onchange}" class="accent-[#B76E88]"> <span>${label}</span></label>`;
+        const scSection = (title, html, hint = '') =>
+            `<div class="mb-5"><p class="text-[10px] uppercase tracking-widest font-bold text-[#B76E88] mb-2">${title}</p>${hint ? `<p class="text-[11px] opacity-50 -mt-1 mb-2">${hint}</p>` : ''}${html}</div>`;
+
+        function scRenderConfig() {
+            const s = scState;
+            const fromIntake = '<span class="text-[9px] opacity-50 ml-1">(del ingreso)</span>';
+            const eyeConcern = SC_EYE_CONCERNS.some(c => s.concerns.includes(c.id));
+            const protocol = s.level === 'advanced'
+                ? '<b>Mañana:</b> limpiador → sérum activo → contorno → hidratante → protector.<br><b>Noche:</b> doble limpieza → limpiador → activo rotativo (noche de retinoide / noche de despigmentante o exfoliante / noche de recuperación) → hidratante → reparador.<br><b>Semanal:</b> mascarilla.'
+                : '<b>Mañana:</b> limpiador → hidratante → protector.<br><b>Noche:</b> limpiador → 1 activo para la condición principal → hidratante.<br>Contorno solo si hay una condición periocular.';
+            return `
+                ${scSection('Capa 0 · Seguridad', `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">${SC_SAFETY.map(x =>
+                    scChip(!!s.safety[x.id], `scToggleSafety('${x.id}')`, x.label, s.fromIntake[x.id] && s.safety[x.id] ? fromIntake : '')).join('')}</div>`,
+                    'Bloquean los productos que no son seguros. Embarazo e isotretinoína se marcan solos si el ingreso lo dice.')}
+                ${scSection('Capa 1 · Nivel', `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    ${scRadio('sc-level', s.level === 'basic', `scSet('level','basic')`, '<b>Básica</b> · base + 1 activo')}
+                    ${scRadio('sc-level', s.level === 'advanced', `scSet('level','advanced')`, '<b>Avanzada</b> · doble limpieza, activos AM y PM, contorno, reparador, mascarilla')}</div>
+                    <p class="text-[11px] leading-relaxed bg-[#FDFBFC] border border-[#EDE1E7] rounded-lg px-3 py-2 mt-2">${protocol}</p>`)}
+                ${scSection('Capa 2 · Tipo de piel', `<div class="grid grid-cols-2 sm:grid-cols-5 gap-2">${SC_SKIN_TYPES.map(t =>
+                    scRadio('sc-skin', s.skin === t.id, `scSet('skin','${t.id}')`, t.label + (s.fromIntake.skin && currentAdmissionData?.skin_type === t.id ? fromIntake : ''))).join('')}</div>
+                    <div class="mt-2 ${s.skin === 'sensitive' ? 'hidden' : ''}">${scChip(s.sensitive, `scToggleSensitive()`, 'Además es <b>sensible</b> (sin fragancia, activos suaves, uno a la vez)')}</div>`)}
+                ${scSection('Capa 3 · Condiciones del rostro', `<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">${SC_FACE_CONCERNS.map(c =>
+                    scChip(s.concerns.includes(c.id), `scToggleConcern('${c.id}')`, c.label)).join('')}</div>`,
+                    s.level === 'basic'
+                        ? 'En la básica se trata 1 condición: la de mayor prioridad (melasma → acné → rosácea → manchas → arrugas → brillo → textura → deshidratación).'
+                        : 'Hasta 3. Se ordenan por prioridad: melasma → acné → rosácea → manchas → arrugas → brillo → textura → deshidratación.')}
+                ${scSection('Zona periocular', `<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">${SC_EYE_CONCERNS.map(c =>
+                    scChip(s.concerns.includes(c.id), `scToggleConcern('${c.id}')`, c.label)).join('')}</div>
+                    ${eyeConcern || s.level === 'advanced' ? '' : `<div class="mt-2">${scChip(s.eye, `scSet('eye', ${!s.eye})`, 'Incluir contorno de ojos hidratante aunque no haya condición periocular')}</div>`}`,
+                    'Cualquier condición periocular activa el paso de contorno, en cualquier nivel. En la avanzada el contorno siempre está.')}
+                <div class="flex justify-between items-center gap-3 pt-2 flex-wrap">
+                    <button onclick="scOpenCatalog()" class="text-[10px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline">📦 Catálogo de productos</button>
+                    <button onclick="scGoTo(2)" class="bg-[#2A2330] text-white px-6 py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition rounded-lg">Ver productos sugeridos →</button>
+                </div>`;
+        }
+
+        function scSet(key, value) {
+            scState[key] = value;
+            if (key === 'skin' && value === 'sensitive') scState.sensitive = true;
+            scState.dirty = true;
+            scRerender();
+        }
+        function scToggleSensitive() { scState.sensitive = !scState.sensitive; scState.dirty = true; scRerender(); }
+        function scToggleSafety(id) { scState.safety[id] = !scState.safety[id]; scState.dirty = true; scRerender(); }
+        function scToggleConcern(id) {
+            const list = scState.concerns;
+            const i = list.indexOf(id);
+            if (i >= 0) list.splice(i, 1); else list.push(id);
+            scState.dirty = true;
+            scRerender();
+        }
+
+        function scConfigKey() {
+            const s = scState;
+            return JSON.stringify([s.level, s.skin, s.sensitive, [...s.concerns].sort(), s.eye, s.safety]);
+        }
+
+        function scGoTo(stage) {
+            if (stage >= 2 && !scState.skin) { alert('Elige el tipo de piel.'); return; }
+            if (stage >= 2 && scState.level === 'advanced' && scFaceConcerns().length > 3) { alert('En la avanzada trata hasta 3 condiciones del rostro. Desmarca alguna.'); return; }
+            if (stage === 2) {
+                // Configuración nueva → el protocolo vuelve a proponer la rutina completa.
+                const key = scConfigKey();
+                if (key !== scState.configKey) { scState.picks = {}; scApplySuggestions(); scState.configKey = key; }
+                else scPrunePicks();
+            }
+            if (stage === 3) {
+                scPrunePicks();
+                const missing = scVisibleSlots().filter(sl => sl.required && !(scState.picks[sl.id] || []).length).map(sl => sl.label);
+                if (missing.length) { alert('Elige al menos un producto en: ' + missing.join(', ') + '.'); return; }
+                const conflicts = scSelectionConflicts();
+                if (conflicts.length) { alert('Corrige antes de seguir:\n• ' + conflicts.join('\n• ')); return; }
+                scState.guideText = scBuildGuide();
+            }
+            scState.stage = stage;
+            scRender();
+        }
+
+        // Condiciones del rostro que se tratan, por jerarquía (la básica solo la primera).
+        function scFaceConcerns() {
+            const face = scState.concerns.filter(c => SC_FACE_CONCERNS.some(x => x.id === c))
+                .sort((a, b) => SC_HIERARCHY.indexOf(a) - SC_HIERARCHY.indexOf(b));
+            return scState.level === 'basic' ? face.slice(0, 1) : face;
+        }
+        function scEyeConcerns() { return scState.concerns.filter(c => SC_EYE_CONCERNS.some(x => x.id === c)); }
+        function scById(id) { return (scProducts || []).find(p => p.id === id); }
+
+        // Capa 1: pasos del protocolo según el nivel.
+        function scVisibleSlots() {
+            const s = scState, adv = s.level === 'advanced';
+            const face = scFaceConcerns(), eyeC = scEyeConcerns();
+            const pickedRetinoid = Object.values(s.picks).flat().some(x => { const p = scById(x.id); return p && scIsRetinoid(p); });
+            const slots = SC_SLOTS.map(sl => ({ ...sl, required: ['cleanser', 'moisturizer', 'spf'].includes(sl.id) })).filter(sl => {
+                switch (sl.id) {
+                    case 'double_cleanse': case 'weekly': case 'active_am': case 'active_pm': return adv && (!sl.id.startsWith('active') || face.length > 0);
+                    case 'serum': return adv || face.includes('dehydration');
+                    case 'active_one': return !adv && face.length > 0;
+                    case 'eye': return adv || eyeC.length > 0 || s.eye;
+                    case 'repair': return adv || s.sensitive || s.skin === 'dry' || !!s.safety.procedure || pickedRetinoid;
+                    default: return true;
+                }
+            });
+            // Un paso de activo sin productos posibles (p. ej. solo deshidratación) no se muestra.
+            return slots.filter(sl => !SC_ACTIVE_SLOTS.includes(sl.id) || scCandidates(sl).length > 0);
+        }
+
+        // Capas 2 y 3: candidatos de un paso, ordenados (sugerido → en stock → marca → coincidencias).
+        function scCandidates(slot) {
+            const s = scState, skin = s.skin;
+            const face = scFaceConcerns(), eyeC = scEyeConcerns();
+            const wanted = slot.id === 'eye' ? eyeC : face;
+            const suggested = (s.suggested && s.suggested[slot.id]) || [];
+            return (scProducts || []).filter(p => {
+                if (!slot.steps.includes(p.step) || p.us_available === false) return false;
+                const types = p.skin_types || [];
+                if (!(types.includes(skin) || (s.sensitive && types.includes('sensitive')))) return false;
+                if (SC_ACTIVE_SLOTS.includes(slot.id)) return (p.concerns || []).some(c => wanted.includes(c));
+                if (slot.id === 'eye' && eyeC.length) return (p.concerns || []).some(c => eyeC.includes(c));
+                return true;
+            }).map(p => ({ p, matches: (p.concerns || []).filter(c => wanted.includes(c)).length }))
+              .sort((a, b) => (Number(suggested.includes(b.p.id)) - Number(suggested.includes(a.p.id)))
+                    || (b.matches - a.matches) || (scBrandRank(a.p, a.p.step) - scBrandRank(b.p, b.p.step))
+                    || (Number(b.p.in_stock) - Number(a.p.in_stock)) || a.p.name.localeCompare(b.p.name))
+              .map(x => x.p);
+        }
+
+        // Capa 0 + guardrails clínicos: motivo por el que un producto no se puede elegir.
+        function scBlockReason(p, slotId) {
+            const s = scState, adv = s.level === 'advanced';
+            const face = scFaceConcerns();
+            if ((s.safety.pregnancy || s.safety.planning) && p.pregnancy === 'avoid') return s.safety.pregnancy ? 'Embarazo / lactancia' : 'Planea embarazo';
+            const strong = scIsRetinoid(p) || scIsAcid(p) || scHas(p, 'bpo') || scHas(p, 'hydroquinone');
+            if (s.safety.isotretinoin && (strong || (SC_ACTIVE_SLOTS.includes(slotId) && p.irritation > 0))) return 'Isotretinoína oral: solo base suave';
+            if (s.safety.procedure && (strong || (slotId === 'weekly' && p.irritation > 0))) return 'Procedimiento reciente: pausar activos';
+            if (scHas(p, 'tretinoin')) {
+                if (!adv) return 'Tretinoína: solo en rutina avanzada';
+                if (s.sensitive) return 'Tretinoína: no en piel sensible';
+                if (face.includes('redness')) return 'Tretinoína: no con rosácea';
+                if (!face.some(c => ['wrinkles', 'melasma', 'acne'].includes(c))) return 'Tretinoína: requiere arrugas, melasma o acné';
+            }
+            if (s.sensitive && p.irritation >= 2) return 'Piel sensible: demasiado irritante';
+            if (s.sensitive && p.irritation >= 1 && !SC_ACTIVE_SLOTS.includes(slotId)) return 'Piel sensible: la base debe ser sin activos';
+            if (face.includes('redness') && p.irritation >= 2) return 'Rosácea: demasiado irritante';
+            if (face.includes('melasma')) {
+                if (p.step === 'spf' && !p.tinted) return 'Melasma: usar protector con color';
+                if (scIsAcid(p) && p.irritation >= 2) return 'Melasma: evitar ácidos fuertes (inflaman)';
+            }
+            // Validación con lo ya elegido en otros pasos: un solo retinoide por rutina.
+            if (scIsRetinoid(p)) {
+                const other = scPickedProducts().find(x => x.slotId !== slotId && x.role !== 'alt' && scIsRetinoid(x.p));
+                if (other) return 'Ya hay un retinoide: ' + other.p.name;
+            }
+            return null;
+        }
+        function scWarnings(p) {
+            const s = scState, w = [];
+            if ((s.safety.pregnancy || s.safety.planning) && p.pregnancy === 'consult') w.push('consultar en embarazo');
+            if (p.is_prescription) w.push('receta: lo confirma un médico');
+            if (p.step === 'spf' && p.tinted) w.push('anota el tono');
+            if (scHas(p, 'bpo') && scPickedProducts().some(x => scHas(x.p, 'tretinoin'))) w.push('solo AM (degrada la tretinoína)');
+            if (p.step === 'eye' && p.pregnancy === 'avoid') w.push('no en embarazo');
+            return w;
+        }
+
+        function scPickedProducts() {
+            const out = [];
+            Object.entries(scState.picks).forEach(([slotId, list]) => list.forEach(x => { const p = scById(x.id); if (p) out.push({ slotId, role: x.role, p, tone: x.tone }); }));
+            return out;
+        }
+        function scEligible(slot, id) {
+            const p = scById(id);
+            return !!p && scCandidates(slot).some(c => c.id === id) && !scBlockReason(p, slot.id);
+        }
+
+        // Protocolo sugerido: llena cada paso con el producto de primera línea.
+        function scApplySuggestions() {
+            const s = scState;
+            s.suggested = {};
+            const face = scFaceConcerns(), eyeC = scEyeConcerns();
+            const used = new Set();
+            const choose = (slot, ids) => ids.find(id => !used.has(id) && scEligible(slot, id));
+            const set = (slot, list) => {
+                if (!list.length) return;
+                s.picks[slot.id] = list;
+                s.suggested[slot.id] = list.map(x => x.id);
+                list.forEach(x => used.add(x.id));
+            };
+            // Orden: los activos primero (deciden si hay retinoide → reparador).
+            const order = ['active_one', 'active_pm', 'active_am', 'eye', 'cleanser', 'double_cleanse', 'serum', 'moisturizer', 'spf', 'repair', 'weekly'];
+            for (let pass = 0; pass < 2; pass++) {
+                const visible = scVisibleSlots();
+                order.forEach(id => {
+                    const slot = visible.find(sl => sl.id === id);
+                    if (!slot || (s.picks[id] || []).length) return;
+                    if (id === 'active_one') {
+                        const c = face[0];
+                        const pick = c && choose(slot, [...SC_FIRST_LINE[c].pm, ...SC_FIRST_LINE[c].am]);
+                        if (pick) set(slot, [{ id: pick, role: 'main' }]);
+                        return;
+                    }
+                    if (id === 'active_pm' || id === 'active_am') {
+                        const key = id === 'active_pm' ? 'pm' : 'am';
+                        const list = [];
+                        for (const c of face) {
+                            const hasRetinoid = list.some(x => scIsRetinoid(scById(x.id) || {}));
+                            const pick = choose(slot, SC_FIRST_LINE[c][key].filter(pid => !(hasRetinoid && scIsRetinoid(scById(pid) || {}))));
+                            if (!pick || list.some(x => x.id === pick)) continue;
+                            // Noche: hasta 2 activos (rotación); mañana: 1.
+                            list.push({ id: pick, role: list.length ? 'plus' : 'main' });
+                            s.picks[id] = list;   // para que el bloqueo de un solo retinoide lo vea
+                            if (list.length >= (key === 'pm' ? 2 : 1)) break;
+                        }
+                        delete s.picks[id];
+                        set(slot, list);
+                        return;
+                    }
+                    if (id === 'weekly' && !face.some(c => ['acne', 'shine', 'texture', 'dehydration', 'redness'].includes(c))) return;
+                    // Pasos de base: el mejor candidato para la condición (marca y stock solo desempatan).
+                    const wanted = id === 'eye' ? eyeC : face;
+                    const cands = scCandidates(slot).filter(p => !used.has(p.id) && !scBlockReason(p, id));
+                    // Con retinoide en la rutina, la base debe ser sin ácidos; sin condición que lo pida, sin activos.
+                    const hasRetinoid = Object.values(s.picks).flat().some(x => scIsRetinoid(scById(x.id) || {}));
+                    const ACTIVE_CLASSES = ['retinoid', 'aha', 'bha', 'bpo', 'tyrosinase', 'tranexamic', 'vitc', 'azelaic', 'hydroquinone', 'antioxidant'];
+                    const score = p => {
+                        const matches = (p.concerns || []).filter(c => wanted.includes(c)).length;
+                        const hasActive = (p.classes || []).some(c => ACTIVE_CLASSES.includes(c));
+                        // Lo que la condición pide manda; el stock solo desempata.
+                        return (p.in_stock ? 2 : 0) + matches * 30 - (hasActive && !matches ? 40 : 0) + ((p.concerns || []).includes('dehydration') ? 10 : 0) - ((p.concerns || []).length && !matches && !(p.concerns || []).includes('dehydration') ? 8 : 0)
+                            - scBrandRank(p, p.step) * 5 - (p.irritation || 0) * (hasRetinoid ? 120 : 3)
+                        + (id === 'eye' && !eyeC.length && !(p.concerns || []).length ? 200 : 0)
+                        + (id === 'spf' && wanted.some(c => ['melasma', 'spots'].includes(c)) && p.tinted ? 50 : 0);
+                    };
+                    const best = cands.sort((a, b) => score(b) - score(a))[0];
+                    if (best) set(slot, [{ id: best.id, role: 'main' }]);
+                });
+            }
+        }
+        function scResetSuggestions() {
+            if (!confirm('¿Volver a la rutina sugerida? Se pierden los cambios que hiciste en los productos.')) return;
+            scState.picks = {};
+            scApplySuggestions();
+            scState.dirty = true;
+            scRerender();
+        }
+
+        // Quita elecciones que ya no aplican (paso oculto, producto fuera de la lista o bloqueado).
+        function scPrunePicks() {
+            for (let pass = 0; pass < 2; pass++) {
+                const visible = scVisibleSlots();
+                const visibleIds = new Set(visible.map(sl => sl.id));
+                Object.keys(scState.picks).forEach(slotId => {
+                    if (!visibleIds.has(slotId)) { delete scState.picks[slotId]; return; }
+                    const slot = visible.find(sl => sl.id === slotId);
+                    const allowed = new Set(scCandidates(slot).map(p => p.id));
+                    scState.picks[slotId] = scState.picks[slotId].filter(x => allowed.has(x.id) && !scBlockReason(scById(x.id), slotId));
+                    const list = scState.picks[slotId];
+                    if (list.length && !list.some(x => x.role === 'main')) list[0].role = 'main';
+                });
+            }
+        }
+        function scSelectionConflicts() {
+            const problems = [];
+            scPickedProducts().forEach(x => { const r = scBlockReason(x.p, x.slotId); if (r) problems.push(`${x.p.name}: ${r}`); });
+            Object.values(scState.picks).forEach(list => {
+                if (list.filter(x => x.role !== 'alt' && scIsRetinoid(scById(x.id) || {})).length > 1)
+                    problems.push('Dos retinoides a la vez en el mismo paso: marca uno como «Alternativa».');
+            });
+            return problems;
+        }
+
+        function scTogglePick(slotId, productId) {
+            const list = scState.picks[slotId] || (scState.picks[slotId] = []);
+            const i = list.findIndex(x => x.id === productId);
+            if (i >= 0) list.splice(i, 1);
+            else {
+                if (list.length >= 2) { alert('Máximo 2 productos por paso. Desmarca uno primero.'); scRerender(); return; }
+                list.push({ id: productId, role: list.length ? (SC_ACTIVE_SLOTS.includes(slotId) && slotId !== 'active_one' ? 'plus' : 'alt') : 'main' });
+            }
+            if (list.length && !list.some(x => x.role === 'main')) list[0].role = 'main';
+            scState.dirty = true;
+            scPrunePicks();
+            scRerender();
+        }
+        function scSetRole(slotId, productId, role) {
+            const list = scState.picks[slotId] || [];
+            const item = list.find(x => x.id === productId);
+            if (!item) return;
+            if (role === 'main') list.forEach(x => { if (x !== item && x.role === 'main') x.role = SC_ACTIVE_SLOTS.includes(slotId) && slotId !== 'active_one' ? 'plus' : 'alt'; });
+            item.role = role;
+            if (!list.some(x => x.role === 'main')) list[0].role = 'main';
+            scState.dirty = true;
+            scRerender();
+        }
+        function scSetTone(slotId, productId, tone) {
+            const item = (scState.picks[slotId] || []).find(x => x.id === productId);
+            if (item) { item.tone = tone; scState.dirty = true; }
+        }
+
+        function scRenderPicker() {
+            const s = scState;
+            const slots = scVisibleSlots();
+            const summary = [
+                s.level === 'advanced' ? 'Avanzada' : 'Básica',
+                'Piel ' + scLabel(SC_SKIN_TYPES, s.skin) + (s.sensitive && s.skin !== 'sensitive' ? ' + sensible' : ''),
+                ...scFaceConcerns().map(c => scLabel(SC_FACE_CONCERNS, c)),
+                ...scEyeConcerns().map(c => scLabel(SC_EYE_CONCERNS, c)),
+                ...SC_SAFETY.filter(x => s.safety[x.id]).map(x => '⚠️ ' + x.label),
+            ];
+            const notes = ['La rutina ya viene armada con el protocolo sugerido (✓ Sugerido). Cambia lo que quieras: el sistema sigue validando los bloqueos.'];
+            if (scFaceConcerns().includes('melasma')) notes.push('Melasma: el protector con color es obligatorio y se bloquean los ácidos fuertes.');
+            const markedFace = s.concerns.filter(c => SC_FACE_CONCERNS.some(x => x.id === c));
+            if (s.level === 'basic' && markedFace.length > 1) notes.push('Rutina básica: solo se trata «' + scLabel(SC_FACE_CONCERNS, scFaceConcerns()[0]) + '» (la de mayor prioridad). Para tratar más, cambia a avanzada.');
+            const slotsHtml = slots.map(sl => {
+                const cands = scCandidates(sl);
+                const picked = s.picks[sl.id] || [];
+                const suggested = s.suggested[sl.id] || [];
+                const rows = cands.map(p => {
+                    const pick = picked.find(x => x.id === p.id);
+                    const reason = pick ? null : scBlockReason(p, sl.id);
+                    const warns = scWarnings(p);
+                    const roles = Object.entries(SC_ROLES).filter(([k]) => k !== 'plus' || (SC_ACTIVE_SLOTS.includes(sl.id) && sl.id !== 'active_one'));
+                    return `<div class="flex items-start gap-3 px-3 py-2 border rounded-lg ${pick ? 'border-[#B76E88] bg-[#FBF0F3]' : 'border-[#EDE1E7]'} ${reason ? 'opacity-45' : ''}">
+                        <input type="checkbox" ${pick ? 'checked' : ''} ${reason ? 'disabled' : ''} onchange="scTogglePick('${sl.id}','${p.id}')" class="accent-[#B76E88] mt-1 flex-shrink-0">
+                        ${scThumb(p)}
+                        <div class="min-w-0 flex-1 text-xs">
+                            <p><span class="font-semibold text-[#2A2330]">${escapeHtml(p.name)}</span> <span class="opacity-60">· ${escapeHtml(p.brand)}</span>
+                                ${suggested.includes(p.id) ? '<span class="ml-1 text-[9px] uppercase tracking-widest font-bold text-white bg-[#B76E88] rounded-full px-2 py-0.5">✓ Sugerido</span>' : ''}
+                                ${p.in_stock ? '<span class="ml-1 text-[9px] uppercase tracking-widest font-bold text-[#B76E88]">★ En stock</span>' : ''}
+                                ${p.tinted ? '<span class="ml-1 text-[9px] uppercase tracking-widest opacity-60">con color</span>' : ''}</p>
+                            ${scPriceLine(p)}
+                            ${p.format || p.key_actives ? `<p class="text-[11px] opacity-60 mt-0.5">${p.format ? `<b class="font-medium">${escapeHtml(p.format)}</b>` : ''}${p.format && p.key_actives ? ' · ' : ''}${escapeHtml(p.key_actives || '')}</p>` : ''}
+                            ${p.internal_notes ? `<p class="text-[11px] italic opacity-50 mt-0.5">📝 ${escapeHtml(p.internal_notes)}</p>` : ''}
+                            ${reason ? `<p class="text-[11px] text-red-500 mt-0.5">⛔ ${escapeHtml(reason)}</p>` : ''}
+                            ${warns.length ? `<p class="text-[11px] text-amber-600 mt-0.5">⚠️ ${escapeHtml(warns.join(' · '))}</p>` : ''}
+                            ${pick ? `<div class="flex items-center gap-2 mt-1 flex-wrap">
+                                <select onchange="scSetRole('${sl.id}','${p.id}', this.value)" style="padding:3px 6px;font-size:11px;border:1px solid #EDE1E7;border-radius:6px;background:#fff;">
+                                    ${roles.map(([k, v]) => `<option value="${k}" ${pick.role === k ? 'selected' : ''}>${v}</option>`).join('')}
+                                </select>
+                                ${p.tinted ? ((p.shades || []).length
+                                    ? `<select onchange="scSetTone('${sl.id}','${p.id}', this.value)" style="padding:3px 6px;font-size:11px;border:1px solid #EDE1E7;border-radius:6px;background:#fff;"><option value="">Tono…</option>${p.shades.map(t => `<option ${pick.tone === t ? 'selected' : ''}>${escapeHtml(t)}</option>`).join('')}</select>`
+                                    : `<input type="text" placeholder="Tono (ej. Medium)" value="${escapeHtml(pick.tone || '')}" oninput="scSetTone('${sl.id}','${p.id}', this.value)" style="padding:3px 6px;font-size:11px;border:1px solid #EDE1E7;border-radius:6px;width:140px;">`) : ''}
+                            </div>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+                const hint = sl.id === 'repair' ? 'Noches de recuperación, piel sensible o seca, después de procedimientos o si hay irritación.'
+                    : sl.id === 'eye' ? 'Si la cara lleva retinoide o ácidos, la guía indica aplicar el contorno primero, como escudo.'
+                    : sl.id === 'active_one' ? 'Rutina básica: 1 activo para la condición principal. El 2.º producto queda como alternativa.'
+                    : SC_ACTIVE_SLOTS.includes(sl.id) ? 'Con 2 productos: «Además» = se usan los dos (si uno es retinoide, en noches distintas); «Alternativa» = uno u otro.'
+                    : 'El 2.º producto queda como alternativa para el paciente.';
+                return `<div class="mb-5">
+                    <div class="flex items-baseline justify-between gap-2 mb-1">
+                        <p class="text-[10px] uppercase tracking-widest font-bold text-[#B76E88]">${sl.label}${sl.required ? '' : ' <span class="opacity-50 normal-case tracking-normal font-normal">(opcional)</span>'}</p>
+                        <p class="text-[10px] opacity-50">${picked.length}/2</p>
+                    </div>
+                    <p class="text-[11px] opacity-50 mb-2">${hint}</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">${rows || '<p class="text-xs opacity-50 italic">No hay productos del catálogo para esta combinación.</p>'}</div>
+                </div>`;
+            }).join('');
+            return `
+                <div class="flex flex-wrap gap-1.5 mb-4">${summary.map(t => `<span class="text-[10px] px-2 py-1 rounded-full bg-[#FBF0F3] text-[#2A2330]">${escapeHtml(t)}</span>`).join('')}</div>
+                ${notes.map(n => `<p class="text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">${escapeHtml(n)}</p>`).join('')}
+                ${scCostSummary()}
+                ${slotsHtml}
+                <div class="flex justify-between gap-3 sticky bottom-0 z-10 bg-white -mb-5 py-3 border-t border-[#EDE1E7] flex-wrap">
+                    <div class="flex gap-2">
+                        <button onclick="scGoTo(1)" class="px-5 py-3 uppercase text-[10px] tracking-widest font-bold border border-[#EDE1E7] rounded-lg hover:border-[#B76E88]">← Capas</button>
+                        <button onclick="scResetSuggestions()" class="px-4 py-3 uppercase text-[10px] tracking-widest font-bold text-[#B76E88] hover:underline">↺ Volver a sugeridos</button>
+                    </div>
+                    <button onclick="scGoTo(3)" class="bg-[#2A2330] text-white px-6 py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition rounded-lg">Generar guía →</button>
+                </div>`;
+        }
+
+        // ---------- Guía ----------
+        function scItemsForSave() {
+            const items = [];
+            scVisibleSlots().forEach(sl => (scState.picks[sl.id] || []).forEach(x => {
+                const p = scById(x.id);
+                if (!p) return;
+                let time = sl.time;
+                if (sl.time === 'ampm' && p.time_of_day !== 'both') time = p.time_of_day;
+                if (sl.time === 'auto') time = p.time_of_day === 'am' ? 'am' : 'pm';
+                items.push({ slot: sl.id, step_label: sl.label, role: x.role, time, product_id: p.id, name: p.name, brand: p.brand,
+                    tone: x.tone || null, usage: p.usage || null, classes: p.classes || [], is_prescription: p.is_prescription, tinted: !!p.tinted,
+                    in_stock: !!p.in_stock, format: p.format || null });
+            }));
+            return items;
+        }
+
+        function scBuildGuide() {
+            const s = scState;
+            const items = scItemsForSave();
+            const firstName = String(currentPatientName || '').trim().split(/\s+/)[0] || '';
+            const bySlot = id => items.filter(it => it.slot === id);
+            const inTime = (list, t) => list.filter(it => it.time === t || it.time === 'ampm');
+            const fmt = it => `${it.name} (${it.brand})${it.tone ? ', tono ' + it.tone : ''}${it.in_stock ? ' · disponible en Piel Spa' : ''}`;
+            const line = (label, list) => {
+                const main = list.filter(it => it.role !== 'alt');
+                const alt = list.filter(it => it.role === 'alt');
+                if (!main.length) return null;
+                let txt = `${label}: ${main.map(fmt).join(' + ')}`;
+                if (alt.length) txt += `. Alternativa: ${alt.map(fmt).join(' o ')}`;
+                const usage = main.map(it => it.usage).filter(Boolean)[0];
+                if (usage) txt += `. ${usage}`;
+                return txt;
+            };
+            const mains = items.filter(it => it.role !== 'alt');
+            const activesAm = [...bySlot('active_am'), ...bySlot('active_one').filter(it => it.time === 'am')];
+            const activesPmAll = [...bySlot('active_pm'), ...bySlot('active_one').filter(it => it.time === 'pm')];
+            const pmActives = activesPmAll.filter(it => it.role !== 'alt');
+            const retinoid = mains.find(it => it.classes.includes('retinoid') && it.slot !== 'eye');
+            const tretinoin = mains.find(it => it.classes.includes('tretinoin'));
+            const faceAcid = mains.some(it => it !== retinoid && !['eye', 'weekly', 'cleanser', 'double_cleanse'].includes(it.slot) && SC_ACID.some(c => it.classes.includes(c)));
+            const eyeItems = bySlot('eye');
+            const eyeShield = eyeItems.length > 0 && (!!retinoid || faceAcid);
+            const repair = bySlot('repair');
+
+            const am = [], pm = [];
+            const push = (arr, txt) => { if (txt) arr.push(txt); };
+            push(am, line('Limpiador', inTime(bySlot('cleanser'), 'am')));
+            push(am, line('Sérum hidratante', bySlot('serum')));
+            push(am, line('Activo', activesAm));
+            push(am, line('Contorno de ojos', inTime(eyeItems, 'am')));
+            push(am, line('Hidratante', inTime(bySlot('moisturizer'), 'am')));
+            push(am, line('Protector solar', bySlot('spf')));
+
+            push(pm, line('Doble limpieza', bySlot('double_cleanse')));
+            const pmCleanser = inTime(bySlot('cleanser'), 'pm');
+            if (pmCleanser.some(it => it.role !== 'alt')) push(pm, line('Limpiador', pmCleanser));
+            else if (bySlot('cleanser').length) pm.push('Limpiador: uno suave sin activos (el de la mañana es solo para la mañana).');
+            if (eyeShield) { const eyeLine = line('Contorno de ojos (primero, como escudo)', inTime(eyeItems, 'pm')); if (eyeLine) pm.push(eyeLine + '. Aplícalo en el hueso orbital y espera 10 minutos antes del activo.'); }
+            if (retinoid && pmActives.length > 1) {
+                const others = pmActives.filter(it => it !== retinoid);
+                pm.push(`Activo de noche, en noches alternas: noches de retinoide, ${fmt(retinoid)}${retinoid.usage ? ' (' + retinoid.usage.replace(/\.$/, '') + ')' : ''}. Las otras noches, ${others.map(fmt).join(' + ')}`);
+            } else if (pmActives.length > 1) {
+                push(pm, line('Activos de noche (uno después del otro)', activesPmAll));
+            } else {
+                { const l = line('Activo de noche', activesPmAll); if (l) pm.push(tretinoin ? l + '. Técnica sándwich: hidratante, activo, hidratante.' : l); }
+            }
+            if (!eyeShield) push(pm, line('Contorno de ojos', inTime(eyeItems, 'pm')));
+            push(pm, line('Hidratante', inTime(bySlot('moisturizer'), 'pm')));
+            { const l = line('Reparador', repair); if (l) pm.push(l + (retinoid ? '. Al final de la noche y, sobre todo, en las noches de recuperación.' : '. Al final de la noche.')); }
+
+            const weekly = line('Mascarilla', bySlot('weekly'));
+
+            const tips = [];
+            const actives = mains.filter(it => SC_ACTIVE_SLOTS.includes(it.slot)).map(it => it.name);
+            if (actives.length) tips.push(`Semanas 1 y 2: solo limpiador, hidratante y protector. Semanas 3 y 4: agrega ${actives.length > 1 ? actives.slice(0, -1).join(', ') + ' y ' + actives[actives.length - 1] : actives[0]}, 2 o 3 veces por semana. Desde el mes 2: la frecuencia completa si no hay irritación.`);
+            if (tretinoin) tips.push('Tretinoína: empieza 2 noches por semana (por ejemplo lunes y jueves), una cantidad del tamaño de un guisante, con técnica sándwich: hidratante, tretinoína, hidratante. Subimos la frecuencia en tu control de 4 a 6 semanas.');
+            if (retinoid && (faceAcid || bySlot('weekly').some(it => SC_ACID.some(c => it.classes.includes(c))))) tips.push('Nunca uses el retinoide la misma noche que ácidos o la mascarilla exfoliante.');
+            if (tretinoin && mains.some(it => it.classes.includes('bpo'))) tips.push('El peróxido de benzoilo, solo en la mañana: de noche degrada la tretinoína.');
+            if (scFaceConcerns().includes('melasma')) tips.push('Melasma: protector con color todos los días, también en casa cerca de ventanas. Evita el calor directo (sauna, vapor) y no frotes la piel.');
+            if (eyeShield) tips.push('Aplica los activos del rostro evitando el área de los ojos.');
+            tips.push('Reaplica el protector cada 2 o 3 horas si estás al aire libre o cerca de ventanas.');
+            if (items.some(it => it.in_stock)) tips.push('Los productos marcados «disponible en Piel Spa» los encuentras en la clínica: pregúntanos en tu próxima visita o escríbenos.');
+            tips.push(`Si notas ardor, enrojecimiento o descamación fuerte: deja los activos de 3 a 5 noches, usa solo limpiador${repair.length ? ', reparador' : ''} e hidratante, y escríbenos.`);
+
+            const goals = [...scFaceConcerns().map(c => scLabel(SC_FACE_CONCERNS, c)), ...scEyeConcerns().map(c => scLabel(SC_EYE_CONCERNS, c))];
+            const header = `Hola${firstName ? ' ' + firstName : ''}, esta es tu rutina ${s.level === 'advanced' ? 'avanzada' : 'básica'} para piel ${scLabel(SC_SKIN_TYPES, s.skin).toLowerCase()}${s.sensitive && s.skin !== 'sensitive' ? ' y sensible' : ''}.`
+                + (goals.length ? ' Objetivos: ' + goals.join(', ').toLowerCase() + '.' : '');
+            const numbered = arr => arr.map((t, i) => `${i + 1}. ${t}`).join('\n');
+            return [
+                header,
+                '☀️ MAÑANA\n' + numbered(am),
+                pm.length ? '🌙 NOCHE\n' + numbered(pm) : '',
+                weekly ? '🗓️ UNA O DOS VECES POR SEMANA\n- ' + weekly : '',
+                'Indicaciones\n' + tips.map(t => '- ' + t).join('\n'),
+                SC_CONSENSUS_NOTE,
+            ].filter(Boolean).join('\n\n');
+        }
+
+        function scRenderGuideEditor() {
+            const hasPhone = !!whatsappNumber(currentPatientPhone);
+            return `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] uppercase font-bold opacity-50 mb-1 block">Guía (puedes editarla)</label>
+                        <textarea id="sc-guide-text" rows="22" oninput="scState.guideText = this.value; scState.dirty = true; document.getElementById('sc-guide-preview').innerHTML = renderRecommendationBody(this.value);" style="padding:10px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:8px;background:#fff;outline-color:#B76E88;resize:vertical;font-family:monospace;">${escapeHtml(scState.guideText)}</textarea>
+                        <p class="text-[10px] opacity-50 mt-1">La nota del consenso (AAD / J Cosmet Dermatol) se agrega siempre al enviar, aunque la borres aquí.</p>
+                    </div>
+                    <div>
+                        <label class="text-[10px] uppercase font-bold opacity-50 mb-1 block">Así la verá el paciente</label>
+                        <div id="sc-guide-preview" class="border border-[#EDE1E7] rounded-lg p-4 bg-[#FDFBFC] text-sm leading-relaxed" style="min-height:300px;">${renderRecommendationBody(scState.guideText)}</div>
+                    </div>
+                </div>
+                <div class="mt-4 space-y-2">
+                    <label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" id="sc-send-portal" checked class="accent-[#B76E88]"> Publicar en el portal del paciente (resumen en su inicio + guía completa)</label>
+                    <label class="flex items-center gap-2 text-xs ${hasPhone ? 'cursor-pointer' : 'opacity-40'}"><input type="checkbox" id="sc-send-wa" ${hasPhone ? '' : 'disabled'} class="accent-[#B76E88]"> Enviar por WhatsApp el mensaje${hasPhone ? '' : ' (sin teléfono válido)'}</label>
+                    <label class="flex items-center gap-2 text-xs ${hasPhone ? 'cursor-pointer' : 'opacity-40'} ml-6"><input type="checkbox" id="sc-send-wa-pdf" ${hasPhone ? 'checked' : 'disabled'} class="accent-[#B76E88]"> … y el PDF de la rutina</label>
+                </div>
+                <div class="flex flex-wrap justify-between gap-3 pt-4 mt-4 border-t border-[#EDE1E7]">
+                    <button onclick="scGoTo(2)" class="px-5 py-3 uppercase text-[10px] tracking-widest font-bold border border-[#EDE1E7] rounded-lg hover:border-[#B76E88]">← Productos</button>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="scDownloadPdf(scCurrentDraft())" class="px-5 py-3 uppercase text-[10px] tracking-widest font-bold border border-[#EDE1E7] rounded-lg hover:border-[#B76E88]">Ver PDF</button>
+                        <button id="sc-save-btn" onclick="saveSkincareRoutine()" class="bg-[#B76E88] text-white px-6 py-3 uppercase text-[10px] tracking-widest font-bold hover:bg-[#9C5570] transition rounded-lg">Guardar rutina</button>
+                    </div>
+                </div>`;
+        }
+
+        // La rutina que se está armando, con la misma forma que una guardada.
+        function scCurrentDraft() {
+            const s = scState;
+            return {
+                level: s.level, skin_type: s.skin, sensitive: s.sensitive,
+                concerns: [...scFaceConcerns(), ...scEyeConcerns()],
+                items: scItemsForSave(), guide_text: scWithNote(s.guideText), created_at: new Date().toISOString(),
+            };
+        }
+
+        async function saveSkincareRoutine() {
+            const s = scState;
+            const text = scWithNote(s.guideText);
+            if (!String(s.guideText || '').trim()) { alert('La guía está vacía.'); return; }
+            const toPortal = document.getElementById('sc-send-portal').checked;
+            const toWhatsApp = document.getElementById('sc-send-wa').checked;
+            const withPdf = toWhatsApp && document.getElementById('sc-send-wa-pdf').checked;
+            const btn = document.getElementById('sc-save-btn');
+            btn.disabled = true; btn.innerText = 'Guardando…';
+            const title = 'Tu rutina de skincare';
+            const today = clinicDateIso(0);
+            const draft = scCurrentDraft();
+            const results = [];
+            try {
+                const { data: routine, error } = await _supabase.from('skincare_routines').insert({
+                    patient_id: currentPatientId, level: s.level, skin_type: s.skin, sensitive: s.sensitive,
+                    concerns: draft.concerns, safety: s.safety, items: draft.items,
+                    guide_title: title, guide_text: text, published: toPortal,
+                }).select('*').single();
+                if (error) { alert('✗ No se pudo guardar la rutina: ' + error.message); return; }
+                results.push('✓ Rutina guardada en la historia.');
+                if (toPortal) {
+                    const { data: msg, error: msgError } = await _supabase.from('patient_messages')
+                        .insert({ patient_id: currentPatientId, subject: title, body: text, visit_date: today }).select('id').single();
+                    if (msgError) results.push('✗ No se publicó en Mensajes del portal: ' + msgError.message);
+                    else {
+                        await _supabase.from('skincare_routines').update({ message_id: msg.id }).eq('id', routine.id);
+                        results.push('✓ Visible en el portal: resumen en su inicio y guía completa en Mensajes.');
+                    }
+                }
+                scState = null;
+                scShowModal(false);
+                if (toWhatsApp) {
+                    btn.innerText = 'Enviando…';
+                    results.push(...await scSendWhatsApp(routine, withPdf));
+                }
+                loadSkincareRoutines();
+                loadNotes();
+                alert(results.join('\n'));
+            } finally {
+                if (btn.isConnected) { btn.disabled = false; btn.innerText = 'Guardar rutina'; }
+            }
+        }
+
+        // WhatsApp desde el número de la clínica: el mensaje y, si se pide, el PDF.
+        // Ventana de 24 h cerrada → plantilla de aviso; al tocarla, le llegan texto y PDF.
+        async function scSendWhatsApp(routine, withPdf) {
+            const results = [];
+            const title = routine.guide_title || 'Tu rutina de skincare';
+            const text = scWithNote(routine.guide_text);
+            let document_ = null;
+            if (withPdf) {
+                try {
+                    const blob = await scBuildPdfBlob(routine);
+                    const path = `skincare/${routine.patient_id}/${routine.id}.pdf`;
+                    const { error: upError } = await _supabase.storage.from('wa-media').upload(path, blob, { contentType: 'application/pdf', upsert: true });
+                    if (upError) throw new Error(upError.message);
+                    await _supabase.from('skincare_routines').update({ pdf_path: path }).eq('id', routine.id);
+                    document_ = { path, filename: SC_PDF_FILENAME, caption: 'Tu rutina de skincare en PDF 🧴' };
+                } catch (e) {
+                    results.push('✗ No se pudo preparar el PDF (' + e.message + '). Se envía solo el mensaje.');
+                }
+            }
+            const { data: waData, error: waError } = await _supabase.functions.invoke('whatsapp-send', {
+                body: { recommendation: { patient_id: routine.patient_id, texts: splitWhatsAppText(buildWhatsAppRecommendations([{ title, body: text }])),
+                    tratamiento: 'rutina de skincare', fecha: formatDayMonthEs(scLocalDate(routine.created_at)),
+                    ...(document_ ? { document: document_ } : {}) } },
+            });
+            if (waError || waData?.error) {
+                const problem = await functionError(waError, waData);
+                results.push('✗ WhatsApp automático falló (' + problem + '). Se abre WhatsApp para enviarlo a mano' + (withPdf ? '; el PDF se descarga para que lo adjuntes.' : '.'));
+                openWhatsAppModal({ name: currentPatientName, phone: currentPatientPhone, text: buildWhatsAppRecommendations([{ title, body: text }]) });
+                if (withPdf) scDownloadPdf(routine);
+            } else {
+                const pdfOk = !!document_ && waData.document === true;
+                results.push(waData.delivered
+                    ? (pdfOk ? '✓ WhatsApp enviado: mensaje y PDF.' : '✓ WhatsApp enviado (mensaje).')
+                    : '✓ WhatsApp: le llegó un aviso; al tocar "Ver recomendaciones" recibe la guía' + (pdfOk ? ' y el PDF.' : '.'));
+                if (document_ && !pdfOk) {
+                    results.push('✗ El PDF no salió: la función de WhatsApp aún no está actualizada. Se descarga para que lo adjuntes a mano.');
+                    scDownloadPdf(routine);
+                }
+            }
+            return results;
+        }
+
+        // Guía guardada: ver, copiar, PDF, reenviar por WhatsApp.
+        function openSkincareGuide(id) {
+            const r = scRoutines.find(x => x.id === id);
+            if (!r) return;
+            scState = { stage: 0, dirty: false, viewing: r };
+            document.getElementById('sc-title').innerText = 'Guía de skincare · ' + (currentPatientName || '');
+            document.getElementById('sc-stepper').innerText = formatDayMonthEs(scLocalDate(r.created_at)) + (r.published ? ' · visible en el portal' : ' · no publicada en el portal');
+            const hasPhone = !!whatsappNumber(currentPatientPhone);
+            document.getElementById('sc-body').innerHTML = `
+                <div class="border border-[#EDE1E7] rounded-lg p-5 bg-[#FDFBFC] text-sm leading-relaxed">${renderRecommendationBody(scWithNote(r.guide_text))}</div>
+                <div class="flex flex-wrap justify-end gap-2 pt-4">
+                    <button onclick="navigator.clipboard.writeText(scWithNote(scState.viewing.guide_text)).then(() => alert('Guía copiada.'))" class="px-5 py-3 uppercase text-[10px] tracking-widest font-bold border border-[#EDE1E7] rounded-lg hover:border-[#B76E88]">Copiar</button>
+                    <button onclick="scDownloadPdf(scState.viewing)" class="px-5 py-3 uppercase text-[10px] tracking-widest font-bold border border-[#EDE1E7] rounded-lg hover:border-[#B76E88]">Descargar PDF</button>
+                    ${hasPhone ? `<button id="sc-resend-btn" onclick="scResendWhatsApp()" class="bg-[#25D366] text-white px-5 py-3 uppercase text-[10px] tracking-widest font-bold rounded-lg hover:opacity-90">WhatsApp: mensaje + PDF</button>` : ''}
+                </div>`;
+            scShowModal(true);
+        }
+        async function scResendWhatsApp() {
+            const r = scState?.viewing;
+            if (!r || !confirm('¿Enviar por WhatsApp la guía y el PDF a ' + (currentPatientName || 'este paciente') + '?')) return;
+            const btn = document.getElementById('sc-resend-btn');
+            btn.disabled = true; btn.innerText = 'Enviando…';
+            try { alert((await scSendWhatsApp(r, true)).join('\n')); }
+            finally { if (btn.isConnected) { btn.disabled = false; btn.innerText = 'WhatsApp: mensaje + PDF'; } }
+        }
+
+        // ---------- Catálogo (solo admin): formato, activos, tonos, notas, stock, EE. UU., foto ----------
+        const SC_STEP_LABELS = { cleanser: 'Limpiador', double_cleanse: 'Doble limpieza', serum: 'Sérum hidratante', active_am: 'Activo AM',
+            active_pm: 'Activo PM', moisturizer: 'Hidratante', repair: 'Reparador', eye: 'Contorno', spf: 'Protector', weekly: 'Mascarilla' };
+        const SC_INPUT_STYLE = 'padding:6px 8px;font-size:12px;width:100%;border:1px solid #EDE1E7;border-radius:6px;background:#fff;';
+        let scCatalog = { all: [], query: '', filter: 'all', editing: null };
+
+        async function scOpenCatalog() {
+            const { data, error } = await _supabase.from('skincare_products').select('*').order('step').order('brand').order('name');
+            if (error) { alert('No se pudo cargar el catálogo: ' + error.message); return; }
+            scCatalog = { all: data || [], query: '', filter: 'all', editing: null };
+            scState.stage = 'catalog';
+            scRender();
+        }
+        function scCloseCatalog() {
+            scProducts = null;   // se recarga con los cambios
+            scLoadCatalog().then(() => { scState.stage = 1; scRender(); }).catch(e => alert(e.message));
+        }
+        function scCatalogFiltered() {
+            const q = scCatalog.query.trim().toLowerCase();
+            return scCatalog.all.filter(p => {
+                if (q && !`${p.name} ${p.brand} ${p.key_actives || ''} ${p.format || ''}`.toLowerCase().includes(q)) return false;
+                switch (scCatalog.filter) {
+                    case 'stock': return p.in_stock;
+                    case 'nophoto': return !p.image_url && p.us_available;
+                    case 'nonus': return !p.us_available;
+                    default: return true;
+                }
+            });
+        }
+        function scRenderCatalog() {
+            const filters = [['all', 'Todos'], ['stock', '★ En stock'], ['nophoto', 'Sin foto'], ['nonus', 'Fuera de EE. UU.']];
+            return `
+                <div class="flex flex-wrap items-center gap-2 mb-3">
+                    <input type="search" placeholder="Buscar producto, marca o activo…" value="${escapeHtml(scCatalog.query)}" oninput="scCatalog.query = this.value; scCatalogRefreshList()" style="${SC_INPUT_STYLE}max-width:300px;">
+                    ${filters.map(([k, v]) => `<button onclick="scCatalog.filter='${k}'; scRerender()" class="text-[10px] px-3 py-1.5 rounded-full border ${scCatalog.filter === k ? 'border-[#B76E88] bg-[#FBF0F3] font-bold' : 'border-[#EDE1E7]'}">${v}</button>`).join('')}
+                </div>
+                <p class="text-[11px] opacity-50 mb-3">Las fotos y precios son solo para el equipo. El precio de mercado es una referencia aproximada en EE. UU.; en los productos en stock puedes escribir tu <b>precio Piel Spa</b> directo en la lista. Los productos fuera de EE. UU. no aparecen al armar rutinas.</p>
+                <div id="sc-catalog-list" class="space-y-2">${scCatalogRows(scCatalogFiltered())}</div>
+                <div class="flex justify-start sticky bottom-0 z-10 bg-white -mb-5 py-3 border-t border-[#EDE1E7] mt-4">
+                    <button onclick="scCloseCatalog()" class="px-5 py-3 uppercase text-[10px] tracking-widest font-bold border border-[#EDE1E7] rounded-lg hover:border-[#B76E88]">← Volver a la rutina</button>
+                </div>`;
+        }
+        function scCatalogRefreshList() {
+            const el = document.getElementById('sc-catalog-list');
+            if (el) el.innerHTML = scCatalogRows(scCatalogFiltered());
+        }
+        // Precio Piel Spa directo desde la lista del catálogo (filtro «En stock»), sin abrir el editor.
+        async function scQuickClinicPrice(id, value) {
+            const v = value === '' ? null : Number(value);
+            const { error } = await _supabase.from('skincare_products').update({ clinic_price_usd: v }).eq('id', id);
+            if (error) { alert('No se pudo guardar el precio: ' + error.message); return; }
+            const p = scCatalog.all.find(x => x.id === id);
+            if (p) p.clinic_price_usd = v;
+            scCatalogRefreshList();
+        }
+        // Costo y margen (solo en el catálogo del admin).
+        function scCostLine(p) {
+            if (p.cost_usd == null) return '';
+            const sell = p.clinic_price_usd != null ? Number(p.clinic_price_usd) : (p.price_usd != null ? Number(p.price_usd) : null);
+            const margin = sell ? Math.round((sell - Number(p.cost_usd)) / sell * 100) : null;
+            return `<p class="text-[11px] opacity-60">Costo $${Number(p.cost_usd).toFixed(2)}${margin != null ? ` · margen ${margin}% ${p.clinic_price_usd != null ? 'con tu precio' : 'al precio sugerido'}` : ''}</p>`;
+        }
+        function scCatalogField(label, html) {
+            return `<label class="block"><span class="text-[10px] uppercase font-bold opacity-50">${label}</span>${html}</label>`;
+        }
+        function scCatalogRows(rows) {
+            if (!rows.length) return '<p class="text-xs opacity-50 italic">Nada con ese filtro.</p>';
+            const st = SC_INPUT_STYLE, field = scCatalogField;
+            return rows.map(p => {
+                const editing = scCatalog.editing === p.id;
+                return `<div class="border rounded-lg ${editing ? 'border-[#B76E88]' : 'border-[#EDE1E7]'} ${p.us_available ? '' : 'opacity-60'}">
+                    <div class="flex items-center gap-3 px-3 py-2">
+                        ${scThumb(p, 48)}
+                        <div class="min-w-0 flex-1 text-xs">
+                            <p><span class="font-semibold">${escapeHtml(p.name)}</span> <span class="opacity-60">· ${escapeHtml(p.brand)}</span>
+                                ${p.in_stock ? '<span class="ml-1 text-[9px] uppercase tracking-widest font-bold text-[#B76E88]">★ En stock</span>' : ''}
+                                ${p.us_available ? '' : '<span class="ml-1 text-[9px] uppercase tracking-widest font-bold text-red-400">Fuera de EE. UU.</span>'}</p>
+                            <p class="opacity-60">${SC_STEP_LABELS[p.step] || p.step}${p.format ? ' · ' + escapeHtml(p.format) : ''}${p.key_actives ? ' · ' + escapeHtml(p.key_actives) : ''}</p>
+                            ${scPriceLine(p)}
+                            ${scCostLine(p)}
+                        </div>
+                        ${p.in_stock && !editing ? `<label class="flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold opacity-70 flex-shrink-0">Piel Spa $<input type="number" min="0" step="0.01" value="${p.clinic_price_usd ?? ''}" onchange="scQuickClinicPrice('${p.id}', this.value)" style="width:70px;padding:4px 6px;font-size:12px;border:1px solid #EDE1E7;border-radius:6px;" title="Tu precio de venta; se guarda al salir del campo"></label>` : ''}
+                        <button onclick="scCatalog.editing = ${editing ? 'null' : `'${p.id}'`}; scCatalogRefreshList()" class="text-[10px] uppercase tracking-widest font-bold text-[#B76E88] flex-shrink-0">${editing ? 'Cerrar' : 'Editar'}</button>
+                    </div>
+                    ${editing ? `<div class="grid grid-cols-1 md:grid-cols-2 gap-3 px-3 pb-3 pt-1 border-t border-[#EDE1E7]">
+                        ${field('Formato', `<input id="scc-format" value="${escapeHtml(p.format || '')}" placeholder="gel, espuma, crema…" style="${st}">`)}
+                        ${field('Activos clave y %', `<input id="scc-actives" value="${escapeHtml(p.key_actives || '')}" placeholder="Retinol 0.3% + bakuchiol" style="${st}">`)}
+                        ${field('Precio aproximado (USD)', `<input id="scc-price" type="number" min="0" step="0.01" value="${p.price_usd ?? ''}" placeholder="ej. 47" style="${st}">`)}
+                        ${field('Presentación', `<input id="scc-size" value="${escapeHtml(p.size || '')}" placeholder="ej. 50 ml" style="${st}">`)}
+                        ${field('Costo para Piel Spa (USD) — precio profesional', `<input id="scc-cost" type="number" min="0" step="0.01" value="${p.cost_usd ?? ''}" placeholder="ej. 24.50" style="${st}">`)}
+                        ${field('Precio Piel Spa (USD) — tu precio de venta', `<input id="scc-clinic-price" type="number" min="0" step="0.01" value="${p.clinic_price_usd ?? ''}" placeholder="ej. 55" style="${st}">`)}
+                        ${field('Tonos disponibles (separados por coma)', `<input id="scc-shades" value="${escapeHtml((p.shades || []).join(', '))}" placeholder="Fair, Light, Medium" style="${st}">`)}
+                        ${field('Foto (pega un enlace o sube un archivo)', `<input id="scc-image" value="${escapeHtml(p.image_url || '')}" placeholder="https://…" style="${st}"><input id="scc-file" type="file" accept="image/*" class="mt-1 text-[11px]">`)}
+                        <div class="md:col-span-2">${field('Notas internas (no salen en la guía)', `<textarea id="scc-notes" rows="2" style="${st}resize:vertical;">${escapeHtml(p.internal_notes || '')}</textarea>`)}</div>
+                        <div class="md:col-span-2 flex flex-wrap items-center gap-4 text-xs">
+                            <label class="flex items-center gap-2"><input id="scc-stock" type="checkbox" ${p.in_stock ? 'checked' : ''} class="accent-[#B76E88]"> ★ En stock en Piel Spa</label>
+                            <label class="flex items-center gap-2"><input id="scc-us" type="checkbox" ${p.us_available ? 'checked' : ''} class="accent-[#B76E88]"> Se consigue en EE. UU.</label>
+                            <label class="flex items-center gap-2"><input id="scc-active" type="checkbox" ${p.active ? 'checked' : ''} class="accent-[#B76E88]"> Activo en el catálogo</label>
+                            <button id="scc-save" onclick="scCatalogSave('${p.id}')" class="ml-auto bg-[#2A2330] text-white px-5 py-2 uppercase text-[10px] tracking-widest font-bold hover:bg-[#B76E88] transition rounded-lg">Guardar</button>
+                        </div>
+                    </div>` : ''}
+                </div>`;
+            }).join('');
+        }
+        async function scCatalogSave(id) {
+            const btn = document.getElementById('scc-save');
+            btn.disabled = true; btn.innerText = 'Guardando…';
+            try {
+                let imageUrl = document.getElementById('scc-image').value.trim() || null;
+                const file = document.getElementById('scc-file').files[0];
+                if (file) {
+                    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const path = `${id}-${Date.now()}.${ext}`;
+                    const { error: upError } = await _supabase.storage.from('skincare-products').upload(path, file, { contentType: file.type, upsert: true });
+                    if (upError) { alert('No se pudo subir la foto: ' + upError.message); return; }
+                    imageUrl = _supabase.storage.from('skincare-products').getPublicUrl(path).data.publicUrl;
+                }
+                const patch = {
+                    format: document.getElementById('scc-format').value.trim() || null,
+                    key_actives: document.getElementById('scc-actives').value.trim() || null,
+                    shades: document.getElementById('scc-shades').value.split(',').map(x => x.trim()).filter(Boolean),
+                    internal_notes: document.getElementById('scc-notes').value.trim() || null,
+                    price_usd: document.getElementById('scc-price').value === '' ? null : Number(document.getElementById('scc-price').value),
+                    size: document.getElementById('scc-size').value.trim() || null,
+                    clinic_price_usd: document.getElementById('scc-clinic-price').value === '' ? null : Number(document.getElementById('scc-clinic-price').value),
+                    cost_usd: document.getElementById('scc-cost').value === '' ? null : Number(document.getElementById('scc-cost').value),
+                    image_url: imageUrl,
+                    in_stock: document.getElementById('scc-stock').checked,
+                    us_available: document.getElementById('scc-us').checked,
+                    active: document.getElementById('scc-active').checked,
+                };
+                const { data, error } = await _supabase.from('skincare_products').update(patch).eq('id', id).select('*').single();
+                if (error) { alert('No se pudo guardar: ' + error.message); return; }
+                const i = scCatalog.all.findIndex(p => p.id === id);
+                if (i >= 0) scCatalog.all[i] = data;
+                scCatalog.editing = null;
+                scCatalogRefreshList();
+            } finally {
+                if (btn.isConnected) { btn.disabled = false; btn.innerText = 'Guardar'; }
+            }
+        }
+
+        // ---------- PDF ----------
+        // Explicación de cada paso (va al final del PDF).
+        const SC_WHY_STEP = {
+            cleanser: ['Limpiador', 'Retira grasa, sudor, contaminación y restos de producto sin dañar la barrera de la piel. Una piel limpia deja que los tratamientos actúen; un limpiador suave evita la irritación.'],
+            double_cleanse: ['Doble limpieza', 'El protector solar y el maquillaje están hechos para resistir el agua. El primer paso (aceite o agua micelar) los disuelve para que el limpiador termine el trabajo sin frotar.'],
+            serum: ['Sérum hidratante', 'Aporta agua a la piel (ácido hialurónico, activos de barrera). Una piel bien hidratada se ve más firme y tolera mejor los activos.'],
+            eye: ['Contorno de ojos', 'La piel alrededor de los ojos es más fina y sensible que la del resto del rostro, por eso necesita fórmulas específicas. Cuando usas activos fuertes en la cara, aplicarlo primero la protege como un escudo.'],
+            moisturizer: ['Hidratante', 'Sella el agua dentro de la piel y repara la barrera, la capa que la protege de irritantes y de la deshidratación. También reduce la irritación que pueden causar los activos.'],
+            repair: ['Reparador', 'Con ingredientes como pantenol, centella o ceramidas, calma y reconstruye la barrera. Es clave en las noches de recuperación y cuando la piel se irrita.'],
+            spf: ['Protector solar', 'El sol es la causa principal de envejecimiento prematuro y manchas. Sin protector diario, ningún tratamiento puede dar resultados, y los activos pueden volver la piel más sensible al sol.'],
+            weekly: ['Mascarilla semanal', 'Un complemento 1 o 2 veces por semana para limpiar en profundidad, renovar o hidratar de forma intensiva, según tu tipo de piel.'],
+        };
+        const SC_WHY_ACTIVE = [
+            ['tretinoin', 'Tretinoína', 'Es el retinoide más estudiado en dermatología: acelera la renovación de la piel y estimula el colágeno, mejorando arrugas finas, textura, manchas y acné. Se usa de noche (la luz la degrada), se introduce poco a poco y se ajusta en los controles.'],
+            ['retinoid', 'Retinoide', 'Acelera la renovación celular y estimula el colágeno: mejora arrugas finas, textura, manchas y poros. Se usa de noche y se introduce poco a poco para que la piel se acostumbre.'],
+            ['tranexamic', 'Ácido tranexámico', 'Frena las señales que activan la producción de pigmento y la vía inflamatoria del melasma. Aclara las manchas de forma gradual y es bien tolerado.'],
+            ['tyrosinase', 'Despigmentante', 'Inhibe la tirosinasa, la enzima que fabrica la melanina (el pigmento de las manchas), para aclararlas y evitar que reaparezcan.'],
+            ['vitc', 'Vitamina C', 'Antioxidante: neutraliza el daño de la radiación y la contaminación durante el día, potencia al protector solar y aporta luminosidad.'],
+            ['antioxidant', 'Antioxidantes', 'Protegen la piel del daño de la radiación y la contaminación, aportan luminosidad y potencian al protector solar.'],
+            ['niacinamide', 'Niacinamida', 'Regula el sebo, refuerza la barrera y ayuda a reducir manchas, poros visibles y rojeces.'],
+            ['azelaic', 'Ácido azelaico', 'Antiinflamatorio y despigmentante suave: útil en melasma, acné y rosácea. Es de los pocos activos seguros en el embarazo.'],
+            ['hydroquinone', 'Hidroquinona', 'Despigmentante potente que se usa por ciclos cortos y bajo control médico.'],
+            ['bha', 'Ácido salicílico (BHA)', 'Entra en el poro y lo limpia por dentro: reduce brillo, puntos negros y granitos.'],
+            ['aha', 'Ácidos exfoliantes (AHA)', 'Despegan las células muertas de la superficie para una piel más lisa y luminosa.'],
+            ['bpo', 'Peróxido de benzoilo', 'Elimina la bacteria que participa en el acné y reduce la inflamación de los granitos.'],
+            ['bakuchiol', 'Bakuchiol', 'Alternativa vegetal al retinol, mejor tolerada por pieles sensibles.'],
+            ['ha', 'Ácido hialurónico', 'Atrae y retiene agua en la piel para hidratarla y rellenar visualmente las líneas finas.'],
+        ];
+        // Por qué cada paso: uno por paso usado, con los activos elegidos explicados aparte.
+        function scWhySections(items) {
+            const mains = (items || []).filter(it => it.role !== 'alt');
+            const out = [];
+            const steps = ['cleanser', 'double_cleanse', 'serum', 'ACTIVES', 'eye', 'moisturizer', 'repair', 'spf', 'weekly'];
+            steps.forEach(step => {
+                if (step === 'ACTIVES') {
+                    const actives = mains.filter(it => SC_ACTIVE_SLOTS.includes(it.slot));
+                    if (!actives.length) return;
+                    const seen = new Set();
+                    const parts = [];
+                    actives.forEach(it => {
+                        const found = SC_WHY_ACTIVE.find(([cls]) => (it.classes || []).includes(cls));
+                        if (found && !seen.has(found[0])) { seen.add(found[0]); parts.push({ title: `${found[1]} · ${it.name}`, text: found[2] }); }
+                    });
+                    out.push({ title: 'Activo de tratamiento', text: 'Es el paso que trata tu objetivo (manchas, arrugas, acné…). Va justo después de limpiar, que es cuando la piel lo aprovecha mejor.', parts });
+                    return;
+                }
+                if (!mains.some(it => it.slot === step)) return;
+                const [title, text] = SC_WHY_STEP[step];
+                let extra = '';
+                if (step === 'spf' && mains.some(it => it.slot === 'spf' && it.tinted)) extra = ' El color (óxidos de hierro) bloquea además la luz visible, que empeora el melasma y las manchas.';
+                out.push({ title, text: text + extra, parts: [] });
+            });
+            return out;
+        }
+
+        // Precio aproximado y presentación (solo admin).
+        function scPriceLine(p) {
+            if (p.price_usd == null && p.clinic_price_usd == null && !p.size) return '';
+            const clinic = p.clinic_price_usd != null
+                ? `<span class="font-semibold text-[#B76E88]">Piel Spa $${Number(p.clinic_price_usd).toFixed(0)}</span> · ` : '';
+            const price = p.price_usd != null ? `$${Number(p.price_usd).toFixed(0)}` : '';
+            const per = p.price_usd != null && p.size && /^\d+(\.\d+)?\s*(ml|g)$/i.test(p.size.trim())
+                ? ` · $${(Number(p.price_usd) / parseFloat(p.size)).toFixed(2)}/${p.size.trim().replace(/^[\d.\s]+/, '')}` : '';
+            return `<p class="text-[11px] mt-0.5">${clinic}<span class="${clinic ? 'opacity-60' : 'font-semibold text-[#2A2330]'}">${clinic && price ? 'mercado ' : ''}${price}</span>${price && p.size ? ' · ' : ''}<span class="opacity-60">${escapeHtml(p.size || '')}${per}</span>${price ? ' <span class="opacity-40">(aprox.)</span>' : ''}</p>`;
+        }
+        // Costo aproximado de la rutina elegida (productos principales y «además», sin alternativas).
+        function scCostSummary() {
+            const picked = scPickedProducts().filter(x => x.role !== 'alt');
+            if (!picked.length) return '';
+            const priceOf = x => x.p.in_stock && x.p.clinic_price_usd != null ? Number(x.p.clinic_price_usd) : Number(x.p.price_usd);
+            const priced = picked.filter(x => (x.p.in_stock && x.p.clinic_price_usd != null) || x.p.price_usd != null);
+            const total = priced.reduce((t, x) => t + priceOf(x), 0);
+            const stock = priced.filter(x => x.p.in_stock).reduce((t, x) => t + priceOf(x), 0);
+            const missing = picked.length - priced.length;
+            return `<p class="text-xs bg-[#FDFBFC] border border-[#EDE1E7] rounded-lg px-3 py-2 mb-3">💲 Costo aproximado de la rutina: <b>$${total.toFixed(0)}</b>`
+                + (stock ? ` · de eso, en stock en Piel Spa: <b>$${stock.toFixed(0)}</b>` : '')
+                + (missing ? ` · ${missing} producto${missing > 1 ? 's' : ''} sin precio` : '') + ` <span class="opacity-50">(en stock: precio Piel Spa si lo cargaste; el resto, referencia en EE. UU.)</span></p>`;
+        }
+
+        function scPdfStockBadge(html) {
+            return html.replace(/ · disponible en Piel Spa/g, ' <span style="display:inline-block;padding:1px 7px;border-radius:999px;background:#B76E88;color:#fff;font:600 8px Montserrat,sans-serif;letter-spacing:.08em;text-transform:uppercase;vertical-align:1px;">Disponible en Piel Spa</span>');
+        }
+
+        // Miniatura del producto (foto de referencia, solo en el admin) que se amplía al tocarla.
+        function scThumb(p, size = 44) {
+            const box = `width:${size}px;height:${size}px;flex:0 0 ${size}px;`;
+            if (!p.image_url) return `<div style="${box}" class="rounded-md bg-[#FBF0F3] flex items-center justify-center text-base opacity-60" title="Sin foto">🧴</div>`;
+            return `<img src="${escapeHtml(p.image_url)}" alt="" loading="lazy" style="${box}object-fit:contain;background:#fff;" class="rounded-md border border-[#EDE1E7] cursor-zoom-in" onclick="event.preventDefault(); event.stopPropagation(); scZoom('${p.id}')" onerror="this.replaceWith(Object.assign(document.createElement('div'), { textContent: '🧴', className: 'rounded-md bg-[#FBF0F3] flex items-center justify-center text-base opacity-60', style: '${box}' }))">`;
+        }
+        function scZoom(id) {
+            const p = scById(id);
+            if (!p?.image_url) return;
+            const overlay = document.createElement('div');
+            overlay.className = 'fixed inset-0 z-[90] bg-black/70 flex items-center justify-center p-6 cursor-zoom-out';
+            overlay.onclick = () => overlay.remove();
+            overlay.innerHTML = `<div class="bg-white rounded-2xl p-6 max-w-lg w-full text-center" onclick="event.stopPropagation()">
+                <img src="${escapeHtml(p.image_url)}" alt="" style="max-height:60vh;max-width:100%;object-fit:contain;margin:0 auto;">
+                <p class="mt-4 text-sm font-semibold">${escapeHtml(p.name)}</p>
+                <p class="text-xs opacity-60">${escapeHtml(p.brand)}${p.format ? ' · ' + escapeHtml(p.format) : ''}</p>
+                ${p.key_actives ? `<p class="text-xs mt-1">${escapeHtml(p.key_actives)}</p>` : ''}
+                <button onclick="this.closest('.fixed').remove()" class="mt-4 text-[10px] uppercase tracking-widest font-bold text-[#B76E88]">Cerrar</button></div>`;
+            document.body.appendChild(overlay);
+        }
+
+        let scPdfLibPromise = null;
+        function scLoadPdfLib() {
+            if (window.html2pdf) return Promise.resolve();
+            if (!scPdfLibPromise) scPdfLibPromise = new Promise((resolve, reject) => {
+                const tag = document.createElement('script');
+                tag.src = SC_PDF_LIB;
+                tag.onload = () => resolve();
+                tag.onerror = () => { scPdfLibPromise = null; reject(new Error('no se pudo cargar el generador de PDF')); };
+                document.head.appendChild(tag);
+            });
+            return scPdfLibPromise;
+        }
+
+        // Convierte el texto de la guía (editable) en bloques para el PDF.
+        function scParseGuide(text) {
+            const blocks = String(text || '').split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+            const out = { intro: [], am: [], pm: [], weekly: [], tips: [], note: '', other: [] };
+            blocks.forEach(b => {
+                const lines = b.split('\n').map(l => l.trim()).filter(Boolean);
+                const head = lines[0];
+                const rest = lines.slice(1).map(l => l.replace(/^(\d+\.|[-*])\s+/, ''));
+                if (/^☀️|^MAÑANA/i.test(head)) out.am.push(...rest);
+                else if (/^🌙|^NOCHE/i.test(head)) out.pm.push(...rest);
+                else if (/^🗓️/.test(head)) out.weekly.push(...rest);
+                else if (/^Indicaciones/i.test(head)) out.tips.push(...rest);
+                else if (/^📚/.test(head)) out.note = b.replace(/^📚\s*/, '');
+                else if (!out.am.length && !out.pm.length) out.intro.push(b);
+                else out.other.push(b);
+            });
+            return out;
+        }
+
+        function scPdfHtml(routine) {
+            const g = scParseGuide(scWithNote(routine.guide_text));
+            const esc = escapeHtml;
+            const allConcerns = [...SC_FACE_CONCERNS, ...SC_EYE_CONCERNS];
+            const chips = [
+                `Rutina ${routine.level === 'advanced' ? 'avanzada' : 'básica'}`,
+                `Piel ${scLabel(SC_SKIN_TYPES, routine.skin_type).toLowerCase()}${routine.sensitive && routine.skin_type !== 'sensitive' ? ' y sensible' : ''}`,
+                ...(routine.concerns || []).map(c => scLabel(allConcerns, c)),
+            ];
+            const stepHtml = (t, i) => {
+                const m = t.match(/^([^:]{2,90}):\s*(.*)$/);
+                const label = m ? m[1] : '';
+                const body = m ? m[2] : t;
+                return `<div class="pdf-avoid" style="display:flex;gap:10px;margin:0 0 10px;">
+                    <div style="flex:0 0 22px;height:22px;border-radius:50%;background:#B76E88;color:#fff;font:600 11px/22px Outfit,sans-serif;text-align:center;">${i + 1}</div>
+                    <div style="flex:1;min-width:0;">
+                        ${label ? `<div style="font:600 9px Montserrat,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#B76E88;margin:3px 0 2px;">${esc(label)}</div>` : ''}
+                        <div style="font:400 11.5px/1.5 Outfit,sans-serif;color:#2A2330;">${scPdfStockBadge(esc(body))}</div>
+                    </div></div>`;
+            };
+            const column = (icon, title, list) => `
+                <div style="flex:1;min-width:0;background:#FDFBFC;border:1px solid #EDE1E7;border-radius:14px;padding:16px 16px 6px;">
+                    <div style="font:italic 500 22px 'Cormorant Garamond',serif;color:#2A2330;margin-bottom:12px;">${icon} ${title}</div>
+                    ${list.map(stepHtml).join('') || '<div style="font:12px Outfit;opacity:.5;">—</div>'}
+                </div>`;
+            const why = scWhySections(routine.items);
+            const date = formatDayMonthEs(scLocalDate(routine.created_at || new Date().toISOString()));
+            return `
+                <div style="width:720px;padding:8px 4px;font-family:Outfit,sans-serif;color:#2A2330;background:#fff;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #EDE1E7;padding-bottom:14px;">
+                        <img src="images/logo.png" style="height:46px;" crossorigin="anonymous">
+                        <div style="text-align:right;">
+                            <div style="font:italic 500 26px 'Cormorant Garamond',serif;color:#B76E88;">Tu rutina de skincare</div>
+                            <div style="font:600 9px Montserrat,sans-serif;letter-spacing:.15em;text-transform:uppercase;opacity:.55;margin-top:4px;">${esc(currentPatientName || '')} · ${esc(date)}</div>
+                        </div>
+                    </div>
+                    <div style="margin:14px 0 6px;">${chips.map(c => `<span style="display:inline-block;margin:0 6px 6px 0;padding:4px 10px;border-radius:999px;background:#FBF0F3;font:500 10.5px Outfit,sans-serif;">${esc(c)}</span>`).join('')}</div>
+                    ${g.intro.map(p => `<p style="font:300 12.5px/1.6 Outfit,sans-serif;margin:6px 0 14px;">${esc(p)}</p>`).join('')}
+                    <div style="display:flex;gap:14px;align-items:flex-start;">
+                        ${column('☀️', 'Mañana', g.am)}
+                        ${g.pm.length ? column('🌙', 'Noche', g.pm) : ''}
+                    </div>
+                    ${g.weekly.length ? `<div class="pdf-avoid" style="margin-top:14px;border:1px solid #EDE1E7;border-radius:14px;padding:12px 16px;">
+                        <div style="font:600 9px Montserrat,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#B76E88;margin-bottom:4px;">🗓️ Una o dos veces por semana</div>
+                        ${g.weekly.map(w => `<div style="font:400 11.5px/1.5 Outfit,sans-serif;">${scPdfStockBadge(esc(w))}</div>`).join('')}</div>` : ''}
+                    ${g.tips.length ? `<div class="pdf-avoid" style="margin-top:14px;background:#2A2330;color:#fff;border-radius:14px;padding:14px 18px;">
+                        <div style="font:italic 500 20px 'Cormorant Garamond',serif;margin-bottom:6px;">Indicaciones</div>
+                        ${g.tips.map(t => `<div style="display:flex;gap:8px;font:300 11.5px/1.55 Outfit,sans-serif;margin:4px 0;"><span style="color:#E7B8C8;">•</span><span>${esc(t)}</span></div>`).join('')}</div>` : ''}
+                    ${g.other.map(p => `<p style="font:300 12px/1.6 Outfit,sans-serif;margin:12px 0;">${esc(p)}</p>`).join('')}
+                    <div class="html2pdf__page-break"></div>
+                    <div style="font:italic 500 26px 'Cormorant Garamond',serif;color:#B76E88;margin:6px 0 4px;">Por qué cada paso</div>
+                    <p style="font:300 11.5px/1.6 Outfit,sans-serif;margin:0 0 14px;opacity:.8;">El orden va de lo más ligero a lo más denso: el tratamiento va justo después de limpiar, y el protector siempre al final de la mañana.</p>
+                    ${why.map(w => `<div class="pdf-avoid" style="border-left:3px solid #B76E88;padding:2px 0 2px 12px;margin:0 0 12px;">
+                        <div style="font:600 10px Montserrat,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2A2330;margin-bottom:3px;">${esc(w.title)}</div>
+                        <div style="font:300 11.5px/1.55 Outfit,sans-serif;">${esc(w.text)}</div>
+                        ${w.parts.map(p => `<div style="margin-top:6px;padding:8px 10px;background:#FDFBFC;border-radius:8px;"><div style="font:500 11px Outfit,sans-serif;color:#B76E88;">${esc(p.title)}</div><div style="font:300 11px/1.5 Outfit,sans-serif;">${esc(p.text)}</div></div>`).join('')}
+                    </div>`).join('')}
+                    <div class="pdf-avoid" style="margin-top:18px;padding-top:12px;border-top:1px solid #EDE1E7;font:300 10px/1.55 Outfit,sans-serif;opacity:.75;">${esc(g.note || SC_CONSENSUS_NOTE.replace(/^📚\s*/, ''))}</div>
+                    <div style="margin-top:8px;font:600 8.5px Montserrat,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#B76E88;">Piel Spa · piel-spa.com</div>
+                </div>`;
+        }
+
+        async function scPdfWorker(routine) {
+            await scLoadPdfLib();
+            const holder = document.createElement('div');
+            holder.style.cssText = 'position:fixed;left:-10000px;top:0;';
+            holder.innerHTML = scPdfHtml(routine);
+            document.body.appendChild(holder);
+            const imgs = [...holder.querySelectorAll('img')];
+            await Promise.all(imgs.map(img => img.complete ? null : new Promise(r => { img.onload = img.onerror = r; })));
+            if (document.fonts?.ready) await document.fonts.ready;
+            const worker = window.html2pdf().set({
+                margin: [12, 12, 14, 12],
+                filename: SC_PDF_FILENAME,
+                image: { type: 'jpeg', quality: 0.95 },
+                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'], avoid: '.pdf-avoid' },
+            }).from(holder.firstElementChild);
+            return { worker, cleanup: () => holder.remove() };
+        }
+        async function scBuildPdfBlob(routine) {
+            const { worker, cleanup } = await scPdfWorker(routine);
+            try { return await worker.outputPdf('blob'); } finally { cleanup(); }
+        }
+        async function scDownloadPdf(routine) {
+            try {
+                const { worker, cleanup } = await scPdfWorker(routine);
+                try { await worker.save(); } finally { cleanup(); }
+            } catch (e) { alert('No se pudo generar el PDF: ' + e.message); }
+        }
     </script>
 </body>
 </html>

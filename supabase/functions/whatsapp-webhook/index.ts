@@ -279,7 +279,7 @@ const PENDING_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
 
 async function deliverPending(db: SupabaseClient, conversationId: string, waId: string): Promise<number> {
   const { data: pending } = await db.from("wa_pending_messages")
-    .select("id, body, created_by, created_at").eq("conversation_id", conversationId).eq("status", "pending")
+    .select("id, body, created_by, created_at, media_path, media_type, media_filename").eq("conversation_id", conversationId).eq("status", "pending")
     .order("created_at");
   if (!pending?.length) return 0;
   const { data: before } = await db.from("wa_conversations").select("needs_attention, unread_count").eq("id", conversationId).single();
@@ -293,12 +293,23 @@ async function deliverPending(db: SupabaseClient, conversationId: string, waId: 
     let waMessageId = "";
     let sendError = "";
     try {
-      waMessageId = await sendWhatsAppMessage(waId, { type: "text", text: { body: p.body, preview_url: true } });
+      if (p.media_path) {
+        // A document (e.g. the skincare guide PDF) waiting in wa-media: signed link, caption = body.
+        const { data: signed, error: signError } = await db.storage.from("wa-media").createSignedUrl(p.media_path, 3600);
+        if (signError || !signed?.signedUrl) throw new Error("media_not_found");
+        waMessageId = await sendWhatsAppMessage(waId, {
+          type: "document",
+          document: { link: signed.signedUrl, filename: p.media_filename || "documento.pdf", ...(p.body ? { caption: p.body } : {}) },
+        });
+      } else {
+        waMessageId = await sendWhatsAppMessage(waId, { type: "text", text: { body: p.body, preview_url: true } });
+      }
     } catch (e) {
       sendError = (e as Error).message;
     }
     await db.from("wa_messages").insert({
-      conversation_id: conversationId, direction: "out", sender: "staff", staff_user_id: p.created_by, body: p.body,
+      conversation_id: conversationId, direction: "out", sender: "staff", staff_user_id: p.created_by, body: p.body || null,
+      ...(p.media_path ? { media_type: p.media_type || "document", media_path: p.media_path, media_mime: "application/pdf", media_filename: p.media_filename } : {}),
       wa_message_id: waMessageId || null, status: sendError ? "failed" : "sent", error: sendError || null,
     });
     await db.from("wa_pending_messages")
