@@ -8551,7 +8551,8 @@
 
             const goals = [...scFaceConcerns().map(c => scLabel(SC_FACE_CONCERNS, c)), ...scEyeConcerns().map(c => scLabel(SC_EYE_CONCERNS, c))];
             const header = `Hola${firstName ? ' ' + firstName : ''}, esta es tu rutina ${s.level === 'advanced' ? 'avanzada' : 'básica'} para piel ${scLabel(SC_SKIN_TYPES, s.skin).toLowerCase()}${s.sensitive && s.skin !== 'sensitive' ? ' y sensible' : ''}.`
-                + (goals.length ? ' Objetivos: ' + goals.join(', ').toLowerCase() + '.' : '');
+                + (goals.length ? ' Objetivos: ' + goals.join(', ').toLowerCase() + '.' : '')
+                + (items.some(it => it.role === 'alt') ? ' Cuando un paso dice «Alternativa», es una segunda opción: usa uno de los dos productos, no necesitas comprar ambos.' : '');
             const numbered = arr => arr.map((t, i) => `${i + 1}. ${t}`).join('\n');
             const weekly = line('Mascarilla', bySlot('weekly'));
             return [
