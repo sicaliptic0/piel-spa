@@ -85,7 +85,7 @@
             cuentas: cuentas.map(c => c.name),
             gastos: exp.map(e => ({ id: e.id, fecha: e.spent_on, descripcion: e.description, proveedor: e.vendor || '', categoria: e.category, libro: e.ledger,
                 monto: Number(e.amount), cuenta: e.account || '', pagado_por: e.paid_by, estado: e.reimb_status, fecha_reembolso: e.reimbursed_on, nota: e.note || '',
-                receipt: e.receipt_path, source: e.source })),
+                receipt: e.receipt_path, source: e.source, fijo: !!e.recurring_id })),
             movimientos: mov.map(m => ({ id: m.id, fecha: m.moved_on, socio: m.partner, tipo: m.kind, monto: Number(m.amount), concepto: m.concept,
                 confirmado: m.confirmed, nota: (m.note || '').replace(' [libro]', '').replace('[libro]', '') })),
             ingresos: [
@@ -308,7 +308,7 @@
         $('acc-gtbl').innerHTML = `<thead><tr><th><input type="checkbox" onchange="Acc.selAll(this)" aria-label="Seleccionar todos"></th>${th('gastos', 'fecha', 'Fecha')}${th('gastos', 'descripcion', 'Descripción')}${th('gastos', 'categoria', 'Categoría')}${th('gastos', 'monto', 'Monto', 'num')}${th('gastos', 'pagado_por', 'Pagado por')}${th('gastos', 'estado', 'Estado')}<th></th></tr></thead><tbody>` +
             list.map(g => `<tr><td><input type="checkbox" ${sel.has(g.id) ? 'checked' : ''} onchange="Acc.toggleSel('${g.id}', this.checked)" aria-label="Seleccionar"></td>
               <td class="whitespace-nowrap">${fdate(g.fecha)}</td>
-              <td><div>${esc(g.descripcion)}${g.receipt ? ` <button class="text-[11px] text-[#B76E88] underline" onclick="Acc.verRecibo('${g.id}')">recibo</button>` : ''}</div><div class="text-[11px] opacity-60">${esc(g.proveedor)}${g.proveedor && g.cuenta ? ' · ' : ''}${esc(g.cuenta)}${g.libro !== 'LLC' ? ` <span class="badge ${g.libro.startsWith('NJ') ? 'b-nj' : 'b-sd'}">${esc(g.libro.startsWith('NJ') ? 'NJ fuera' : g.libro)}</span>` : ''}${/jornada NJ/.test(g.nota) ? ' <span class="badge b-nj">viaje NJ</span>' : ''}${g.source === 'telefono' ? ' <span class="badge b-llc">teléfono</span>' : ''}</div></td>
+              <td><div>${esc(g.descripcion)}${g.receipt ? ` <button class="text-[11px] text-[#B76E88] underline" onclick="Acc.verRecibo('${g.id}')">recibo</button>` : ''}</div><div class="text-[11px] opacity-60">${esc(g.proveedor)}${g.proveedor && g.cuenta ? ' · ' : ''}${esc(g.cuenta)}${g.libro !== 'LLC' ? ` <span class="badge ${g.libro.startsWith('NJ') ? 'b-nj' : 'b-sd'}">${esc(g.libro.startsWith('NJ') ? 'NJ fuera' : g.libro)}</span>` : ''}${/jornada NJ/.test(g.nota) ? ' <span class="badge b-nj">viaje NJ</span>' : ''}${g.source === 'telefono' ? ' <span class="badge b-llc">teléfono</span>' : ''}${g.fijo ? ' <span class="badge b-cap">fijo</span>' : ''}</div></td>
               <td class="text-xs">${esc(g.categoria)}${g.categoria === 'Revisar' ? ' <span class="badge b-sd">revisar</span>' : ''}</td>
               <td class="num">${money(g.monto)}</td><td class="text-xs whitespace-nowrap">${esc(g.pagado_por)}</td>
               <td>${badgeEstado(g.estado)}${g.fecha_reembolso ? `<div class="text-[10px] opacity-60 mt-1">${fdate(g.fecha_reembolso)}</div>` : ''}</td>
@@ -321,7 +321,7 @@
               <div class="flex-1 min-w-0">
                 <div class="flex justify-between gap-2"><p class="text-[15px] font-medium leading-snug break-words min-w-0">${esc(g.descripcion)}</p><p class="text-[15px] font-semibold whitespace-nowrap">${money(g.monto)}</p></div>
                 <p class="text-[12px] opacity-60 mt-0.5">${fdate(g.fecha)} · ${esc(corto(g.categoria))}${g.proveedor ? ' · ' + esc(g.proveedor) : ''}</p>
-                <div class="flex flex-wrap gap-1 mt-1.5 items-center"><span class="badge b-llc">${esc(g.pagado_por)}</span>${badgeEstado(g.estado)}${g.categoria === 'Revisar' ? '<span class="badge b-sd">revisar</span>' : ''}${g.libro !== 'LLC' ? '<span class="badge b-nj">NJ fuera</span>' : ''}${g.source === 'telefono' ? '<span class="badge b-llc">teléfono</span>' : ''}${g.receipt ? `<button class="text-[12px] text-[#B76E88] underline" onclick="event.stopPropagation();Acc.verRecibo('${g.id}')">recibo</button>` : ''}</div>
+                <div class="flex flex-wrap gap-1 mt-1.5 items-center"><span class="badge b-llc">${esc(g.pagado_por)}</span>${badgeEstado(g.estado)}${g.categoria === 'Revisar' ? '<span class="badge b-sd">revisar</span>' : ''}${g.libro !== 'LLC' ? '<span class="badge b-nj">NJ fuera</span>' : ''}${g.source === 'telefono' ? '<span class="badge b-llc">teléfono</span>' : ''}${g.fijo ? '<span class="badge b-cap">fijo</span>' : ''}${g.receipt ? `<button class="text-[12px] text-[#B76E88] underline" onclick="event.stopPropagation();Acc.verRecibo('${g.id}')">recibo</button>` : ''}</div>
               </div></div>`).join('') +
             (list.length > gLimit ? `<button class="soft w-full" onclick="Acc.masGastos()">Ver ${Math.min(50, list.length - gLimit)} más</button>` : '') +
             (list.length ? '' : '<p class="text-sm opacity-60 text-center py-8">No hay gastos con estos filtros.</p>');
@@ -361,6 +361,9 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="lbl" for="acc-g-est">Estado reembolso</label><select id="acc-g-est"></select></div>
         <div><label class="lbl" for="acc-g-freemb">Fecha reembolso</label><input type="date" id="acc-g-freemb"></div></div>
       <div><label class="lbl" for="acc-g-lib">Libro</label><select id="acc-g-lib"></select></div>
+      <label id="acc-g-fijo-row" class="flex items-start gap-2 text-sm cursor-pointer"><input type="checkbox" id="acc-g-fijo" class="accent-[#B76E88] w-5 h-5 mt-0.5 shrink-0">
+        <span><b>Gasto fijo</b>: se repite cada mes. Desde el mes que viene se crea solo, el mismo día y por el mismo monto.</span></label>
+      <p id="acc-g-fijo-info" class="text-[12px] text-[#3730A3] hidden">Es un gasto fijo. El monto o el día de los próximos meses se cambian en la pestaña Gastos fijos.</p>
       <div><label class="lbl" for="acc-g-nota">Nota</label><textarea id="acc-g-nota" rows="2"></textarea></div>
       <div><label class="lbl" for="acc-g-foto">Foto del recibo</label><input type="file" accept="image/*,application/pdf" id="acc-g-foto"><p class="text-[11px] opacity-60 mt-1" id="acc-g-fotoinfo"></p></div>
       <div class="dlg-actions flex justify-between gap-2 pt-2"><button type="button" class="soft text-red-700" id="acc-g-del" onclick="Acc.delGasto()">Eliminar</button>
@@ -387,6 +390,8 @@
         $('acc-g-prov').value = g.proveedor || ''; $('acc-g-cat').value = g.categoria; fillCuentas($('acc-g-cuenta'), g.cuenta || 'Sin dato'); $('acc-g-pag').value = g.pagado_por;
         $('acc-g-est').value = g.estado; $('acc-g-freemb').value = g.fecha_reembolso || ''; $('acc-g-lib').value = g.libro; $('acc-g-nota').value = g.nota || ''; $('acc-g-foto').value = '';
         $('acc-g-fotoinfo').textContent = g.receipt ? 'Ya tiene recibo. Si subes otro, reemplaza el anterior.' : '';
+        $('acc-g-fijo').checked = false;
+        $('acc-g-fijo-row').classList.toggle('hidden', !!g.fijo); $('acc-g-fijo-info').classList.toggle('hidden', !g.fijo);
         $('acc-g-del').classList.toggle('invisible', !id);
         $('acc-dg').showModal();
     }
@@ -407,16 +412,32 @@
         const row = { spent_on: $('acc-g-fecha').value, amount: monto, description: $('acc-g-desc').value.trim(), vendor: $('acc-g-prov').value.trim() || null,
             category: $('acc-g-cat').value, account: $('acc-g-cuenta').value, paid_by: pag, reimb_status: est,
             reimbursed_on: est === 'Reembolsado' ? ($('acc-g-freemb').value || null) : null, ledger: $('acc-g-lib').value, note: $('acc-g-nota').value.trim() || null };
+        const hacerFijo = $('acc-g-fijo').checked && !$('acc-g-fijo-row').classList.contains('hidden');
+        if (hacerFijo && !['LLC', 'Freddy', 'Samuel', 'Ambos (50/50)'].includes(pag)) { alert('Un gasto fijo lo paga la LLC, Freddy, Samuel o ambos.'); return; }
+        if (hacerFijo && !row.spent_on) { alert('Elige la fecha: el gasto fijo se repite ese día de cada mes.'); return; }
         const btn = $('acc-g-save'); btn.disabled = true;
         try {
             const file = $('acc-g-foto').files[0];
             if (file) row.receipt_path = await uploadReceipt(file);
+            if (hacerFijo) {
+                const rid = await crearFijoDesde(row);
+                row.recurring_id = rid; row.recurring_month = ym(row.spent_on);
+            }
             const res = id ? await _supabase.from('acct_expenses').update(row).eq('id', id)
                 : await _supabase.from('acct_expenses').insert({ ...row, source: 'admin', created_by: await userId() });
             if (res.error) throw res.error;
-            $('acc-dg').close(); await refresh(); toast('Gasto guardado.');
+            $('acc-dg').close(); await refresh(); toast(hacerFijo ? 'Gasto guardado como fijo: se repetirá cada mes.' : 'Gasto guardado.');
         } catch (err) { alert('No se pudo guardar: ' + err.message); }
         finally { btn.disabled = false; }
+    }
+    // A fixed expense made from an expense: same data, that day of every month, starting this month
+    // (this month's row is the expense itself, linked so it is not created twice).
+    async function crearFijoDesde(row) {
+        const { data, error } = await _supabase.from('acct_recurring').insert({ description: row.description, vendor: row.vendor, category: row.category,
+            amount: row.amount, day_of_month: Number(row.spent_on.slice(8, 10)), paid_by: row.paid_by, account: row.account,
+            starts_on: row.spent_on, created_by: await userId() }).select('id').single();
+        if (error) throw error;
+        return data.id;
     }
     async function delGasto() {
         const id = $('acc-g-id').value; if (!id || !confirm('¿Eliminar este gasto? Deja de contar en los totales.')) return;

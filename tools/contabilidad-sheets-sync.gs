@@ -165,8 +165,8 @@ function syncNow() {
   try {
     const db = fetchData(), ms = months(db), stamp = Utilities.formatDate(new Date(), TIME_ZONE, 'yyyy-MM-dd HH:mm');
     writePanel(db, ms, stamp);
-    writeTable('Gastos · Sistema', ['Fecha', 'Descripción', 'Proveedor', 'Categoría', 'Tipo', 'Libro', 'Monto', 'Cuenta / tarjeta', 'Pagado por', 'Estado reembolso', 'Fecha reembolso', 'Origen', 'Recibo', 'Nota'],
-      db.gastos.slice().reverse().map(g => [d(g.fecha), g.descripcion, g.proveedor || '', g.categoria, db.kind[g.categoria] || '', g.libro, g.monto, g.cuenta || '', g.pagado_por, g.estado, d(g.fecha_reembolso), g.origen, g.recibo ? 'Sí' : '', g.nota || '']),
+    writeTable('Gastos · Sistema', ['Fecha', 'Descripción', 'Proveedor', 'Categoría', 'Tipo', 'Libro', 'Monto', 'Cuenta / tarjeta', 'Pagado por', 'Estado reembolso', 'Fecha reembolso', 'Origen', 'Recibo', 'Gasto fijo', 'Nota'],
+      db.gastos.slice().reverse().map(g => [d(g.fecha), g.descripcion, g.proveedor || '', g.categoria, db.kind[g.categoria] || '', g.libro, g.monto, g.cuenta || '', g.pagado_por, g.estado, d(g.fecha_reembolso), g.origen, g.recibo ? 'Sí' : '', g.fijo ? 'Sí' : '', g.nota || '']),
       { money: [7], dates: [1, 11], redWhen: { col: 10, value: 'Pendiente' } }, stamp);
     writeTable('Ingresos · Sistema', ['Fecha', 'Cliente', 'Servicio', 'Categoría', 'Método', 'Venta', 'Impuesto', 'Recargo', 'Total cobrado', 'Libro', 'Origen', 'Nota'],
       db.ingresos.slice().reverse().map(i => [d(i.fecha), i.cliente, i.servicio || '', i.categoria || '', i.metodo || '', i.monto == null ? '' : i.monto, i.impuesto, i.recargo, i.total == null ? '' : i.total, i.anulado ? 'Anulado' : i.libro, i.origen, i.nota || '']),

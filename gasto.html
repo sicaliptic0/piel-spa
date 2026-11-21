@@ -69,6 +69,10 @@
             <input type="file" id="foto" accept="image/*,application/pdf">
             <img id="prev" class="hidden mt-2 rounded-xl max-h-40" alt="Vista previa del recibo">
         </div>
+        <label for="fijo" class="flex items-start gap-3 bg-white border border-[#EDE1E7] rounded-2xl p-4 cursor-pointer">
+            <input type="checkbox" id="fijo" class="mt-0.5 shrink-0 accent-[#B76E88]" style="width:22px;height:22px;padding:0">
+            <span class="text-sm"><b>Gasto fijo</b> (renta, suscripción, seguro…). Se repite solo cada mes, el mismo día y por el mismo monto.</span>
+        </label>
         <button id="guardar" class="w-full bg-[#2A2330] text-white py-4 rounded-2xl uppercase text-xs tracking-widest font-bold disabled:opacity-50">Guardar gasto</button>
     </form>
 
@@ -127,10 +131,10 @@
         fillCuentas((pref.cuenta || {})[pagador] || (pagador === 'LLC' ? 'Débito Chase Business' : 'Chase Ink Business'));
     }
     async function ultimos() {
-        const { data } = await _supabase.from('acct_expenses').select('spent_on, description, amount, paid_by, category')
+        const { data } = await _supabase.from('acct_expenses').select('spent_on, description, amount, paid_by, category, recurring_id')
             .eq('source', 'telefono').eq('created_by', user.id).is('deleted_at', null).order('created_at', { ascending: false }).limit(5);
         $('ultimos').innerHTML = (data || []).length ? data.map(g => `<div class="bg-white border border-[#EDE1E7] rounded-xl px-3 py-2 flex justify-between gap-3">
-            <div><div>${esc(g.description)}</div><div class="text-[11px] opacity-60">${esc(g.spent_on.split('-').reverse().join('/'))} · ${esc(g.paid_by)} · ${esc(CORTO[g.category] || g.category)}</div></div>
+            <div><div>${esc(g.description)}</div><div class="text-[11px] opacity-60">${esc(g.spent_on.split('-').reverse().join('/'))} · ${esc(g.paid_by)} · ${esc(CORTO[g.category] || g.category)}${g.recurring_id ? ' · <b class="text-[#3730A3]">fijo</b>' : ''}</div></div>
             <div class="font-semibold whitespace-nowrap">${money(g.amount)}</div></div>`).join('') : '<p class="opacity-60 text-sm">Todavía no has agregado gastos desde aquí.</p>';
     }
     async function guardar(ev) {
@@ -150,11 +154,21 @@
             const row = { spent_on: $('fecha').value, amount: Math.round(monto * 100) / 100, description: $('desc').value.trim(), vendor: $('prov').value.trim() || null,
                 category: cat, account: $('cuenta').value, paid_by: pagador, reimb_status: pagador === 'LLC' ? 'No aplica (pagó la LLC)' : 'Pendiente',
                 ledger: 'LLC', receipt_path, source: 'telefono', created_by: user.id };
+            // "Gasto fijo": also save it in acct_recurring; this month's row is this expense, linked so it is not created twice.
+            const fijo = $('fijo').checked;
+            if (fijo) {
+                const rec = await _supabase.from('acct_recurring').insert({ description: row.description, vendor: row.vendor, category: row.category,
+                    amount: row.amount, day_of_month: Number(row.spent_on.slice(8, 10)), paid_by: row.paid_by, account: row.account,
+                    starts_on: row.spent_on, created_by: user.id }).select('id').single();
+                if (rec.error) throw rec.error;
+                row.recurring_id = rec.data.id; row.recurring_month = row.spent_on.slice(0, 7);
+            }
             const { error } = await _supabase.from('acct_expenses').insert(row);
             if (error) throw error;
+            $('fijo').checked = false;
             pref.pagador = pagador; pref.cuenta = { ...(pref.cuenta || {}), [pagador]: $('cuenta').value };
             try { localStorage.setItem('gasto-pref', JSON.stringify(pref)); } catch (e) {}
-            $('ok').textContent = `Guardado: ${money(row.amount)} · ${row.description}`; $('ok').classList.remove('hidden');
+            $('ok').textContent = `Guardado: ${money(row.amount)} · ${row.description}${fijo ? ' · se repetirá cada mes' : ''}`; $('ok').classList.remove('hidden');
             $('monto').value = ''; $('desc').value = ''; $('prov').value = ''; $('foto').value = ''; $('prev').classList.add('hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
             ultimos();
