@@ -167,7 +167,7 @@ function syncNow() {
     writePanel(db, ms, stamp);
     writeTable('Gastos · Sistema', ['Fecha', 'Descripción', 'Proveedor', 'Categoría', 'Tipo', 'Libro', 'Monto', 'Cuenta / tarjeta', 'Pagado por', 'Estado reembolso', 'Fecha reembolso', 'Origen', 'Recibo', 'Nota'],
       db.gastos.slice().reverse().map(g => [d(g.fecha), g.descripcion, g.proveedor || '', g.categoria, db.kind[g.categoria] || '', g.libro, g.monto, g.cuenta || '', g.pagado_por, g.estado, d(g.fecha_reembolso), g.origen, g.recibo ? 'Sí' : '', g.nota || '']),
-      { money: [7], dates: [1, 11] }, stamp);
+      { money: [7], dates: [1, 11], redWhen: { col: 10, value: 'Pendiente' } }, stamp);
     writeTable('Ingresos · Sistema', ['Fecha', 'Cliente', 'Servicio', 'Categoría', 'Método', 'Venta', 'Impuesto', 'Recargo', 'Total cobrado', 'Libro', 'Origen', 'Nota'],
       db.ingresos.slice().reverse().map(i => [d(i.fecha), i.cliente, i.servicio || '', i.categoria || '', i.metodo || '', i.monto == null ? '' : i.monto, i.impuesto, i.recargo, i.total == null ? '' : i.total, i.anulado ? 'Anulado' : i.libro, i.origen, i.nota || '']),
       { money: [6, 7, 8, 9], dates: [1] }, stamp);
@@ -204,7 +204,40 @@ function writeTable(name, header, rows, fmt, stamp) {
   sh.setFrozenRows(2);
   if (sh.getFilter()) sh.getFilter().remove();
   sh.getRange(2, 1, Math.max(rows.length, 1) + 1, header.length).createFilter();
-  sh.autoResizeColumns(1, header.length);
+  // Pending reimbursements: light red row (a rule, so it follows the filter and sorting).
+  sh.clearConditionalFormatRules();
+  if (fmt.redWhen && rows.length) {
+    const letter = String.fromCharCode(64 + fmt.redWhen.col);
+    sh.setConditionalFormatRules([SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied('=$' + letter + '3="' + fmt.redWhen.value + '"').setBackground('#F8D4D4').setFontColor('#7A1F1F')
+      .setRanges([sh.getRange(3, 1, rows.length, header.length)]).build()]);
+  }
+  fitColumns(sh, header, rows, fmt);
+}
+
+// Column widths from the content: short columns fit, long text gets a capped width and wraps,
+// so every tab reads on a computer and on the phone app without endless sideways scrolling.
+const COL_MIN = 64, COL_MAX = 260, CHAR_PX = 7.2, PAD_PX = 18;
+function fitColumns(sh, header, rows, fmt) {
+  header.forEach((h, k) => {
+    const c = k + 1;
+    const lens = rows.map(r => String(r[k] == null ? '' : r[k]).length);
+    let px;
+    if ((fmt.dates || []).includes(c)) px = 92;
+    else if ((fmt.money || []).includes(c)) px = Math.max(96, String(h).length * CHAR_PX + PAD_PX);
+    else {
+      const sorted = lens.slice().sort((a, b) => a - b);
+      const typical = sorted.length ? sorted[Math.floor(sorted.length * 0.9)] : 0;   // 90th percentile: one long note does not widen the column
+      px = Math.max(String(h).length * CHAR_PX + PAD_PX, typical * CHAR_PX + PAD_PX);
+    }
+    px = Math.round(Math.min(COL_MAX, Math.max(COL_MIN, px)));
+    sh.setColumnWidth(c, px);
+    const longest = lens.reduce((m, n) => Math.max(m, n), 0);
+    if (rows.length) sh.getRange(3, c, rows.length, 1).setWrap(longest * CHAR_PX + PAD_PX > px);
+  });
+  sh.getRange(2, 1, 1, header.length).setWrap(true).setVerticalAlignment('middle');
+  if (rows.length) sh.getRange(3, 1, rows.length, header.length).setVerticalAlignment('top');
+  sh.getRange(1, 1).setWrap(false);   // the "Actualizado…" line runs across; it does not widen column A
 }
 function writePanel(db, ms, stamp) {
   const ss = SpreadsheetApp.getActive(), old = ss.getSheetByName('Panel · Sistema');   // first version had one tab
@@ -230,7 +263,10 @@ function writePanelYear(db, ms, year, stamp) {
     else if (r.t === 'tot') rg.setFontWeight('bold').setBackground('#FBF0F3');
   });
   sh.setFrozenRows(2); sh.setFrozenColumns(1);
-  sh.autoResizeColumn(1);
+  sh.setColumnWidth(1, 250);
+  sh.getRange(3, 1, data.length, 1).setWrap(true).setVerticalAlignment('top');
+  for (let c = 2; c <= width; c++) sh.setColumnWidth(c, 92);
+  sh.getRange(1, 1).setWrap(false);
 }
 
 // ---------- monthly close as PDF in Drive
@@ -264,7 +300,8 @@ function saveMonthPdf(mes) {
   sh.getRange(1, 1, out.length, 2).setValues(out);
   sh.getRange(1, 2, out.length, 1).setNumberFormat(MONEY);
   sh.getRange(1, 1).setFontSize(16).setFontWeight('bold');
-  sh.setColumnWidth(1, 560); sh.setColumnWidth(2, 140);
+  sh.setColumnWidth(1, 420); sh.setColumnWidth(2, 110);
+  sh.getRange(4, 1, out.length - 3, 1).setWrap(true).setVerticalAlignment('top');
   SpreadsheetApp.flush();
 
   const ss = SpreadsheetApp.getActive();

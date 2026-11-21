@@ -194,6 +194,10 @@
       dialog.acc { border:none; border-radius:16px; padding:0; width:min(560px, calc(100vw - 32px)); }
       dialog.acc::backdrop { background:rgba(42,35,48,.35); }
       .acc .gcard { background:#fff; border:1px solid #EDE1E7; border-radius:12px; padding:12px; display:flex; gap:10px; align-items:flex-start; cursor:pointer; }
+      /* Pending reimbursement: light red, same as the Google Sheet */
+      .acc .gcard.pend { background:#FCE4E4; border-color:#F3B9B9; }
+      .acc table.t tbody tr.pend td { background:#FCE4E4; }
+      .acc table.t tbody tr.pend:hover td { background:#F8D4D4; }
       .acc .gcard:active { background:#FBF0F3; }
       .acc .fab { position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom)); z-index:40; width:56px; height:56px; border-radius:99px; background:#B76E88; color:#fff; font-size:30px; line-height:56px; text-align:center; box-shadow:0 6px 16px rgba(42,35,48,.25); }
       .acc .bulkbar { position:fixed; left:0; right:0; bottom:0; z-index:41; background:#2A2330; color:#fff; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
@@ -304,7 +308,7 @@
         const total = list.reduce((s, g) => s + g.monto, 0), pend = list.filter(g => g.estado === 'Pendiente').reduce((s, g) => s + g.monto, 0);
         $('acc-gsum').innerHTML = `<b>${list.length}</b> gastos · total <b>${money(total)}</b> · pendiente de reembolso <b>${money(pend)}</b>`;
         $('acc-gtbl').innerHTML = `<thead><tr><th><input type="checkbox" onchange="Acc.selAll(this)" aria-label="Seleccionar todos"></th>${th('gastos', 'fecha', 'Fecha')}${th('gastos', 'descripcion', 'Descripción')}${th('gastos', 'categoria', 'Categoría')}${th('gastos', 'monto', 'Monto', 'num')}${th('gastos', 'pagado_por', 'Pagado por')}${th('gastos', 'estado', 'Estado')}<th></th></tr></thead><tbody>` +
-            list.map(g => `<tr><td><input type="checkbox" ${sel.has(g.id) ? 'checked' : ''} onchange="Acc.toggleSel('${g.id}', this.checked)" aria-label="Seleccionar"></td>
+            list.map(g => `<tr class="${g.estado === 'Pendiente' ? 'pend' : ''}"><td><input type="checkbox" ${sel.has(g.id) ? 'checked' : ''} onchange="Acc.toggleSel('${g.id}', this.checked)" aria-label="Seleccionar"></td>
               <td class="whitespace-nowrap">${fdate(g.fecha)}</td>
               <td><div>${esc(g.descripcion)}${g.receipt ? ` <button class="text-[11px] text-[#B76E88] underline" onclick="Acc.verRecibo('${g.id}')">recibo</button>` : ''}</div><div class="text-[11px] opacity-60">${esc(g.proveedor)}${g.proveedor && g.cuenta ? ' · ' : ''}${esc(g.cuenta)}${g.libro !== 'LLC' ? ` <span class="badge ${g.libro.startsWith('NJ') ? 'b-nj' : 'b-sd'}">${esc(g.libro.startsWith('NJ') ? 'NJ fuera' : g.libro)}</span>` : ''}${/jornada NJ/.test(g.nota) ? ' <span class="badge b-nj">viaje NJ</span>' : ''}${g.source === 'telefono' ? ' <span class="badge b-llc">teléfono</span>' : ''}</div></td>
               <td class="text-xs">${esc(g.categoria)}${g.categoria === 'Revisar' ? ' <span class="badge b-sd">revisar</span>' : ''}</td>
@@ -314,7 +318,7 @@
         // Phone: one card per expense; tap to edit, the box selects it for the bulk actions.
         const corto = c => ({ 'Insumos y productos de tratamiento': 'Insumos', 'Envíos y aranceles de importación': 'Envíos', 'Comidas de negocio (50%)': 'Comidas',
             'Equipo menor y mobiliario': 'Equipo menor', 'Software y suscripciones': 'Software', 'Limpieza y suministros': 'Limpieza', 'Licencias, trámites y legal': 'Trámites' }[c] || c);
-        $('acc-gcards').innerHTML = list.slice(0, gLimit).map(g => `<div class="gcard" onclick="Acc.openGasto('${g.id}')">
+        $('acc-gcards').innerHTML = list.slice(0, gLimit).map(g => `<div class="gcard ${g.estado === 'Pendiente' ? 'pend' : ''}" onclick="Acc.openGasto('${g.id}')">
               <input type="checkbox" class="mt-1 w-5 h-5 accent-[#B76E88] shrink-0" ${sel.has(g.id) ? 'checked' : ''} onclick="event.stopPropagation()" onchange="Acc.toggleSel('${g.id}', this.checked)" aria-label="Seleccionar">
               <div class="flex-1 min-w-0">
                 <div class="flex justify-between gap-2"><p class="text-[15px] font-medium leading-snug break-words min-w-0">${esc(g.descripcion)}</p><p class="text-[15px] font-semibold whitespace-nowrap">${money(g.monto)}</p></div>
