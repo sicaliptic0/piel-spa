@@ -879,7 +879,7 @@
         $('acc-ds-body').innerHTML = `<div class="flex items-start justify-between gap-3"><h3 class="text-3xl italic">Google Sheets</h3><button class="text-2xl opacity-40 hover:opacity-100 leading-none" onclick="this.closest('dialog').close()" aria-label="Cerrar">&times;</button></div>
           <p class="text-sm">El Sheet se actualiza solo cada 10 minutos con todo lo de Contabilidad: Panel, Gastos, Ingresos, Socios, Estado de socios y Gastos fijos. El día 1 de cada mes guarda el cierre del mes anterior en PDF en tu Google Drive.</p>
           <ol class="list-decimal pl-5 text-sm space-y-2">
-            <li>Abre el Google Sheet <b>Libro Contable PIEL SPA</b> (uno solo para todos los años).</li>
+            <li>Con la cuenta <b>pielspanyc@gmail.com</b>, abre <a class="underline text-[#B76E88]" href="https://sheets.new" target="_blank" rel="noopener">sheets.new</a> y llámalo <b>Libro Contable PIEL SPA</b> (uno solo para todos los años; la primera carga llena las pestañas).</li>
             <li>Menú <b>Extensiones → Apps Script</b>. Borra lo que haya y pega el código de <a class="underline text-[#B76E88]" href="${esc(site)}/tools/contabilidad-sheets-sync.gs" target="_blank" rel="noopener">${esc(site)}/tools/contabilidad-sheets-sync.gs</a>. Guarda.</li>
             <li>Vuelve al Sheet y recarga la página. Aparece el menú <b>Piel Spa · Contabilidad</b>.</li>
             <li>Menú → <b>Configurar clave</b> y pega esta clave:
