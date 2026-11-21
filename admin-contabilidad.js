@@ -654,7 +654,7 @@
         db.ingresos.filter(i => !i.anulado && i.libro === 'LLC' && inY(i.fecha)).forEach(i => { if (i.categoria === 'Otro ingreso') r.l7 += i.monto || 0; else r.l1a += i.monto || 0; r.l1a += i.recargo || 0; });
         db.gastos.filter(g => g.libro === 'LLC' && inY(g.fecha)).forEach(g => {
             const t = catTipo(g.categoria), v = g.monto; r.porCat[g.categoria] = (r.porCat[g.categoria] || 0) + v;
-            if (t === 'Costo de ventas') r.cogs += v; else if (g.categoria === 'Alquiler de cabina') r.rent += v;
+            if (t === 'Costo de ventas') r.cogs += v; else if (g.categoria === 'Renta de cabina/suite' || g.categoria === 'Alquiler de cabina') r.rent += v;
             else if (g.categoria === 'Comidas de negocio (50%)') { r.comidas += v / 2; r.comidasNoDed += v / 2; }
             else if (t === 'Gasto operativo') r.otras += v; else if (t === 'Activo') r.s179 += v; else if (t === 'No deducible') r.nodeduc += v;
             else if (t === 'No es gasto') r.noGasto += v; else r.revisar += v;
