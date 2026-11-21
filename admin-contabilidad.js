@@ -45,12 +45,30 @@
         t.textContent = msg; t.style.opacity = 1; clearTimeout(t._h); t._h = setTimeout(() => t.style.opacity = 0, 2600);
     }
     const userId = async () => (await _supabase.auth.getUser()).data.user?.id || null;
+    // Cards/accounts come from acct_accounts; "Otra…" adds one there so it stays in the list.
+    function fillCuentas(el, value) {
+        const list = (db && db.cuentas && db.cuentas.length) ? db.cuentas.slice() : CUENTAS.slice();
+        if (value && !list.includes(value)) list.push(value);
+        el.innerHTML = list.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('') + '<option value="__otra">Otra…</option>';
+        el.value = value || list[0];
+        el.dataset.prev = el.value;
+        el.onchange = async () => {
+            if (el.value !== '__otra') { el.dataset.prev = el.value; return; }
+            const name = (prompt('Nombre de la tarjeta o cuenta (ej. "Amex Platinum Samuel"):') || '').trim().slice(0, 60);
+            if (!name) { el.value = el.dataset.prev; return; }
+            const { error } = await _supabase.from('acct_accounts').insert({ name, created_by: await userId() });
+            if (error && error.code !== '23505') { alert('No se pudo agregar: ' + error.message); el.value = el.dataset.prev; return; }
+            if (!db.cuentas.includes(name)) db.cuentas.push(name);
+            fillCuentas(el, name);
+            toast(`"${name}" quedó guardada en la lista.`);
+        };
+    }
     function fill(el, opts, first) { el.innerHTML = (first ? `<option value="">${first}</option>` : '') + opts.map(o => `<option value="${esc(o.v ?? o)}">${esc(o.t ?? o)}</option>`).join(''); }
 
     // ---------- data
     async function load() {
         const q = (p) => p.then(r => { if (r.error) throw r.error; return r.data || []; });
-        const [cfg, cats, exp, mov, inc, pay, fijos] = await Promise.all([
+        const [cfg, cats, exp, mov, inc, pay, fijos, cuentas] = await Promise.all([
             q(_supabase.from('acct_settings').select('*').eq('id', 1)),
             q(_supabase.from('acct_categories').select('*').order('sort')),
             q(_supabase.from('acct_expenses').select('*').is('deleted_at', null).order('spent_on', { ascending: false }).limit(5000)),
@@ -58,11 +76,13 @@
             q(_supabase.from('acct_income').select('*').is('deleted_at', null)),
             q(_supabase.from('payments').select('*').limit(5000)),
             q(_supabase.from('acct_recurring').select('*').order('description')),
+            q(_supabase.from('acct_accounts').select('name').order('sort').order('name')).catch(() => []),
         ]);
         db = {
             cfg: cfg[0] || { share_freddy: 0.5, share_samuel: 0.5, loan_rate: 0 },
             categorias: cats,
             fijos,
+            cuentas: cuentas.map(c => c.name),
             gastos: exp.map(e => ({ id: e.id, fecha: e.spent_on, descripcion: e.description, proveedor: e.vendor || '', categoria: e.category, libro: e.ledger,
                 monto: Number(e.amount), cuenta: e.account || '', pagado_por: e.paid_by, estado: e.reimb_status, fecha_reembolso: e.reimbursed_on, nota: e.note || '',
                 receipt: e.receipt_path, source: e.source })),
@@ -360,9 +380,9 @@
         const g = id ? db.gastos.find(x => x.id === id) : { fecha: today(), libro: 'LLC', estado: 'Pendiente', pagado_por: 'Freddy', categoria: 'Insumos y productos de tratamiento', cuenta: 'Chase Ink Business' };
         $('acc-g-title').textContent = id ? 'Editar gasto' : 'Nuevo gasto';
         fill($('acc-g-cat'), db.categorias.map(c => ({ v: c.name, t: `${c.name} · ${c.kind}` })));
-        fill($('acc-g-cuenta'), CUENTAS); fill($('acc-g-pag'), PAGADORES); fill($('acc-g-est'), ESTADOS); fill($('acc-g-lib'), LIBROS);
+        fill($('acc-g-pag'), PAGADORES); fill($('acc-g-est'), ESTADOS); fill($('acc-g-lib'), LIBROS);
         $('acc-g-id').value = id || ''; $('acc-g-fecha').value = g.fecha || ''; $('acc-g-monto').value = g.monto ?? ''; $('acc-g-desc').value = g.descripcion || '';
-        $('acc-g-prov').value = g.proveedor || ''; $('acc-g-cat').value = g.categoria; $('acc-g-cuenta').value = g.cuenta || 'Sin dato'; $('acc-g-pag').value = g.pagado_por;
+        $('acc-g-prov').value = g.proveedor || ''; $('acc-g-cat').value = g.categoria; fillCuentas($('acc-g-cuenta'), g.cuenta || 'Sin dato'); $('acc-g-pag').value = g.pagado_por;
         $('acc-g-est').value = g.estado; $('acc-g-freemb').value = g.fecha_reembolso || ''; $('acc-g-lib').value = g.libro; $('acc-g-nota').value = g.nota || ''; $('acc-g-foto').value = '';
         $('acc-g-fotoinfo').textContent = g.receipt ? 'Ya tiene recibo. Si subes otro, reemplaza el anterior.' : '';
         $('acc-g-del').classList.toggle('invisible', !id);
@@ -799,10 +819,10 @@
             $('acc-f-form').addEventListener('submit', saveFijo);
         }
         const f = id ? db.fijos.find(x => x.id === id) : { description: '', amount: '', day_of_month: 1, category: 'Software y suscripciones', paid_by: 'LLC', account: 'Débito Chase Business', starts_on: today(), active: true };
-        fill($('acc-f-cat'), db.categorias.filter(c => ['Gasto operativo', 'Costo de ventas'].includes(c.kind)).map(c => c.name)); fill($('acc-f-cuenta'), CUENTAS);
+        fill($('acc-f-cat'), db.categorias.filter(c => ['Gasto operativo', 'Costo de ventas'].includes(c.kind)).map(c => c.name));
         $('acc-f-title').textContent = id ? 'Editar gasto fijo' : 'Nuevo gasto fijo';
         $('acc-f-id').value = id || ''; $('acc-f-desc').value = f.description; $('acc-f-monto').value = f.amount; $('acc-f-dia').value = f.day_of_month;
-        $('acc-f-cat').value = f.category; $('acc-f-prov').value = f.vendor || ''; $('acc-f-pag').value = f.paid_by; $('acc-f-cuenta').value = f.account || 'Sin dato';
+        $('acc-f-cat').value = f.category; $('acc-f-prov').value = f.vendor || ''; $('acc-f-pag').value = f.paid_by; fillCuentas($('acc-f-cuenta'), f.account || 'Sin dato');
         $('acc-f-desde').value = f.starts_on; $('acc-f-hasta').value = f.ends_on || ''; $('acc-f-act').checked = !!f.active;
         dlg.showModal();
     }
@@ -859,7 +879,7 @@
         $('acc-ds-body').innerHTML = `<div class="flex items-start justify-between gap-3"><h3 class="text-3xl italic">Google Sheets</h3><button class="text-2xl opacity-40 hover:opacity-100 leading-none" onclick="this.closest('dialog').close()" aria-label="Cerrar">&times;</button></div>
           <p class="text-sm">El Sheet se actualiza solo cada 10 minutos con todo lo de Contabilidad: Panel, Gastos, Ingresos, Socios, Estado de socios y Gastos fijos. El día 1 de cada mes guarda el cierre del mes anterior en PDF en tu Google Drive.</p>
           <ol class="list-decimal pl-5 text-sm space-y-2">
-            <li>Abre el Google Sheet <b>Libro Contable PIEL SPA 2026</b> (o el que quieras usar).</li>
+            <li>Abre el Google Sheet <b>Libro Contable PIEL SPA</b> (uno solo para todos los años).</li>
             <li>Menú <b>Extensiones → Apps Script</b>. Borra lo que haya y pega el código de <a class="underline text-[#B76E88]" href="${esc(site)}/tools/contabilidad-sheets-sync.gs" target="_blank" rel="noopener">${esc(site)}/tools/contabilidad-sheets-sync.gs</a>. Guarda.</li>
             <li>Vuelve al Sheet y recarga la página. Aparece el menú <b>Piel Spa · Contabilidad</b>.</li>
             <li>Menú → <b>Configurar clave</b> y pega esta clave:
@@ -893,7 +913,7 @@
             <p class="text-sm">Un toque en el widget (o "Oye Siri, Gasto Piel") te pregunta el monto, qué compraste, la categoría y si quieres foto, y lo guarda. Cada teléfono necesita su propio código.</p>
             <div class="grid grid-cols-3 gap-2 items-end">
               <div><label class="lbl" for="acc-di-p">Teléfono de</label><select id="acc-di-p"><option>Freddy</option><option>Samuel</option><option value="LLC">La LLC</option></select></div>
-              <div><label class="lbl" for="acc-di-c">Tarjeta que más usa</label><select id="acc-di-c">${CUENTAS.map(c => `<option>${esc(c)}</option>`).join('')}</select></div>
+              <div><label class="lbl" for="acc-di-c">Tarjeta que más usa</label><select id="acc-di-c"></select></div>
               <button class="abtn" onclick="Acc.crearCodigo()">Crear código</button></div>
             <div id="acc-di-new"></div>
             ${(toks || []).length ? `<table class="t"><thead><tr><th>Teléfono</th><th>Tarjeta</th><th>Creado</th><th>Último uso</th><th></th></tr></thead><tbody>${toks.map(t => `<tr><td>${esc(t.label || t.partner)}</td><td class="text-xs">${esc(t.default_account || '')}</td><td class="text-xs">${fdate(t.created_at.slice(0, 10))}</td><td class="text-xs">${t.last_used_at ? fdate(t.last_used_at.slice(0, 10)) : '—'}</td><td><button class="text-xs text-red-700 hover:underline" onclick="Acc.revocarCodigo('${t.id}')">Desactivar</button></td></tr>`).join('')}</tbody></table>` : '<p class="text-xs opacity-60">Todavía no hay códigos.</p>'}
@@ -912,6 +932,7 @@
             </ol>
             <p class="text-[12px] opacity-70 mt-3">Si pagó otro socio o la LLC, puedes agregar un campo <code>pagado_por</code> (Freddy, Samuel o LLC). Todo lo del atajo entra como pendiente de reembolso y se corrige en Gastos si hace falta.</p>
           </details>`;
+        fillCuentas($('acc-di-c'), 'Chase Ink Business');
         if (!dlg.open) dlg.showModal();
     }
     async function crearCodigo() {

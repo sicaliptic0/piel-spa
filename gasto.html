@@ -105,9 +105,26 @@
             chips();
         });
     }
+    // Cards come from acct_accounts; "Otra…" adds one there so it stays for next time (also in the admin).
+    let cuentas = CUENTAS.slice();
+    function fillCuentas(value) {
+        if (value && !cuentas.includes(value)) cuentas.push(value);
+        $('cuenta').innerHTML = cuentas.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('') + '<option value="__otra">Otra…</option>';
+        $('cuenta').value = value || cuentas[0];
+        $('cuenta').dataset.prev = $('cuenta').value;
+    }
+    async function onCuenta() {
+        const el = $('cuenta');
+        if (el.value !== '__otra') { el.dataset.prev = el.value; return; }
+        const name = (prompt('Nombre de la tarjeta o cuenta (ej. "Amex Platinum Samuel"):') || '').trim().slice(0, 60);
+        if (!name) { el.value = el.dataset.prev; return; }
+        const { error } = await _supabase.from('acct_accounts').insert({ name, created_by: user.id });
+        if (error && error.code !== '23505') { alert('No se pudo agregar: ' + error.message); el.value = el.dataset.prev; return; }
+        fillCuentas(name);
+    }
     function segs() {
         $('pag').querySelectorAll('.seg').forEach(b => b.classList.toggle('on', b.dataset.v === pagador));
-        $('cuenta').value = (pref.cuenta || {})[pagador] || (pagador === 'LLC' ? 'Débito Chase Business' : 'Chase Ink Business');
+        fillCuentas((pref.cuenta || {})[pagador] || (pagador === 'LLC' ? 'Débito Chase Business' : 'Chase Ink Business'));
     }
     async function ultimos() {
         const { data } = await _supabase.from('acct_expenses').select('spent_on, description, amount, paid_by, category')
@@ -153,7 +170,9 @@
         const { data: cats } = await _supabase.from('acct_categories').select('name').order('sort');
         $('cat').innerHTML = (cats || []).map(c => `<option>${esc(c.name)}</option>`).join('');
         $('cat').onchange = () => cat = $('cat').value;
-        $('cuenta').innerHTML = CUENTAS.map(c => `<option>${esc(c)}</option>`).join('');
+        const { data: ctas } = await _supabase.from('acct_accounts').select('name').order('sort').order('name');
+        if (ctas && ctas.length) cuentas = ctas.map(c => c.name).filter(c => c !== 'Sin dato');
+        $('cuenta').onchange = onCuenta;
         $('pag').querySelectorAll('.seg').forEach(b => b.onclick = () => { pagador = b.dataset.v; segs(); });
         $('fecha').value = today();
         $('foto').onchange = () => { const f = $('foto').files[0]; if (!f || !f.type.startsWith('image/')) return; $('prev').src = URL.createObjectURL(f); $('prev').classList.remove('hidden'); };

@@ -6,9 +6,10 @@
  * Google Sheets), Activar actualización automática, Actualizar ahora.
  *
  * Every 10 minutes it rewrites these tabs from Supabase (read-only key, RPC
- * accounting_export): Panel · Sistema, Gastos · Sistema, Ingresos · Sistema,
+ * accounting_export): Panel <año> · Sistema (one per year), Gastos · Sistema, Ingresos · Sistema,
  * Socios · Sistema, Estado socios · Sistema, Gastos fijos · Sistema.
- * Tabs without "· Sistema" are never touched.
+ * Tabs without "· Sistema" are never touched. One file serves every year: a new
+ * year just adds its own Panel tab; the other tabs list all years (filter by Fecha).
  * On the 1st of each month it saves the previous month's close as a PDF in the
  * Drive folder "Piel Spa · Cierres mensuales".
  *
@@ -206,10 +207,14 @@ function writeTable(name, header, rows, fmt, stamp) {
   sh.autoResizeColumns(1, header.length);
 }
 function writePanel(db, ms, stamp) {
-  const year = Utilities.formatDate(new Date(), TIME_ZONE, 'yyyy');
+  const ss = SpreadsheetApp.getActive(), old = ss.getSheetByName('Panel · Sistema');   // first version had one tab
+  if (old) ss.deleteSheet(old);
+  [...new Set(ms.map(m => m.slice(0, 4)))].forEach(year => writePanelYear(db, ms, year, stamp));
+}
+function writePanelYear(db, ms, year, stamp) {
   const cols = ms.filter(m => m.startsWith(year));
   const rows = panelRows(db, cols, ms);
-  const sh = sheetFor('Panel · Sistema');
+  const sh = sheetFor(`Panel ${year} · Sistema`);
   sh.clear();
   const width = cols.length + 2;
   sh.getRange(1, 1).setValue(`Panel ${year} · actualizado ${stamp}. No escribas aquí: esta pestaña se reescribe sola.`).setFontStyle('italic').setFontColor('#8A7F8F');
