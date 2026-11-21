@@ -171,6 +171,16 @@
       .acc .stmt-line.total { border-bottom:none; border-top:2px solid #2A2330; font-weight:700; padding-top:8px; }
       dialog.acc { border:none; border-radius:16px; padding:0; width:min(560px, calc(100vw - 32px)); }
       dialog.acc::backdrop { background:rgba(42,35,48,.35); }
+      .acc .gcard { background:#fff; border:1px solid #EDE1E7; border-radius:12px; padding:12px; display:flex; gap:10px; align-items:flex-start; cursor:pointer; }
+      .acc .gcard:active { background:#FBF0F3; }
+      .acc .fab { position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom)); z-index:40; width:56px; height:56px; border-radius:99px; background:#B76E88; color:#fff; font-size:30px; line-height:56px; text-align:center; box-shadow:0 6px 16px rgba(42,35,48,.25); }
+      .acc .bulkbar { position:fixed; left:0; right:0; bottom:0; z-index:41; background:#2A2330; color:#fff; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+      .acc .bulkbar .soft { background:transparent; color:#fff; border-color:rgba(255,255,255,.35); }
+      @media (max-width: 767px) {
+        .acc input, .acc select, .acc textarea { font-size:16px !important; }   /* iOS zooms in on smaller text */
+        dialog.acc { width:100vw; max-width:100vw; height:100dvh; max-height:100dvh; margin:0; border-radius:0; }
+        dialog.acc .dlg-actions { position:sticky; bottom:0; background:#fff; padding:12px 0 calc(12px + env(safe-area-inset-bottom)); border-top:1px solid #EDE1E7; }
+      }
       @media print { body.acc-printing * { visibility:hidden !important; } body.acc-printing #acc-stmt, body.acc-printing #acc-stmt * { visibility:visible !important; }
         body.acc-printing #acc-stmt { position:fixed; inset:0; border:none; box-shadow:none; } }`;
     function build() {
@@ -180,9 +190,10 @@
         root.innerHTML = `<div class="max-w-6xl mx-auto">
           <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
             <div class="flex gap-2 overflow-x-auto pb-1" id="acc-tabs">${VIEWS.map(([v, t]) => `<button class="sub" data-v="${v}">${t}</button>`).join('')}</div>
-            <div class="flex gap-2 flex-wrap"><button class="soft" onclick="Acc.openIphone()">iPhone</button><button class="abtn" onclick="Acc.openMov()">+ Aporte de socio</button><button class="abtn rose" onclick="Acc.openGasto()">+ Nuevo gasto</button></div>
+            <div class="flex gap-2 flex-wrap"><button class="soft" onclick="Acc.openIphone()">iPhone</button><button class="abtn" onclick="Acc.openMov()">+ Aporte de socio</button><button class="abtn rose hidden md:inline-block" onclick="Acc.openGasto()">+ Nuevo gasto</button></div>
           </div>
-          <div id="acc-body"><p class="text-sm opacity-50 text-center py-10">Cargando…</p></div></div>`;
+          <div id="acc-body" class="pb-20 md:pb-0"><p class="text-sm opacity-50 text-center py-10">Cargando…</p></div>
+          <button class="fab md:hidden" onclick="Acc.openGasto()" aria-label="Nuevo gasto">+</button></div>`;
         root.querySelectorAll('#acc-tabs .sub').forEach(b => b.onclick = () => { view = b.dataset.v; try { localStorage.setItem('acc-view', view); } catch (e) {} render(); });
         try { view = localStorage.getItem('acc-view') || 'resumen'; } catch (e) {}
         if (!VIEWS.some(v => v[0] === view)) view = 'resumen';
@@ -232,19 +243,29 @@
     }
     function viewGastos(body) {
         if (!$('acc-gq')) {
-            body.innerHTML = `<div class="card p-4 mb-4 grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
-              <div class="col-span-2"><label class="lbl" for="acc-gq">Buscar</label><input id="acc-gq" placeholder="Descripción o proveedor"></div>
-              <div><label class="lbl" for="acc-gmes">Mes</label><select id="acc-gmes"></select></div>
-              <div><label class="lbl" for="acc-gpag">Pagado por</label><select id="acc-gpag"></select></div>
-              <div><label class="lbl" for="acc-gest">Estado</label><select id="acc-gest"></select></div>
-              <div><label class="lbl" for="acc-gcat">Categoría</label><select id="acc-gcat"></select></div></div>
+            body.innerHTML = `<div class="card p-3 md:p-4 mb-3 md:mb-4">
+                <div class="flex gap-2 items-end">
+                  <div class="flex-1"><label class="lbl" for="acc-gq">Buscar</label><input id="acc-gq" placeholder="Descripción o proveedor" type="search"></div>
+                  <button type="button" class="soft md:hidden whitespace-nowrap" onclick="Acc.toggleFiltros()" id="acc-gfbtn">Filtros</button>
+                </div>
+                <div id="acc-gfil" class="hidden md:grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                  <div><label class="lbl" for="acc-gmes">Mes</label><select id="acc-gmes"></select></div>
+                  <div><label class="lbl" for="acc-gpag">Pagado por</label><select id="acc-gpag"></select></div>
+                  <div><label class="lbl" for="acc-gest">Estado</label><select id="acc-gest"></select></div>
+                  <div><label class="lbl" for="acc-gcat">Categoría</label><select id="acc-gcat"></select></div>
+                  <div class="col-span-2 md:hidden"><label class="lbl" for="acc-gord">Ordenar por</label><select id="acc-gord">
+                    <option value="fecha|-1">Más recientes</option><option value="fecha|1">Más antiguos</option><option value="monto|-1">Monto mayor</option><option value="monto|1">Monto menor</option><option value="descripcion|1">Descripción A–Z</option></select></div>
+                </div></div>
               <div class="flex flex-wrap items-center justify-between gap-3 mb-3"><p class="text-sm" id="acc-gsum"></p>
                 <span id="acc-bulk" class="hidden flex flex-wrap gap-2 items-center"><span class="text-xs opacity-70" id="acc-bulkn"></span><input type="date" id="acc-bulkd" style="width:auto">
-                <button class="soft" onclick="Acc.bulkSet('Reembolsado')">Marcar reembolsado</button><button class="soft" onclick="Acc.bulkSet('Aportado como capital')">Pasar a capital</button></span></div>
-              <div class="card overflow-hidden"><div class="overflow-auto max-h-[65vh]"><table class="t" id="acc-gtbl"></table></div></div>`;
-            $('acc-gq').oninput = e => { gf.q = e.target.value; tablaGastos(); };
-            [['acc-gmes', 'mes'], ['acc-gpag', 'pag'], ['acc-gest', 'est'], ['acc-gcat', 'cat']].forEach(([id, k]) => $(id).onchange = e => { gf[k] = e.target.value; tablaGastos(); });
+                <button class="soft" onclick="Acc.bulkSet('Reembolsado')">Marcar reembolsado</button><button class="soft" onclick="Acc.bulkSet('Aportado como capital')">Pasar a capital</button><button class="soft md:hidden" onclick="Acc.clearSel()">Cancelar</button></span></div>
+              <div class="card overflow-hidden hidden md:block"><div class="overflow-auto max-h-[65vh]"><table class="t" id="acc-gtbl"></table></div></div>
+              <div class="md:hidden space-y-2" id="acc-gcards"></div>`;
+            $('acc-gq').oninput = e => { gf.q = e.target.value; gLimit = 50; tablaGastos(); };
+            [['acc-gmes', 'mes'], ['acc-gpag', 'pag'], ['acc-gest', 'est'], ['acc-gcat', 'cat']].forEach(([id, k]) => $(id).onchange = e => { gf[k] = e.target.value; gLimit = 50; tablaGastos(); });
+            $('acc-gord').onchange = e => { const [k, d] = e.target.value.split('|'); sortState.gastos = { k, d: Number(d) }; tablaGastos(); };
         }
+        $('acc-gord').value = `${sortState.gastos.k}|${sortState.gastos.d}`;
         fill($('acc-gmes'), months().slice().reverse().map(m => ({ v: m, t: mesLabel(m) })), 'Todos');
         fill($('acc-gpag'), PAGADORES, 'Todos'); fill($('acc-gest'), ESTADOS, 'Todos'); fill($('acc-gcat'), db.categorias.map(c => c.name), 'Todas');
         $('acc-gq').value = gf.q; $('acc-gmes').value = gf.mes; $('acc-gpag').value = gf.pag; $('acc-gest').value = gf.est; $('acc-gcat').value = gf.cat;
@@ -266,9 +287,29 @@
               <td class="num">${money(g.monto)}</td><td class="text-xs whitespace-nowrap">${esc(g.pagado_por)}</td>
               <td>${badgeEstado(g.estado)}${g.fecha_reembolso ? `<div class="text-[10px] opacity-60 mt-1">${fdate(g.fecha_reembolso)}</div>` : ''}</td>
               <td><button class="text-xs text-[#B76E88] hover:underline" onclick="Acc.openGasto('${g.id}')">Editar</button></td></tr>`).join('') + '</tbody>';
+        // Phone: one card per expense; tap to edit, the box selects it for the bulk actions.
+        const corto = c => ({ 'Insumos y productos de tratamiento': 'Insumos', 'Envíos y aranceles de importación': 'Envíos', 'Comidas de negocio (50%)': 'Comidas',
+            'Equipo menor y mobiliario': 'Equipo menor', 'Software y suscripciones': 'Software', 'Limpieza y suministros': 'Limpieza', 'Licencias, trámites y legal': 'Trámites' }[c] || c);
+        $('acc-gcards').innerHTML = list.slice(0, gLimit).map(g => `<div class="gcard" onclick="Acc.openGasto('${g.id}')">
+              <input type="checkbox" class="mt-1 w-5 h-5 accent-[#B76E88] shrink-0" ${sel.has(g.id) ? 'checked' : ''} onclick="event.stopPropagation()" onchange="Acc.toggleSel('${g.id}', this.checked)" aria-label="Seleccionar">
+              <div class="flex-1 min-w-0">
+                <div class="flex justify-between gap-2"><p class="text-[15px] font-medium leading-snug break-words min-w-0">${esc(g.descripcion)}</p><p class="text-[15px] font-semibold whitespace-nowrap">${money(g.monto)}</p></div>
+                <p class="text-[12px] opacity-60 mt-0.5">${fdate(g.fecha)} · ${esc(corto(g.categoria))}${g.proveedor ? ' · ' + esc(g.proveedor) : ''}</p>
+                <div class="flex flex-wrap gap-1 mt-1.5 items-center"><span class="badge b-llc">${esc(g.pagado_por)}</span>${badgeEstado(g.estado)}${g.categoria === 'Revisar' ? '<span class="badge b-sd">revisar</span>' : ''}${g.libro !== 'LLC' ? '<span class="badge b-nj">NJ fuera</span>' : ''}${g.source === 'telefono' ? '<span class="badge b-llc">teléfono</span>' : ''}${g.receipt ? `<button class="text-[12px] text-[#B76E88] underline" onclick="event.stopPropagation();Acc.verRecibo('${g.id}')">recibo</button>` : ''}</div>
+              </div></div>`).join('') +
+            (list.length > gLimit ? `<button class="soft w-full" onclick="Acc.masGastos()">Ver ${Math.min(50, list.length - gLimit)} más</button>` : '') +
+            (list.length ? '' : '<p class="text-sm opacity-60 text-center py-8">No hay gastos con estos filtros.</p>');
         updateBulk();
     }
-    function updateBulk() { const b = $('acc-bulk'); if (!b) return; b.classList.toggle('hidden', !sel.size); $('acc-bulkn').textContent = sel.size + ' seleccionados'; }
+    let gLimit = 50;
+    function masGastos() { gLimit += 50; tablaGastos(); }
+    function toggleFiltros() { const f = $('acc-gfil'); f.classList.toggle('hidden'); f.classList.toggle('grid'); }
+    function clearSel() { sel.clear(); tablaGastos(); }
+    function updateBulk() {
+        const b = $('acc-bulk'); if (!b) return;
+        b.classList.toggle('hidden', !sel.size); $('acc-bulkn').textContent = sel.size + ' seleccionados';
+        b.classList.toggle('bulkbar', !!sel.size && window.innerWidth < 768);   // phone: fixed bar at the bottom
+    }
     function toggleSel(id, on) { on ? sel.add(id) : sel.delete(id); updateBulk(); }
     function selAll(cb) { visibles.forEach(id => cb.checked ? sel.add(id) : sel.delete(id)); tablaGastos(); }
     async function bulkSet(estado) {
@@ -285,29 +326,29 @@
     <dialog id="acc-dg" class="acc"><form id="acc-g-form" method="dialog" class="p-6 space-y-3">
       <h3 class="text-2xl italic" id="acc-g-title">Nuevo gasto</h3><input type="hidden" id="acc-g-id">
       <div class="grid grid-cols-2 gap-3"><div><label class="lbl" for="acc-g-fecha">Fecha</label><input type="date" id="acc-g-fecha" required></div>
-        <div><label class="lbl" for="acc-g-monto">Monto ($)</label><input id="acc-g-monto" inputmode="decimal" required></div></div>
+        <div><label class="lbl" for="acc-g-monto">Monto ($)</label><input id="acc-g-monto" inputmode="decimal" required placeholder="0.00" style="font-size:20px;font-weight:600"></div></div>
       <div><label class="lbl" for="acc-g-desc">Descripción</label><input id="acc-g-desc" required></div>
-      <div class="grid grid-cols-2 gap-3"><div><label class="lbl" for="acc-g-prov">Proveedor</label><input id="acc-g-prov"></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="lbl" for="acc-g-prov">Proveedor</label><input id="acc-g-prov"></div>
         <div><label class="lbl" for="acc-g-cat">Categoría</label><select id="acc-g-cat"></select></div></div>
-      <div class="grid grid-cols-2 gap-3"><div><label class="lbl" for="acc-g-cuenta">Cuenta / tarjeta</label><select id="acc-g-cuenta"></select></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="lbl" for="acc-g-cuenta">Cuenta / tarjeta</label><select id="acc-g-cuenta"></select></div>
         <div><label class="lbl" for="acc-g-pag">Pagado por</label><select id="acc-g-pag"></select></div></div>
-      <div class="grid grid-cols-2 gap-3"><div><label class="lbl" for="acc-g-est">Estado reembolso</label><select id="acc-g-est"></select></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="lbl" for="acc-g-est">Estado reembolso</label><select id="acc-g-est"></select></div>
         <div><label class="lbl" for="acc-g-freemb">Fecha reembolso</label><input type="date" id="acc-g-freemb"></div></div>
       <div><label class="lbl" for="acc-g-lib">Libro</label><select id="acc-g-lib"></select></div>
       <div><label class="lbl" for="acc-g-nota">Nota</label><textarea id="acc-g-nota" rows="2"></textarea></div>
       <div><label class="lbl" for="acc-g-foto">Foto del recibo</label><input type="file" accept="image/*,application/pdf" id="acc-g-foto"><p class="text-[11px] opacity-60 mt-1" id="acc-g-fotoinfo"></p></div>
-      <div class="flex justify-between gap-2 pt-2"><button type="button" class="soft text-red-700" id="acc-g-del" onclick="Acc.delGasto()">Eliminar</button>
+      <div class="dlg-actions flex justify-between gap-2 pt-2"><button type="button" class="soft text-red-700" id="acc-g-del" onclick="Acc.delGasto()">Eliminar</button>
         <div class="flex gap-2"><button type="button" class="soft" onclick="this.closest('dialog').close()">Cancelar</button><button class="abtn" id="acc-g-save">Guardar</button></div></div>
     </form></dialog>
     <dialog id="acc-dm" class="acc"><form id="acc-m-form" method="dialog" class="p-6 space-y-3">
       <h3 class="text-2xl italic">Movimiento de socio</h3><input type="hidden" id="acc-m-id">
       <div class="grid grid-cols-2 gap-3"><div><label class="lbl" for="acc-m-fecha">Fecha</label><input type="date" id="acc-m-fecha" required></div>
         <div><label class="lbl" for="acc-m-monto">Monto ($)</label><input id="acc-m-monto" inputmode="decimal" required></div></div>
-      <div class="grid grid-cols-2 gap-3"><div><label class="lbl" for="acc-m-socio">Socio</label><select id="acc-m-socio"><option>Freddy</option><option>Samuel</option><option>Ambos (50/50)</option></select></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="lbl" for="acc-m-socio">Socio</label><select id="acc-m-socio"><option>Freddy</option><option>Samuel</option><option>Ambos (50/50)</option></select></div>
         <div><label class="lbl" for="acc-m-tipo">Tipo</label><select id="acc-m-tipo"><option>Aporte de capital</option><option>Retiro de capital</option><option>Préstamo del socio</option><option>Pago de préstamo al socio</option></select></div></div>
       <div><label class="lbl" for="acc-m-concepto">Concepto</label><input id="acc-m-concepto" placeholder="Ej. aporte de noviembre para pagar tarjetas" required></div>
       <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="acc-m-conf" checked class="accent-[#B76E88]"> Confirmado (ya pasó el dinero)</label>
-      <div class="flex justify-between gap-2 pt-2"><button type="button" class="soft text-red-700" id="acc-m-del" onclick="Acc.delMov()">Eliminar</button>
+      <div class="dlg-actions flex justify-between gap-2 pt-2"><button type="button" class="soft text-red-700" id="acc-m-del" onclick="Acc.delMov()">Eliminar</button>
         <div class="flex gap-2"><button type="button" class="soft" onclick="this.closest('dialog').close()">Cancelar</button><button class="abtn">Guardar</button></div></div>
     </form></dialog>`;
     async function openGasto(id) {
@@ -711,6 +752,6 @@
         openIphone();
     }
 
-    window.Acc = { open, refresh, openIphone, crearCodigo, revocarCodigo, sortBy, toggleSel, selAll, bulkSet, openGasto, delGasto, verRecibo, openMov, delMov, verEstado, imprimir,
+    window.Acc = { open, refresh, openIphone, crearCodigo, revocarCodigo, masGastos, toggleFiltros, clearSel, sortBy, toggleSel, selAll, bulkSet, openGasto, delGasto, verRecibo, openMov, delMov, verEstado, imprimir,
         guardarConciliacion, irACobros, depAporte, exportContadora, exportFormatoSheet };
 })();
