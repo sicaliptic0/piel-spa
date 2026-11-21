@@ -679,8 +679,8 @@
             if (!currentSkincareRoutine) { card.classList.add('hidden'); return; }
             const { data: owned } = await _supabase.from('skincare_purchases').select('product_id').eq('routine_id', currentSkincareRoutine.id);
             skincareOwned = new Set((owned || []).map(o => o.product_id));
-            renderSkincareCard();
             card.classList.remove('hidden');
+            try { renderSkincareCard(); } catch (e) { console.error('skincare card:', e); }
         }
 
         // Cada producto una sola vez, en el orden en que se necesita; la alternativa va al lado.
@@ -798,8 +798,11 @@
                 const inSlot = items.filter(it => it.slot === slot && inTab(it));
                 if (!inSlot.length) return;
                 const owned = inSlot.filter(it => skincareOwned.has(it.product_id));
-                if (owned.length) steps.push({ slot, show: owned, mains: owned, alts: [] });
-                else steps.push({ slot, show: inSlot, mains: inSlot.filter(it => it.role !== 'alt'), alts: inSlot.filter(it => it.role === 'alt') });
+                if (owned.length) { steps.push({ slot, show: owned, mains: owned, alts: [] }); return; }
+                let mains = inSlot.filter(it => it.role !== 'alt'), alts = inSlot.filter(it => it.role === 'alt');
+                // A esta hora solo aplica la alternativa (p. ej. el principal es solo de mañana): se muestra como el producto del paso.
+                if (!mains.length) { mains = alts; alts = []; }
+                steps.push({ slot, show: inSlot, mains, alts });
             });
             const prod = it => `<span class="flex items-center gap-2 min-w-0">
                 ${it.image_url ? `<img src="${escapeHtmlMsg(it.image_url)}" alt="" loading="lazy" class="w-9 h-9 object-contain bg-white border border-[#EDE1E7] rounded-md flex-shrink-0">` : ''}
