@@ -13,7 +13,7 @@
         'BofA Travel', 'Visa (sin identificar)', 'Tarjeta personal', 'Zelle / transferencia personal', 'Efectivo', 'Cheque', 'Sin dato'];
     const PAY_LABEL = { cash: 'Efectivo', transfer: 'Transferencia', zelle: 'Zelle', debit: 'Tarjeta de débito', credit: 'Tarjeta de crédito', cherry: 'Cherry', check: 'Cheque', other: 'Otro' };
     const VIEWS = [['panel', 'Panel'], ['resumen', 'Resumen'], ['gastos', 'Gastos'], ['fijos', 'Gastos fijos'], ['socios', 'Socios'], ['estado', 'Estado de cuenta'], ['ingresos', 'Ingresos'],
-        ['impuestos', 'Impuestos'], ['conciliacion', 'Conciliación'], ['reportes', 'Reportes']];
+        ['impuestos', 'Impuestos'], ['productos', 'Productos'], ['conciliacion', 'Conciliación'], ['reportes', 'Reportes']];
 
     // ---------- state
     let db = null, view = 'resumen', built = false, loading = null;
@@ -95,7 +95,7 @@
                 ...pay.map(p => {
                     const servBase = r2(Number(p.amount) - Number(p.discount || 0)), prod = Number(p.product_amount || 0);
                     return { id: 'pay:' + p.id, tabla: 'payments', pid: p.id, fecha: p.paid_on, cliente: p.patient_name,
-                        servicio: [p.category, p.product_desc].filter(Boolean).join(' + ') || 'Cobro', categoria: p.category || 'Sin categoría',
+                        servicio: [p.service_desc || p.category, p.product_desc].filter(Boolean).join(' + ') || 'Cobro', descuento: Number(p.discount || 0), categoria: p.category || 'Sin categoría',
                         metodo: PAY_LABEL[p.method] || p.method, monto: r2(servBase + prod), baseServ: servBase, baseProd: prod,
                         taxServ: Number(p.service_tax || 0) || (prod ? 0 : Number(p.tax || 0)), taxProd: Number(p.product_tax || 0), impuesto: Number(p.tax || 0),
                         recargo: Number(p.surcharge || 0), total: Number(p.total), comision: Number(p.processor_fee || 0), libro: p.ledger || 'LLC',
@@ -240,7 +240,7 @@
         if (!db) return;
         document.querySelectorAll('#acc-tabs .sub').forEach(b => b.classList.toggle('on', b.dataset.v === view));
         const body = $('acc-body');
-        ({ panel: viewPanel, fijos: viewFijos, resumen: viewResumen, gastos: viewGastos, socios: viewSocios, estado: viewEstado, ingresos: viewIngresos,
+        ({ productos: viewProductos, panel: viewPanel, fijos: viewFijos, resumen: viewResumen, gastos: viewGastos, socios: viewSocios, estado: viewEstado, ingresos: viewIngresos,
             impuestos: viewImpuestos, conciliacion: viewConciliacion, reportes: viewReportes })[view](body);
     }
 
@@ -807,6 +807,49 @@
     }
     function irGastos(cat, mes) { gf.q = ''; gf.cat = cat; gf.mes = mes; gf.pag = ''; gf.est = ''; view = 'gastos'; render(); }
 
+    // ---------- Productos: what Piel Spa sells (the skincare catalog's "in stock" items)
+    let prodTodos = false, prodCache = null;
+    async function viewProductos(body) {
+        body.innerHTML = '<p class="text-sm opacity-50 text-center py-10">Cargando productos…</p>';
+        const [{ data: prods, error }, { data: ventas }] = await Promise.all([
+            _supabase.from('skincare_products').select('id, name, brand, step, size, price_usd, clinic_price_usd, cost_usd, sales_taxable, stock_qty, in_stock, active').order('brand').order('name'),
+            _supabase.from('payments').select('product_id, product_qty, product_amount').not('product_id', 'is', null).is('voided_at', null),
+        ]);
+        if (error) { body.innerHTML = `<p class="text-sm text-red-500 text-center py-8">${esc(error.message)}</p>`; return; }
+        if (view !== 'productos') return;
+        prodCache = prods || [];
+        const vend = {}; (ventas || []).forEach(v => { const x = vend[v.product_id] = vend[v.product_id] || { u: 0, m: 0 }; x.u += v.product_qty || 1; x.m += Number(v.product_amount || 0); });
+        const list = prodCache.filter(p => prodTodos ? p.active !== false : p.in_stock);
+        const num = (id, field, val, w) => `<input class="text-right" style="width:${w};padding:6px 8px" inputmode="decimal" value="${val ?? ''}" onchange="Acc.prodSet('${esc(id)}','${field}',this.value)" aria-label="${field}">`;
+        const chk = (id, field, val, label) => `<label class="inline-flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="accent-[#B76E88] w-4 h-4" ${val ? 'checked' : ''} onchange="Acc.prodSet('${esc(id)}','${field}',this.checked)">${label}</label>`;
+        const precio = p => p.clinic_price_usd ?? p.price_usd;
+        const margen = p => { const pv = precio(p), c = p.cost_usd; return pv && c != null ? Math.round((pv - c) / pv * 100) + '%' : '–'; };
+        body.innerHTML = `<div class="card p-4 mb-4 text-sm space-y-2">
+            <p>Los productos que vende Piel Spa. Son los del catálogo de rutinas marcados "a la venta". El precio es el que sale en Cobros.</p>
+            <p class="text-[13px]"><b>Sales tax:</b> los protectores solares quedaron <b>sin sales tax</b>, como indicaron. Confírmenlo con la contadora: en NY depende de si el producto se vende como medicamento OTC (con "Drug Facts") o como cosmético.</p>
+            <label class="inline-flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" class="accent-[#B76E88]" ${prodTodos ? 'checked' : ''} onchange="Acc.prodTodos(this.checked)"> Mostrar todo el catálogo (para poner otros productos a la venta)</label></div>
+          <div class="card overflow-hidden hidden md:block"><div class="overflow-x-auto"><table class="t"><thead><tr><th>Producto</th><th class="num">Precio Piel Spa</th><th class="num">Costo</th><th class="num">Margen</th><th>Sales tax</th><th class="num">Stock</th><th class="num">Vendidos</th><th>A la venta</th></tr></thead><tbody>${list.map(p => `<tr>
+              <td><div>${esc(p.name)}</div><div class="text-[11px] opacity-60">${esc(p.brand)}${p.size ? ' · ' + esc(p.size) : ''}${p.step === 'spf' ? ' · protector solar' : ''}</div></td>
+              <td class="num">${num(p.id, 'clinic_price_usd', p.clinic_price_usd, '6rem')}${p.clinic_price_usd == null && p.price_usd != null ? `<div class="text-[10px] opacity-50">sugerido ${money(Number(p.price_usd))}</div>` : ''}</td>
+              <td class="num">${num(p.id, 'cost_usd', p.cost_usd, '5.5rem')}</td><td class="num">${margen(p)}</td>
+              <td>${chk(p.id, 'sales_taxable', p.sales_taxable, 'Sí')}</td><td class="num">${num(p.id, 'stock_qty', p.stock_qty, '4rem')}</td>
+              <td class="num">${vend[p.id] ? `${vend[p.id].u} · ${money(vend[p.id].m)}` : '–'}</td><td>${chk(p.id, 'in_stock', p.in_stock, '')}</td></tr>`).join('')}</tbody></table></div></div>
+          <div class="md:hidden space-y-2">${list.map(p => `<div class="card p-3 space-y-2"><div><p class="font-medium">${esc(p.name)}</p><p class="text-[12px] opacity-60">${esc(p.brand)}${p.step === 'spf' ? ' · protector solar' : ''} · margen ${margen(p)}${vend[p.id] ? ` · vendidos ${vend[p.id].u}` : ''}</p></div>
+              <div class="grid grid-cols-3 gap-2 items-end"><div><p class="lbl">Precio</p>${num(p.id, 'clinic_price_usd', p.clinic_price_usd, '100%')}</div><div><p class="lbl">Costo</p>${num(p.id, 'cost_usd', p.cost_usd, '100%')}</div><div><p class="lbl">Stock</p>${num(p.id, 'stock_qty', p.stock_qty, '100%')}</div></div>
+              <div class="flex gap-4">${chk(p.id, 'sales_taxable', p.sales_taxable, 'Lleva sales tax')}${chk(p.id, 'in_stock', p.in_stock, 'A la venta')}</div></div>`).join('')}</div>
+          ${list.length ? '' : '<p class="text-sm opacity-60 text-center py-8">No hay productos a la venta. Marca "Mostrar todo el catálogo" para elegirlos.</p>'}`;
+    }
+    async function prodSet(id, field, value) {
+        let v = value;
+        if (field === 'clinic_price_usd' || field === 'cost_usd') { v = String(value).trim() === '' ? null : amt(value); if (v === null && String(value).trim() !== '') { alert('Escribe un número.'); return; } }
+        if (field === 'stock_qty') { v = String(value).trim() === '' ? null : parseInt(value, 10); if (v !== null && (isNaN(v) || v < 0)) { alert('El stock es un número entero.'); return; } }
+        const { error } = await _supabase.from('skincare_products').update({ [field]: v }).eq('id', id);
+        if (error) { alert('No se pudo guardar: ' + error.message); return; }
+        toast('Guardado.');
+        if (field === 'in_stock' || field === 'clinic_price_usd' || field === 'cost_usd') render();
+    }
+    function setProdTodos(on) { prodTodos = on; render(); }
+
     // ---------- Gastos fijos (monthly, created by acct_generate_recurring)
     function viewFijos(body) {
         const list = db.fijos;
@@ -977,6 +1020,6 @@
         openIphone();
     }
 
-    window.Acc = { open, refresh, irGastos, openFijo, cierreMes, openSheets, openIphone, crearCodigo, revocarCodigo, masGastos, toggleFiltros, clearSel, sortBy, toggleSel, selAll, bulkSet, openGasto, delGasto, verRecibo, openMov, delMov, verEstado, imprimir,
+    window.Acc = { open, refresh, prodSet, prodTodos: setProdTodos, irGastos, openFijo, cierreMes, openSheets, openIphone, crearCodigo, revocarCodigo, masGastos, toggleFiltros, clearSel, sortBy, toggleSel, selAll, bulkSet, openGasto, delGasto, verRecibo, openMov, delMov, verEstado, imprimir,
         guardarConciliacion, irACobros, depAporte, exportContadora, exportFormatoSheet };
 })();

@@ -431,6 +431,7 @@
                                 <select id="pay-category" style="font-size: 13px; padding: 7px 8px;">
                                     <option>Faciales</option><option>Faciales B</option><option>Faciales R</option><option>Faciales Bio</option>
                                     <option>Faciales T</option><option>Faciales Reg</option><option>Depilación láser</option><option>Láser</option>
+                                    <option>Consulta</option><option>Otro servicio</option><option>Solo producto</option>
                                 </select>
                             </div>
                             <div>
@@ -442,10 +443,20 @@
                             </div>
                         </div>
                         <div>
-                            <p class="enc-label mb-1">Producto vendido (opcional, lleva sales tax)</p>
-                            <div class="grid grid-cols-3 gap-2">
-                                <input type="text" id="pay-product-desc" placeholder="Ej. protector solar" class="col-span-2" aria-label="Producto vendido">
-                                <input type="text" id="pay-product-amount" inputmode="decimal" placeholder="$0.00" oninput="renderPayTotals()" aria-label="Precio del producto">
+                            <label for="pay-product" class="enc-label mb-1 block">Producto vendido (opcional)</label>
+                            <div class="grid grid-cols-4 gap-2">
+                                <select id="pay-product" class="col-span-3" onchange="onPayProductChange()" style="font-size: 13px; padding: 7px 8px;"><option value="">Sin producto</option></select>
+                                <input type="text" id="pay-product-qty" inputmode="numeric" value="1" oninput="renderPayTotals()" aria-label="Cantidad" title="Cantidad">
+                            </div>
+                            <div id="pay-product-detail" class="hidden mt-2 space-y-2">
+                                <div class="grid grid-cols-3 gap-2">
+                                    <input type="text" id="pay-product-desc" placeholder="Nombre del producto" class="col-span-2" aria-label="Producto vendido">
+                                    <input type="text" id="pay-product-amount" inputmode="decimal" placeholder="$ c/u" oninput="renderPayTotals()" aria-label="Precio por unidad">
+                                </div>
+                                <label class="flex items-center gap-2 text-xs cursor-pointer select-none">
+                                    <input type="checkbox" id="pay-product-taxable" class="accent-[#B76E88]" onchange="renderPayTotals()">
+                                    <span>Lleva sales tax</span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -459,7 +470,7 @@
                         </div>
                         <div>
                             <label for="pay-method" class="enc-label mb-1 block">Método de pago</label>
-                            <select id="pay-method" onchange="renderPayTotals()" style="max-width: 16rem; font-size: 13px; padding: 7px 8px;">
+                            <select id="pay-method" onchange="onPayMethodChange()" style="max-width: 16rem; font-size: 13px; padding: 7px 8px;">
                                 <option value="cash">Efectivo</option>
                                 <option value="zelle">Zelle</option>
                                 <option value="transfer">Transferencia</option>
@@ -469,6 +480,10 @@
                                 <option value="check">Cheque</option>
                                 <option value="other">Otro</option>
                             </select>
+                            <label id="pay-surcharge-opt" class="hidden mt-2 flex items-center gap-2 text-xs cursor-pointer select-none">
+                                <input type="checkbox" id="pay-surcharge-on" class="accent-[#B76E88]" onchange="renderPayTotals()">
+                                <span id="pay-surcharge-opt-label">Cobrar recargo de tarjeta</span>
+                            </label>
                         </div>
                         <div id="pay-promo-row" class="hidden flex items-baseline justify-between gap-3 text-green-700">
                             <span class="text-lg">Promoción</span>
@@ -3987,7 +4002,37 @@
             if (!month.value) month.value = clinicDateIso(0).slice(0, 7);
             if (!allPatients.length) fetchPatients();
             renderPayTotals();
-            await Promise.all([loadPaymentsList(), loadFriendCoupons(), loadPayRates()]);
+            await Promise.all([loadPaymentsList(), loadFriendCoupons(), loadPayRates(), loadPayProducts()]);
+        }
+
+        // Products for sale: the skincare catalog's "in stock" items (Contabilidad → Productos).
+        let payProducts = [];
+        async function loadPayProducts() {
+            const { data } = await _supabase.from('skincare_products').select('id, name, brand, clinic_price_usd, price_usd, sales_taxable, stock_qty')
+                .eq('in_stock', true).order('brand').order('name');
+            payProducts = data || [];
+            const sel = document.getElementById('pay-product'), keep = sel.value;
+            sel.innerHTML = '<option value="">Sin producto</option>' + payProducts.map(p => {
+                const price = p.clinic_price_usd ?? p.price_usd;
+                return `<option value="${escapeHtml(p.id)}">${escapeHtml(p.brand + ' · ' + p.name)}${price != null ? ' · ' + escapeHtml(formatAmount(price)) : ''}${p.stock_qty != null ? ` (${p.stock_qty} en stock)` : ''}</option>`;
+            }).join('') + '<option value="__otro">Otro producto…</option>';
+            sel.value = keep;
+        }
+        function onPayProductChange() {
+            const v = document.getElementById('pay-product').value, p = payProducts.find(x => x.id === v);
+            document.getElementById('pay-product-detail').classList.toggle('hidden', !v);
+            document.getElementById('pay-product-qty').value = '1';
+            document.getElementById('pay-product-desc').value = p ? `${p.brand} · ${p.name}` : '';
+            const price = p ? (p.clinic_price_usd ?? p.price_usd) : null;
+            document.getElementById('pay-product-amount').value = price != null ? Number(price).toFixed(2) : '';
+            document.getElementById('pay-product-taxable').checked = p ? p.sales_taxable !== false : true;
+            renderPayTotals();
+        }
+        // Card surcharge: on by default for credit, off for debit (card networks do not allow it on debit); either can be changed.
+        function onPayMethodChange() {
+            const m = document.getElementById('pay-method').value;
+            document.getElementById('pay-surcharge-on').checked = m === 'credit';
+            renderPayTotals();
         }
 
         function payPatientLabel(p) {
@@ -4061,20 +4106,25 @@
         // Base, discount, taxes, surcharge and total from what's on screen. amount is undefined when mistyped.
         function payFigures() {
             const amount = parseAmount(document.getElementById('pay-amount').value);
-            const product = parseAmount(document.getElementById('pay-product-amount').value) || 0;
+            const hasProduct = !!document.getElementById('pay-product').value;
+            const productQty = Math.max(1, parseInt(document.getElementById('pay-product-qty').value, 10) || 1);
+            const productUnit = hasProduct ? (parseAmount(document.getElementById('pay-product-amount').value) || 0) : 0;
+            const product = roundTo(productUnit * productQty, 2);
+            const productTaxable = document.getElementById('pay-product-taxable').checked;
             const method = document.getElementById('pay-method').value;
             const friend = document.getElementById('pay-friend').checked;
             const discount = friend ? Math.min(FRIEND_COUPON_AMOUNT, amount || 0) : 0;
             const base = (amount || 0) - discount;
             const serviceRate = payRates.services_taxed ? Number(payRates.tax_services) : 0;
             const serviceTax = roundTo(base * serviceRate, 2);
-            const productTax = roundTo(product * Number(payRates.tax_products), 2);
+            const productTax = productTaxable ? roundTo(product * Number(payRates.tax_products), 2) : 0;
             const tax = roundTo(serviceTax + productTax, 2);
             const beforeSurcharge = roundTo(base + product + tax, 2);
-            const surcharge = method === 'credit' ? roundTo(beforeSurcharge * Number(payRates.surcharge_credit), 2) : 0;
+            const isCard = PAY_CARD_METHODS.includes(method);
+            const surcharge = isCard && document.getElementById('pay-surcharge-on').checked ? roundTo(beforeSurcharge * Number(payRates.surcharge_credit), 2) : 0;
             const total = roundTo(beforeSurcharge + surcharge, 2);
-            const fee = PAY_CARD_METHODS.includes(method) && total ? roundTo(total * Number(payRates.fee_pct) + Number(payRates.fee_fixed), 2) : 0;
-            return { amount, product, method, friend, discount, taxRate: serviceRate * 100, serviceTax, productTax, tax, surcharge, total, fee };
+            const fee = isCard && total ? roundTo(total * Number(payRates.fee_pct) + Number(payRates.fee_fixed), 2) : 0;
+            return { amount, product, productQty, productTaxable, method, isCard, friend, discount, taxRate: serviceRate * 100, serviceTax, productTax, tax, surcharge, total, fee };
         }
 
         function renderPayTotals() {
@@ -4088,7 +4138,12 @@
                 : f.productTax ? `Sales tax ${payPct(payRates.tax_products)}` : `Tax ${payPct(payRates.tax_services)}`;
             document.getElementById('pay-tax').innerText = formatAmount(f.tax);
             document.getElementById('pay-surcharge-row').classList.toggle('hidden', !f.surcharge);
-            document.getElementById('pay-surcharge-label').innerText = `Recargo tarjeta de crédito ${payPct(payRates.surcharge_credit)}`;
+            document.getElementById('pay-surcharge-label').innerText = `Recargo tarjeta ${payPct(payRates.surcharge_credit)}`;
+            document.getElementById('pay-surcharge-opt').classList.toggle('hidden', !f.isCard);
+            document.getElementById('pay-surcharge-opt-label').innerText = f.method === 'debit'
+                ? `Cobrar recargo de tarjeta (${payPct(payRates.surcharge_credit)}). Ojo: Visa y Mastercard no lo permiten en débito.`
+                : `Cobrar recargo de tarjeta (${payPct(payRates.surcharge_credit)})`;
+            document.getElementById('pay-product-taxable').nextElementSibling.innerText = `Lleva sales tax (${payPct(payRates.tax_products)})`;
             document.getElementById('pay-surcharge').innerText = formatAmount(f.surcharge);
             document.getElementById('pay-total').innerText = formatAmount(f.total);
             document.getElementById('pay-fee-note').innerText = f.fee ? `Cobrar en ${payRates.processor}. Comisión estimada ${formatAmount(f.fee)}.` : (f.method === 'cherry' ? 'Cherry deposita menos su comisión: regístrala en Contabilidad cuando llegue.' : '');
@@ -4120,8 +4175,8 @@
                     dlg = document.getElementById('qa-dialog');
                 }
                 document.getElementById('qa-amount').innerText = formatAmount(total);
-                document.getElementById('qa-type').innerText = method === 'credit'
-                    ? `Incluye el recargo de crédito de ${formatAmount(surcharge)}. Si el cliente paga con débito, cambia el método antes.` : 'Débito: sin recargo.';
+                document.getElementById('qa-type').innerText = surcharge
+                    ? `Incluye el recargo de tarjeta de ${formatAmount(surcharge)}.${method === 'credit' ? ' Si el cliente paga con débito, cambia el método antes.' : ''}` : 'Sin recargo de tarjeta.';
                 document.getElementById('qa-last4').value = '';
                 document.getElementById('qa-receipt').value = '';
                 dlg.onclose = () => {
@@ -4175,8 +4230,12 @@
             document.getElementById('pay-date').value = clinicDateIso(0);
             document.getElementById('pay-friend').checked = false;
             document.getElementById('pay-extras').classList.add('hidden');
+            document.getElementById('pay-product').value = '';
+            document.getElementById('pay-product-qty').value = '1';
+            document.getElementById('pay-product-detail').classList.add('hidden');
             document.getElementById('pay-product-desc').value = '';
             document.getElementById('pay-product-amount').value = '';
+            document.getElementById('pay-surcharge-on').checked = false;
             document.getElementById('pay-ledger').value = 'LLC';
             renderPayTotals();
         }
@@ -4190,8 +4249,12 @@
             if (f.friend && !payFriendLeft) { alert('Ya no quedan cupos este mes.'); return; }
             const encounterId = document.getElementById('pay-encounter').value || null;
             if (encounterId && payPaidEncounters[encounterId] && !confirm('Este encuentro ya tiene un pago. ¿Registrar otro?')) return;
-            const productDesc = document.getElementById('pay-product-desc').value.trim();
-            if (f.product && !productDesc) { alert('Escribe qué producto se vendió.'); document.getElementById('pay-product-desc').focus(); return; }
+            const productId = document.getElementById('pay-product').value;
+            const productName = document.getElementById('pay-product-desc').value.trim();
+            if (productId && !f.product) { alert('Escribe el precio del producto.'); document.getElementById('pay-product-amount').focus(); return; }
+            if (f.product && !productName) { alert('Escribe qué producto se vendió.'); document.getElementById('pay-product-desc').focus(); return; }
+            const productDesc = f.product ? productName + (f.productQty > 1 ? ` x${f.productQty}` : '') + (f.productTaxable ? '' : ' (sin sales tax)') : '';
+            const encounterForText = payEncounters[document.getElementById('pay-encounter').value];
             let card = null;
             if (PAY_CARD_METHODS.includes(f.method)) {
                 card = await confirmQuickAccept(f.total, f.method, f.surcharge);
@@ -4207,7 +4270,10 @@
                     category: document.getElementById('pay-category').value,
                     ledger,
                     service_tax: f.serviceTax,
+                    service_desc: encounterForText ? (encounterSummaryText(encounterForText) || null) : null,
                     product_desc: productDesc || null,
+                    product_id: f.product && productId !== '__otro' ? productId : null,
+                    product_qty: f.product ? f.productQty : null,
                     product_amount: f.product,
                     product_tax: f.productTax,
                     surcharge: f.surcharge,
@@ -4236,7 +4302,13 @@
                         category: 'Comisiones bancarias y de tarjeta', ledger, amount: f.fee, account: 'Débito Chase Business', paid_by: 'LLC',
                         reimb_status: 'No aplica (pagó la LLC)', note: 'Automático desde Cobros. Comisión estimada.', payment_id: saved.id, source: 'cobros', created_by: user?.id || null,
                     });
-                    if (feeError) console.error('Card fee expense error:', feeError.message);
+                    if (feeError) alert('El cobro se guardó, pero no la comisión de tarjeta (' + feeError.message + '). Agrégala a mano en Contabilidad → Gastos.');
+                }
+                // One less unit in stock, when the product's stock is being tracked.
+                const sold = payProducts.find(p => p.id === productId);
+                if (f.product && sold && sold.stock_qty != null) {
+                    await _supabase.from('skincare_products').update({ stock_qty: Math.max(0, sold.stock_qty - f.productQty) }).eq('id', sold.id);
+                    loadPayProducts();
                 }
                 resetPayForm();
                 document.getElementById('pay-month').value = paidOn.slice(0, 7);
@@ -4334,8 +4406,12 @@
         async function voidPayment(id) {
             if (!confirm('¿Anular este pago? Deja de contar en los totales y, si usó un cupo de amigos, el cupo se libera.')) return;
             const { data: { user } } = await _supabase.auth.getUser();
-            const { error } = await _supabase.from('payments').update({ voided_at: new Date().toISOString(), voided_by: user?.id || null }).eq('id', id);
+            const now = new Date().toISOString();
+            const { error } = await _supabase.from('payments').update({ voided_at: now, voided_by: user?.id || null }).eq('id', id);
             if (error) { alert('No se pudo anular: ' + error.message); return; }
+            // Its card-fee expense stops counting too.
+            const { error: feeError } = await _supabase.from('acct_expenses').update({ deleted_at: now }).eq('payment_id', id).is('deleted_at', null);
+            if (feeError) alert('El pago se anuló, pero no su comisión de tarjeta (' + feeError.message + '). Bórrala a mano en Contabilidad → Gastos.');
             await Promise.all([loadPaymentsList(), loadFriendCoupons()]);
         }
 
