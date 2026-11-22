@@ -411,6 +411,35 @@
         <!-- Payments ("Cobros") View -->
         <div id="payments-view" class="flex-1 overflow-y-auto p-4 md:p-8 hidden">
             <div class="max-w-6xl mx-auto space-y-8">
+                <div class="flex flex-wrap items-center gap-3">
+                    <button type="button" id="pay-estimate-open" class="rounded-full bg-[#2A2330] text-white px-4 py-2 text-sm font-semibold">Calculadora de cobros</button>
+                    <span class="text-sm text-[#665861]">Estima el precio de un tratamiento sin seleccionar paciente.</span>
+                </div>
+                <dialog id="pay-estimate" aria-labelledby="pay-estimate-title" class="m-auto w-[min(94vw,36rem)] max-h-[90dvh] overflow-y-auto rounded-2xl bg-white text-[#2A2330] shadow-2xl backdrop:bg-[#2A2330]/80">
+                    <form method="dialog" class="p-5 sm:p-7 space-y-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <h2 id="pay-estimate-title" class="text-xl font-semibold">Estimación del tratamiento</h2>
+                                <p class="mt-1 text-sm text-[#665861]">Calcula el total sin registrar un cobro.</p>
+                            </div>
+                            <button type="submit" class="rounded-full border border-[#EDE1E7] px-3 py-1 text-sm">Cerrar</button>
+                        </div>
+                        <p id="pay-estimate-status" class="text-sm text-[#665861]" aria-live="polite"></p>
+                        <label class="block text-sm font-semibold">Servicio<select id="pay-estimate-service" autofocus></select></label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="text-sm font-semibold"><span id="pay-estimate-unit-label">Cantidad</span><input id="pay-estimate-qty" type="number" min="1" max="100000" step="1" value="1"></label>
+                            <label class="text-sm font-semibold">Tarifa por unidad<select id="pay-estimate-mode"></select></label>
+                        </div>
+                        <label id="pay-estimate-custom-wrap" class="hidden text-sm font-semibold">Precio manual por unidad (USD)<input id="pay-estimate-custom" type="text" inputmode="decimal"></label>
+                        <label id="pay-estimate-tax-wrap" class="flex items-center gap-2 text-sm"><input id="pay-estimate-tax" type="checkbox" checked> Incluir impuesto de servicios</label>
+                        <dl id="pay-estimate-breakdown" class="hidden rounded-xl bg-[#FDF7FA] p-4 space-y-2 text-sm" aria-live="polite">
+                            <div class="flex justify-between gap-4"><dt>Subtotal</dt><dd id="pay-estimate-base"></dd></div>
+                            <div id="pay-estimate-discount-row" class="flex justify-between gap-4"><dt>Descuento</dt><dd id="pay-estimate-discount"></dd></div>
+                            <div id="pay-estimate-tax-row" class="flex justify-between gap-4"><dt>Impuesto estimado</dt><dd id="pay-estimate-tax-total"></dd></div>
+                            <div class="flex justify-between items-baseline gap-4 border-t border-[#EDE1E7] pt-2"><dt class="font-semibold">Total estimado</dt><dd id="pay-estimate-total" class="text-2xl font-bold"></dd></div>
+                        </dl>
+                    </form>
+                </dialog>
                 <!-- Checkout: left the visit, right what the patient sees -->
                 <div class="bg-white border border-[#EDE1E7] rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-2">
                     <div class="p-5 md:p-8 space-y-5 border-b md:border-b-0 md:border-r border-[#EDE1E7]">
@@ -4185,6 +4214,7 @@
             const { data } = await _supabase.from('acct_settings').select('*').eq('id', 1).maybeSingle();
             if (data) payRates = { ...payRates, ...Object.fromEntries(Object.entries(data).map(([k, v]) => [k, typeof v === 'string' && /^[\d.]+$/.test(v) ? Number(v) : v])) };
             renderPayTotals();
+            if (estimateDialog.open) renderPayEstimate();
         }
         // Each admin account has its own quota, per calendar month.
         const FRIEND_COUPON_AMOUNT = 30;
@@ -4209,6 +4239,98 @@
             return _supabase.from('sale_services').select('code, billing_code, name, unit, sale_price, promo_price, category, unit_price, quantity_source, inventory_product_id, volume_tiers, courtesy_min, courtesy_percent')
                 .eq('active', true).in('status', ['available', 'assessment']).order('sort_order').order('name');
         }
+
+        // A quote has its own controls and never enters the payment form or saves a record.
+        const estimateDialog = document.getElementById('pay-estimate');
+        let estimateServices = [], estimateRequest = 0;
+
+        async function openPayEstimate() {
+            const request = ++estimateRequest;
+            estimateServices = [];
+            const select = document.getElementById('pay-estimate-service');
+            select.replaceChildren(new Option('Elige un servicio…', ''));
+            document.getElementById('pay-estimate-qty').value = '1';
+            document.getElementById('pay-estimate-tax').checked = true;
+            updatePayEstimateOptions();
+            document.getElementById('pay-estimate-status').textContent = 'Cargando tarifas…';
+            estimateDialog.showModal();
+            const { data, error } = await fetchSelectableServices();
+            if (request !== estimateRequest || !estimateDialog.open) return;
+            if (error) {
+                document.getElementById('pay-estimate-status').textContent = 'No se pudo cargar el catálogo. Cierra y vuelve a abrir la calculadora.';
+                return;
+            }
+            estimateServices = data || [];
+            const groups = new Map();
+            for (const service of estimateServices) {
+                const category = service.category || 'Otros';
+                if (!groups.has(category)) {
+                    const group = document.createElement('optgroup');
+                    group.label = category;
+                    groups.set(category, group);
+                }
+                groups.get(category).appendChild(new Option(service.name, service.code));
+            }
+            select.append(...groups.values());
+            document.getElementById('pay-estimate-status').textContent = estimateServices.length ? '' : 'No hay servicios disponibles para calcular.';
+        }
+
+        function estimateSelectedService() {
+            return estimateServices.find(service => service.code === document.getElementById('pay-estimate-service').value);
+        }
+
+        function updatePayEstimateOptions() {
+            const service = estimateSelectedService();
+            const mode = document.getElementById('pay-estimate-mode');
+            mode.replaceChildren();
+            if (service) {
+                const regular = service.unit_price ?? service.sale_price;
+                if (regular != null) mode.add(new Option(`Precio regular · ${formatAmount(regular)}`, 'regular'));
+                if (service.promo_price != null && regular != null && Number(service.promo_price) < Number(regular)) {
+                    mode.add(new Option(`Promoción · ${formatAmount(service.promo_price)}`, 'promo'));
+                }
+                mode.add(new Option('Precio manual', 'manual'));
+            }
+            mode.disabled = !service;
+            document.getElementById('pay-estimate-custom').value = '';
+            document.getElementById('pay-estimate-unit-label').textContent = service?.unit ? `Cantidad · ${service.unit}` : 'Cantidad';
+            renderPayEstimate();
+        }
+
+        function renderPayEstimate() {
+            const service = estimateSelectedService();
+            const mode = document.getElementById('pay-estimate-mode').value;
+            const manual = document.getElementById('pay-estimate-custom');
+            document.getElementById('pay-estimate-custom-wrap').classList.toggle('hidden', mode !== 'manual');
+            document.getElementById('pay-estimate-tax-wrap').classList.toggle('hidden', !payRates.services_taxed || !(Number(payRates.tax_services) > 0));
+            const regular = service?.unit_price ?? service?.sale_price;
+            const unitPrice = mode === 'promo' ? service?.promo_price : mode === 'manual' ? parseAmount(manual.value) : regular;
+            const quantity = Number(document.getElementById('pay-estimate-qty').value);
+            const figures = service && unitPrice != null
+                ? encounterPricedFigures(service, quantity, { unit_price: Number(unitPrice), regular_unit_price: Number(mode === 'promo' ? regular : unitPrice) })
+                : null;
+            document.getElementById('pay-estimate-breakdown').classList.toggle('hidden', !figures);
+            if (!figures) return;
+            const net = roundTo(figures.amount - figures.discount, 2);
+            const tax = payRates.services_taxed && document.getElementById('pay-estimate-tax').checked
+                ? roundTo(net * Number(payRates.tax_services), 2) : 0;
+            document.getElementById('pay-estimate-base').textContent = formatAmount(figures.amount);
+            document.getElementById('pay-estimate-discount-row').classList.toggle('hidden', !figures.discount);
+            document.getElementById('pay-estimate-discount').textContent = '−' + formatAmount(figures.discount);
+            document.getElementById('pay-estimate-tax-row').classList.toggle('hidden', !tax);
+            document.getElementById('pay-estimate-tax-total').textContent = formatAmount(tax);
+            document.getElementById('pay-estimate-total').textContent = formatAmount(roundTo(net + tax, 2));
+        }
+
+        document.getElementById('pay-estimate-open').onclick = openPayEstimate;
+        document.getElementById('pay-estimate-service').onchange = updatePayEstimateOptions;
+        for (const id of ['pay-estimate-qty', 'pay-estimate-mode', 'pay-estimate-custom', 'pay-estimate-tax']) {
+            document.getElementById(id).addEventListener('input', renderPayEstimate);
+        }
+        estimateDialog.querySelector('form').addEventListener('submit', event => {
+            // Pressing Enter in a numeric field should keep the estimate open.
+            if (!event.submitter || document.activeElement !== event.submitter) event.preventDefault();
+        });
 
         async function loadPayServices() {
             const request = ++payServiceRequest;
