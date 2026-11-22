@@ -68,7 +68,7 @@
     // ---------- data
     async function load() {
         const q = (p) => p.then(r => { if (r.error) throw r.error; return r.data || []; });
-        const [cfg, cats, exp, mov, inc, pay, fijos, cuentas] = await Promise.all([
+        const [cfg, cats, exp, mov, inc, pay, fijos, cuentas, services] = await Promise.all([
             q(_supabase.from('acct_settings').select('*').eq('id', 1)),
             q(_supabase.from('acct_categories').select('*').order('sort')),
             q(_supabase.from('acct_expenses').select('*').is('deleted_at', null).order('spent_on', { ascending: false }).limit(5000)),
@@ -77,7 +77,9 @@
             q(_supabase.from('payments').select('*, service:sale_services!payments_service_catalog_code_fkey(billing_code)').limit(5000)),
             q(_supabase.from('acct_recurring').select('*').order('description')),
             q(_supabase.from('acct_accounts').select('name').order('sort').order('name')).catch(() => []),
+            q(_supabase.from('sale_services').select('code,billing_code')),
         ]);
+        const serviceCodes = new Map(services.map(service => [service.code, service.billing_code]));
         db = {
             cfg: cfg[0] || { share_freddy: 0.5, share_samuel: 0.5, loan_rate: 0 },
             categorias: cats,
@@ -95,11 +97,12 @@
                 ...pay.map(p => {
                     const servBase = r2(Number(p.amount) - Number(p.discount || 0)), prod = Number(p.product_amount || 0);
                     const recordedCode = p.service_code_snapshot || p.service_catalog_code;
-                    const currentCode = p.service?.billing_code || recordedCode;
+                    const details = (p.service_lines || []).map(line => ({ ...line, billing_code: serviceCodes.get(line.service_id) || line.billing_code }));
+                    const currentCode = details.length ? details.map(line => line.billing_code).join(' · ') : p.service?.billing_code || recordedCode;
                     const serviceDescription = recordedCode && currentCode !== recordedCode
                         ? p.service_desc?.replaceAll(` (${recordedCode})`, ` (${currentCode})`) : p.service_desc;
                     return { id: 'pay:' + p.id, tabla: 'payments', pid: p.id, fecha: p.paid_on, cliente: p.patient_name,
-                        servicio: [serviceDescription || p.category, p.product_desc].filter(Boolean).join(' + ') || 'Cobro', codigo_servicio: currentCode || '', descuento: Number(p.discount || 0), categoria: p.category || 'Sin categoría',
+                        servicio: [serviceDescription || p.category, p.product_desc].filter(Boolean).join(' + ') || 'Cobro', codigo_servicio: currentCode || '', detalle_servicios: details, descuento: Number(p.discount || 0), categoria: p.category || 'Sin categoría',
                         metodo: PAY_LABEL[p.method] || p.method, monto: r2(servBase + prod), baseServ: servBase, baseProd: prod,
                         taxServ: Number(p.service_tax || 0) || (prod ? 0 : Number(p.tax || 0)), taxProd: Number(p.product_tax || 0), impuesto: Number(p.tax || 0),
                         recargo: Number(p.surcharge || 0), total: Number(p.total), comision: Number(p.processor_fee || 0), libro: p.ledger || 'LLC',
@@ -734,6 +737,12 @@
         XLSX.utils.book_append_sheet(wb, sheet(db.ingresos.map(i => ({ Fecha: asDate(i.fecha), Mes: mes(i.fecha), Cliente: i.cliente, 'Servicio realizado': i.servicio, 'Código Servicio': i.codigo_servicio || '', Categoría: i.categoria,
             'Método de pago': i.metodo, Libro: i.anulado ? 'Anulado' : i.libro, 'Monto del servicio ($)': i.monto, 'Lleva impuesto': i.impuesto ? 'Sí' : 'No', 'Impuesto ($)': i.impuesto || 0,
             'Recargo tarjeta ($)': i.recargo || 0, 'Total cobrado ($)': i.total, Nota: i.nota, Origen: i.tabla === 'payments' ? 'Cobros' : 'Libro original' })), [11, 11, 22, 40, 20, 16, 15, 20, 14, 10, 12, 12, 14, 50, 14]), 'Ingresos');
+        XLSX.utils.book_append_sheet(wb, sheet(db.ingresos.flatMap(i => (i.detalle_servicios || []).map(line => ({
+            Fecha: asDate(i.fecha), 'ID cobro': i.pid, 'Código Servicio': line.billing_code, Servicio: line.name,
+            Categoría: line.category, Cantidad: line.quantity, Unidad: line.unit, 'Precio unitario': line.unit_price,
+            Bruto: line.amount, Descuento: line.discount, 'Neto antes de impuestos': r2(line.amount - line.discount),
+            Libro: i.anulado ? 'Anulado' : i.libro,
+        }))), [11, 36, 20, 40, 24, 10, 16, 16, 14, 14, 20, 14]), 'Detalle servicios');
         XLSX.utils.book_append_sheet(wb, sheet(db.gastos.map(g => ({ Fecha: asDate(g.fecha), Mes: mes(g.fecha), Descripción: g.descripcion, Proveedor: g.proveedor, Categoría: g.categoria, Tipo: catTipo(g.categoria),
             Libro: g.libro, 'Monto ($)': g.monto, 'Cuenta / tarjeta': g.cuenta, 'Método original': '', 'Pagado por': g.pagado_por, 'Estado reembolso': g.estado, 'Fecha reembolso': asDate(g.fecha_reembolso),
             'Mes reembolso': g.estado === 'Reembolsado' ? mes(g.fecha_reembolso || g.fecha) : '', Reembolsable: reembolsable(g) ? 'Sí' : 'No', Nota: g.nota, Origen: g.source })), [11, 11, 45, 20, 30, 15, 20, 12, 22, 10, 14, 22, 12, 11, 11, 50, 12]), 'Gastos');

@@ -437,6 +437,8 @@
                             <input type="date" id="pay-date" style="max-width: 12rem;">
                         </div>
                         <div id="pay-service-fields">
+                            <div id="pay-encounter-service-lines" class="space-y-2"></div>
+                            <div id="pay-single-service">
                             <label for="pay-service" class="enc-label mb-1 block">Servicio</label>
                             <select id="pay-service" onchange="onPayServiceChange()"><option value="">Elige el servicio…</option></select>
                             <input type="text" id="pay-service-other" class="hidden mt-2" placeholder="¿Qué servicio fue?" aria-label="Servicio que no está en el catálogo">
@@ -447,6 +449,7 @@
                                 <p id="pay-service-unit-note" class="mt-1 text-xs opacity-70"></p>
                             </div>
                             <p class="text-[11px] opacity-60 mt-1">La categoría para la contabilidad sale del servicio (Productos y servicios → Servicios).</p>
+                            </div>
                         </div>
                         <div>
                             <label for="pay-ledger" class="enc-label mb-1 block">Dónde</label>
@@ -525,6 +528,7 @@
                                 <input type="checkbox" id="pay-courtesy" onchange="renderPayTotals()">
                                 <span id="pay-courtesy-label">Cortesía de armonización</span>
                             </label>
+                            <div id="pay-line-courtesies" class="space-y-2"></div>
                             <button type="button" onclick="openPayRates()" class="mt-2 underline opacity-70 hover:opacity-100">Tasas de impuesto, recargo y comisión</button>
                         </div>
                         <p id="pay-fee-note" class="text-[11px] opacity-60 text-center -mt-2"></p>
@@ -4168,6 +4172,7 @@
             const select = document.getElementById('pay-service');
             const encounter = payEncounters[document.getElementById('pay-encounter').value];
             const marked = encounterMarkedServices(encounter);
+            renderEncounterCheckoutLines(encounter, marked);
             const markedCodes = new Set(marked.map(s => s.code));
             const groups = new Map();
             payServices.forEach(service => {
@@ -4191,6 +4196,52 @@
                 select.value = previous;
             }
             renderPayServicePrices();
+        }
+
+        function renderEncounterCheckoutLines(encounter, marked) {
+            const root = document.getElementById('pay-encounter-service-lines');
+            const previous = root.dataset.encounter === encounter?.id ? new Map([...root.querySelectorAll('[data-pay-service-line]')].map(row =>
+                [row.dataset.payServiceLine, { checked: row.querySelector('[data-pay-include]').checked, amount: row.querySelector('[data-pay-line-amount]')?.value,
+                    promo: row.querySelector('[data-pay-line-promo]')?.checked,
+                    courtesy: document.querySelector(`[data-pay-line-courtesy="${row.dataset.payServiceLine}"]`)?.checked }])) : new Map();
+            const combined = marked.length > 1;
+            root.dataset.encounter = encounter?.id || '';
+            document.getElementById('pay-single-service').classList.toggle('hidden', combined);
+            root.innerHTML = combined ? '<p class="enc-label mb-1">Servicios del encuentro</p>' + marked.map(service => {
+                const saved = encounter.procedures_detail?.catalog_services?.[service.code];
+                const amount = previous.get(service.code)?.amount ?? saved?.amount ?? service.sale_price ?? '';
+                const qty = serviceEncounterQuantity(service, encounter);
+                return `<div class="rounded-lg border border-[#EDE1E7] p-3 space-y-2" data-pay-service-line="${escapeHtml(service.code)}">
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" data-pay-include ${previous.get(service.code)?.checked === false ? '' : 'checked'}>
+                    <span>${escapeHtml(service.name)} <small class="opacity-60">${escapeHtml(service.billing_code || service.code)}</small></span></label>
+                    ${service.unit_price == null ? `<label class="text-xs">Monto USD<input data-pay-line-amount inputmode="decimal" value="${escapeHtml(amount)}"></label>
+                        ${service.promo_price != null && Number(service.promo_price) < Number(service.sale_price)
+                          ? `<label class="flex gap-2 items-center text-xs"><input type="checkbox" data-pay-line-promo ${previous.get(service.code)?.promo ? 'checked' : ''}> Usar promoción · ${escapeHtml(formatAmount(service.promo_price))}</label>` : ''}`
+                        : `<div class="text-xs">${qty == null ? 'Falta registrar la cantidad en el encuentro' : `${qty} × ${escapeHtml(formatAmount(service.unit_price))} por ${escapeHtml(service.unit)}`}</div>`}
+                    <div class="text-xs opacity-70" data-pay-line-total></div></div>`;
+            }).join('') : '';
+            document.getElementById('pay-line-courtesies').innerHTML = combined ? marked.filter(service =>
+                unitServiceFigures(service,serviceEncounterQuantity(service,encounter),false)?.courtesyAvailable).map(service =>
+                `<label class="flex items-center gap-2 text-xs"><input type="checkbox" data-pay-line-courtesy="${escapeHtml(service.code)}" ${previous.get(service.code)?.courtesy ? 'checked' : ''}>
+                    Cortesía ${escapeHtml(service.courtesy_percent)} % · ${escapeHtml(service.name)}</label>`).join('') : '';
+            root.oninput = renderPayTotals;
+            document.getElementById('pay-line-courtesies').onchange = renderPayTotals;
+        }
+
+        function collectEncounterCheckoutLines() {
+            const encounter = payEncounters[document.getElementById('pay-encounter').value];
+            const rows = [...document.querySelectorAll('[data-pay-service-line]')].filter(row => row.querySelector('[data-pay-include]').checked);
+            return rows.map(row => {
+                const service = payServices.find(s => s.code === row.dataset.payServiceLine);
+                const courtesy = document.querySelector(`[data-pay-line-courtesy="${row.dataset.payServiceLine}"]`)?.checked;
+                const unitMode = service?.unit_price != null;
+                const units = unitMode ? unitServiceFigures(service, serviceEncounterQuantity(service, encounter), courtesy) : null;
+                const included = service?.code === 'CONSULTA' && rows.length > 1;
+                const promo = !included && !unitMode && row.querySelector('[data-pay-line-promo]')?.checked;
+                const amount = included ? 0 : unitMode ? units?.amount : promo ? Number(service.sale_price) : parseAmount(row.querySelector('[data-pay-line-amount]')?.value);
+                return { row, service, units, amount, discount: units ? roundTo(units.volume + units.courtesy, 2)
+                    : promo ? roundTo(amount - Number(service.promo_price), 2) : 0, included };
+            });
         }
 
         function onPayServiceChange() {
@@ -4409,7 +4460,7 @@
             note.innerText = paid
                 ? `⚠️ Este encuentro ya tiene un pago de ${formatAmount(paid.total)} del ${formatVisitDate(paid.paid_on)}.`
                 : (encounter ? encounterSummaryText(encounter) : '');
-            if (marked.length > 1) note.innerText += ' · Hay varios servicios registrados. Selecciona cuál vas a cobrar.';
+            if (marked.length > 1) note.innerText += ' · Puedes cobrar juntos los servicios marcados y los productos.';
             renderPayServiceOptions('', true);
         }
 
@@ -4431,16 +4482,20 @@
         // Base, discount, taxes, surcharge and total from what's on screen. amount is undefined when mistyped.
         function payFigures() {
             const guest = document.getElementById('pay-guest').checked;
-            const service = guest ? null : payServices.find(row => row.code === document.getElementById('pay-service').value);
+            const combined = !guest && !!document.querySelector('[data-pay-service-line]');
+            const serviceLines = combined ? collectEncounterCheckoutLines() : [];
+            const service = guest || combined ? null : payServices.find(row => row.code === document.getElementById('pay-service').value);
             const unitMode = service?.unit_price != null;
             const units = unitMode ? unitServiceFigures(service, Number(document.getElementById('pay-service-qty').value), document.getElementById('pay-courtesy').checked) : null;
             const lines = collectPayProducts();
             const product = roundTo(lines.reduce((total, line) => total + (line.selected ? line.subtotal : 0), 0), 2);
             const rawAmount = parseAmount(document.getElementById('pay-amount').value);
-            const amount = guest ? 0 : unitMode ? units?.amount : rawAmount === null && !service && product > 0 ? 0 : rawAmount;
+            const amount = guest ? 0 : combined ? roundTo(serviceLines.reduce((sum, line) => sum + (line.amount || 0), 0), 2)
+                : unitMode ? units?.amount : rawAmount === null && !service && product > 0 ? 0 : rawAmount;
             const method = document.getElementById('pay-method').value;
-            const friend = !guest && !unitMode && document.getElementById('pay-friend').checked;
-            const discount = units ? roundTo(units.volume + units.courtesy, 2) : friend ? Math.min(FRIEND_COUPON_AMOUNT, amount || 0) : 0;
+            const friend = !guest && !unitMode && !combined && document.getElementById('pay-friend').checked;
+            const discount = combined ? roundTo(serviceLines.reduce((sum, line) => sum + line.discount, 0), 2)
+                : units ? roundTo(units.volume + units.courtesy, 2) : friend ? Math.min(FRIEND_COUPON_AMOUNT, amount || 0) : 0;
             const base = (amount || 0) - discount;
             const serviceRate = !guest && payRates.services_taxed && document.getElementById('pay-servtax-on').checked ? Number(payRates.tax_services) : 0;
             const serviceTax = roundTo(base * serviceRate, 2);
@@ -4451,7 +4506,7 @@
             const surcharge = isCard && document.getElementById('pay-surcharge-on').checked ? roundTo(beforeSurcharge * Number(payRates.surcharge_credit), 2) : 0;
             const total = roundTo(beforeSurcharge + surcharge, 2);
             const fee = isCard && total ? roundTo(total * Number(payRates.fee_pct) + Number(payRates.fee_fixed), 2) : 0;
-            return { amount, product, lines, service, unitMode, units, method, isCard, friend, discount, taxRate: serviceRate * 100, serviceTax, productTax, tax, surcharge, total, fee };
+            return { amount, product, lines, service, unitMode, units, combined, serviceLines, method, isCard, friend, discount, taxRate: serviceRate * 100, serviceTax, productTax, tax, surcharge, total, fee };
         }
 
         function renderPayTotals() {
@@ -4460,8 +4515,18 @@
             breakdown.classList.toggle('hidden', !f.unitMode);
             breakdown.textContent = f.units ? `${f.units.quantity} × ${formatAmount(f.service.unit_price)} = ${formatAmount(f.amount)}`
                 + (f.units.volumePercent ? ` · Volumen ${f.units.volumePercent} %` : '') : 'Ingresa o registra la cantidad para calcular el servicio.';
-            document.getElementById('pay-amount-field').classList.toggle('hidden', f.unitMode);
-            document.getElementById('pay-friend').disabled = !!f.unitMode || document.getElementById('pay-guest').checked || !payFriendLeft;
+            document.getElementById('pay-amount-field').classList.toggle('hidden', f.unitMode || f.combined);
+            document.getElementById('pay-friend').disabled = !!f.unitMode || f.combined || document.getElementById('pay-guest').checked || !payFriendLeft;
+            for (const row of document.querySelectorAll('[data-pay-line-total]')) row.textContent = '';
+            for (const line of f.serviceLines) {
+                const amountInput = line.row.querySelector('[data-pay-line-amount]');
+                const promo = line.row.querySelector('[data-pay-line-promo]');
+                if (promo) promo.disabled = line.included;
+                if (amountInput) amountInput.disabled = line.included || !!promo?.checked;
+                line.row.querySelector('[data-pay-line-total]').textContent = line.included ? 'Consulta incluida en el tratamiento.'
+                    : line.amount == null ? 'Completa el monto o la cantidad del encuentro.'
+                    : `Subtotal ${formatAmount(line.amount)} · Descuento ${formatAmount(line.discount)} · Neto ${formatAmount(line.amount - line.discount)}`;
+            }
             document.getElementById('pay-courtesy-row').classList.toggle('hidden', !f.units?.courtesyAvailable);
             document.getElementById('pay-courtesy-label').textContent = f.service?.quantity_source === 'fillers'
                 ? `Cortesía de armonización · ${f.service.courtesy_percent ?? ''} %`
@@ -4550,7 +4615,8 @@
             payFriendLeft = Math.max(0, FRIEND_COUPONS_PER_MONTH - (count || 0));
             left.innerText = `te quedan ${payFriendLeft} de ${FRIEND_COUPONS_PER_MONTH} este mes`;
             const check = document.getElementById('pay-friend');
-            check.disabled = document.getElementById('pay-guest').checked || payFigures().unitMode || !payFriendLeft;
+            const figures = payFigures();
+            check.disabled = document.getElementById('pay-guest').checked || figures.unitMode || figures.combined || !payFriendLeft;
             if (!payFriendLeft) { check.checked = false; renderPayTotals(); }
         }
 
@@ -4565,6 +4631,7 @@
             document.getElementById('pay-encounter-note').innerText = '';
             document.getElementById('pay-amount').value = '';
             document.getElementById('pay-service').value = '';
+            renderEncounterCheckoutLines(null, []);
             renderPayServicePrices();
             document.getElementById('pay-method').value = 'cash';
             document.getElementById('pay-date').value = clinicDateIso(0);
@@ -4601,6 +4668,10 @@
                 paymentName = `${first} ${last}`;
             } else paymentName = payPatientLabel(payPatient);
             const f = payFigures();
+            if (f.combined && (!f.serviceLines.length || f.serviceLines.some(line => !line.service || line.amount == null))) {
+                alert('Marca al menos un servicio y completa sus montos o las cantidades guardadas en el encuentro.');
+                return;
+            }
             if (guest && !(f.product > 0)) { alert('Selecciona un producto con un precio mayor que cero.'); return; }
             if (f.amount > 99999999.99 || f.product > 99999999.99 || f.total > 99999999.99) {
                 alert('El monto supera el límite de Cobros. Revisa los precios y las cantidades.');
@@ -4625,6 +4696,7 @@
             const addStock = (id, quantity) => { if (id) stockNeeded.set(id, (stockNeeded.get(id) || 0) + quantity); };
             for (const line of f.lines) addStock(line.product_id, line.quantity);
             if (f.units) addStock(f.service.inventory_product_id, f.units.quantity);
+            for (const line of f.serviceLines) if (line.units) addStock(line.service.inventory_product_id, line.units.quantity);
             for (const [id, quantity] of stockNeeded) {
                 const record = payProducts.find(product => product.id === id);
                 if (!record || record.stock_qty < quantity || record.expires_on && record.expires_on < paidOn) {
@@ -4636,13 +4708,20 @@
                 ({ product_id, quantity, unit_price, name, taxable, tax }));
             const productDesc = productLines.map(line => `${line.name} ×${line.quantity}${line.taxable ? '' : ' (sin sales tax)'}`).join(' + ');
             const encounterForText = payEncounters[encounterId];
-            const serviceCode = guest ? '' : document.getElementById('pay-service').value;
+            const serviceCode = guest || f.combined ? '' : document.getElementById('pay-service').value;
             const service = payServices.find(row => row.code === serviceCode);
             const otherService = serviceCode === '__otro' ? document.getElementById('pay-service-other').value.trim() : '';
-            if (!guest && f.amount > 0 && !serviceCode) { alert('Elige el servicio. Si no está en la lista, elige "Otro servicio" y escribe qué fue.'); document.getElementById('pay-service').focus(); return; }
+            if (!guest && !f.combined && f.amount > 0 && !serviceCode) { alert('Elige el servicio. Si no está en la lista, elige "Otro servicio" y escribe qué fue.'); document.getElementById('pay-service').focus(); return; }
             if (serviceCode === '__otro' && !otherService) { alert('Escribe qué servicio fue.'); document.getElementById('pay-service-other').focus(); return; }
             if (serviceCode && serviceCode !== '__otro' && !service) { alert('Ese servicio ya no está disponible. Elige otro.'); return; }
-            const payCategory = guest || !(f.amount > 0) ? 'Solo producto' : service ? (service.category || 'Otro servicio') : 'Otro servicio';
+            const servicesToSave = f.serviceLines.map(({ service: entry, units, amount, discount }) => ({
+                service_id: entry.code, name: entry.name, unit: entry.unit, category: entry.category,
+                quantity: units?.quantity || 1, unit_price: units ? Number(entry.unit_price) : amount,
+                amount, discount, courtesy_percent: units?.courtesyPercent || 0,
+            }));
+            const combinedCategories = [...new Set(servicesToSave.map(line => line.category))];
+            const payCategory = f.combined ? (combinedCategories.length === 1 ? combinedCategories[0] : 'Varios servicios')
+                : guest || !(f.amount > 0) ? 'Solo producto' : service ? (service.category || 'Otro servicio') : 'Otro servicio';
             const encounterText = encounterForText && !encounterForText.procedures_detail?.catalog_services
                 ? encounterSummaryText(encounterForText) : '';
             btn.disabled = true;
@@ -4658,9 +4737,11 @@
                     category: payCategory,
                     ledger,
                     service_tax: f.serviceTax,
-                    service_desc: service ? [f.units ? `${service.name} ×${f.units.quantity} (${service.unit})` : service.name, encounterText].filter(Boolean).join(' · ')
+                    service_desc: f.combined ? servicesToSave.map(line => `${line.name} ×${line.quantity}`).join(' + ')
+                        : service ? [f.units ? `${service.name} ×${f.units.quantity} (${service.unit})` : service.name, encounterText].filter(Boolean).join(' · ')
                         : [otherService, encounterText].filter(Boolean).join(' · ') || null,
                     ...(service ? { service_catalog_code: service.code } : {}),
+                    ...(f.combined ? { service_lines: servicesToSave } : {}),
                     ...(f.units ? {
                         service_quantity: f.units.quantity, unit_price_at_sale: service.unit_price,
                         discount_detail: { volume_percent: f.units.volumePercent, volume_amount: f.units.volume, courtesy_percent: f.units.courtesyPercent, courtesy_amount: f.units.courtesy },
@@ -9766,7 +9847,7 @@
             catch (e) { alert('No se pudo generar el PDF: ' + e.message); }
         }
     </script>
-    <script src="admin-contabilidad.js?v=20261127-current-codes"></script>
+    <script src="admin-contabilidad.js?v=20261129-multi-service"></script>
     <script src="admin-productos.js?v=20261128-quantity-checkout"></script>
 </body>
 </html>

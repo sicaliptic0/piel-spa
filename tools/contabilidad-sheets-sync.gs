@@ -168,9 +168,10 @@ function syncNow() {
     writeTable('Gastos · Sistema', ['Fecha', 'Descripción', 'Proveedor', 'Categoría', 'Tipo', 'Libro', 'Monto', 'Cuenta / tarjeta', 'Pagado por', 'Estado reembolso', 'Fecha reembolso', 'Origen', 'Recibo', 'Gasto fijo', 'Nota'],
       db.gastos.slice().reverse().map(g => [d(g.fecha), g.descripcion, g.proveedor || '', g.categoria, db.kind[g.categoria] || '', g.libro, g.monto, g.cuenta || '', g.pagado_por, g.estado, d(g.fecha_reembolso), g.origen, g.recibo ? 'Sí' : '', g.fijo ? 'Sí' : '', g.nota || '']),
       { money: [7], dates: [1, 11], redWhen: { col: 10, value: 'Pendiente' } }, stamp);
-    writeTable('Ingresos · Sistema', ['Fecha', 'Cliente', 'Servicio', 'Categoría', 'Método', 'Venta', 'Descuento', 'Impuesto', 'Recargo', 'Total cobrado', 'Libro', 'Origen', 'Nota'],
-      db.ingresos.slice().reverse().map(i => [d(i.fecha), i.cliente, i.servicio || '', i.categoria || '', i.metodo || '', i.monto == null ? '' : i.monto, Number(i.descuento || 0), i.impuesto, i.recargo, i.total == null ? '' : i.total, i.anulado ? 'Anulado' : i.libro, i.origen, i.nota || '']),
+    writeTable('Ingresos · Sistema', ['Fecha', 'Cliente', 'Servicio', 'Categoría', 'Método', 'Venta', 'Descuento', 'Impuesto', 'Recargo', 'Total cobrado', 'Libro', 'Origen', 'Nota', 'Código Servicio', 'ID cobro'],
+      db.ingresos.slice().reverse().map(i => [d(i.fecha), i.cliente, i.servicio || '', i.categoria || '', i.metodo || '', i.monto == null ? '' : i.monto, Number(i.descuento || 0), i.impuesto, i.recargo, i.total == null ? '' : i.total, i.anulado ? 'Anulado' : i.libro, i.origen, i.nota || '', i.codigo_servicio || '', i.cobro_id || '']),
       { money: [6, 7, 8, 9, 10], dates: [1] }, stamp);
+    writeServiceDetails(db.ingresos, stamp);
     writeTable('Socios · Sistema', ['Fecha', 'Socio', 'Tipo', 'Monto', 'Concepto', 'Confirmado', 'Nota'],
       db.movimientos.slice().reverse().map(m => [d(m.fecha), m.socio, m.tipo, m.monto, m.concepto, m.confirmado ? 'Sí' : 'No', m.nota || '']),
       { money: [4], dates: [1] }, stamp);
@@ -191,6 +192,16 @@ function sheetFor(name) {
   const ss = SpreadsheetApp.getActive();
   return ss.getSheetByName(name) || ss.insertSheet(name);
 }
+function writeServiceDetails(income, stamp) {
+  const details = income.slice().reverse().flatMap(i => (i.detalle_servicios || []).map(line => [
+    d(i.fecha), i.cobro_id || '', line.billing_code || '', line.name || '', line.category || '', line.quantity, line.unit || '',
+    Number(line.unit_price), Number(line.amount), Number(line.discount || 0),
+    r2(Number(line.amount) - Number(line.discount || 0)), i.anulado ? 'Anulado' : i.libro
+  ]));
+  writeTable('Detalle servicios · Sistema', ['Fecha', 'ID cobro', 'Código Servicio', 'Servicio', 'Categoría', 'Cantidad', 'Unidad', 'Precio unitario', 'Bruto', 'Descuento', 'Neto antes de impuestos', 'Libro'], details,
+    { money: [8, 9, 10, 11], dates: [1] }, stamp);
+}
+
 function writeTable(name, header, rows, fmt, stamp) {
   const sh = sheetFor(name);
   sh.clear();
