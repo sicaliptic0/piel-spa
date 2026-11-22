@@ -1,11 +1,13 @@
 // "Productos y servicios" (admin-only). Productos = public.sale_products: what Piel Spa sells,
-// with prices, stock and expiry. Cobros sells from this list. Servicios comes later.
+// with prices, stock and expiry. Servicios = public.sale_services.
 // Loaded by admin.html after its main script; renders into #products-view; handlers on window.Prod.
 (function () {
     'use strict';
     const CATEGORIAS = ['Protector solar', 'Limpiador', 'Sérum', 'Crema', 'Contorno de ojos', 'Tratamiento', 'Mascarilla', 'Kit', 'Otro'];
     const VENCE_PRONTO_DIAS = 60;
     let rows = [], built = false, tab = 'productos', filtro = 'todos', q = '', verEliminados = false;
+    const SERVICE_STATUS = { available: 'Disponible', assessment: 'Tras valoración', soon: 'Próximamente', pending: 'Pendiente', category: 'Categoría' };
+    let services = [], serviceError = '', showArchived = false, request = 0;
 
     const $ = id => document.getElementById(id);
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -63,19 +65,37 @@
         root.innerHTML = `<div class="max-w-6xl mx-auto">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
               <div class="flex gap-2"><button class="sub" data-t="productos">Productos</button><button class="sub" data-t="servicios">Servicios</button></div>
-              <button class="pbtn" onclick="Prod.abrir()">+ Producto</button>
+              <button class="pbtn" id="prod-add" onclick="Prod.add()">+ Producto</button>
             </div>
             <div id="prod-body"><p class="text-sm opacity-50 text-center py-10">Cargando…</p></div></div>`;
-        root.querySelectorAll('.sub').forEach(b => b.onclick = () => { tab = b.dataset.t; render(); });
-        document.body.insertAdjacentHTML('beforeend', DIALOG);
+        root.querySelectorAll('.sub').forEach(b => b.onclick = () => { tab = b.dataset.t; return open(); });
+        document.body.insertAdjacentHTML('beforeend', DIALOG + SERVICE_DIALOG);
         $('prod-form').addEventListener('submit', guardar);
+        $('svc-form').addEventListener('submit', saveService);
     }
     async function open() {
         build();
+        const current = ++request;
+        updateTabs();
+        $('prod-body').innerHTML = '<p class="text-sm opacity-60 text-center py-8">Cargando…</p>';
+        if (tab === 'servicios') {
+            const { data, error } = await _supabase.from('sale_services').select('*').order('sort_order').order('name');
+            if (current !== request) return;
+            services = data || [];
+            serviceError = error ? error.message : '';
+            renderServices();
+            return;
+        }
         const { data, error } = await _supabase.from('sale_products').select('*').order('brand').order('name');
+        if (current !== request) return;
         if (error) { $('prod-body').innerHTML = `<p class="text-sm text-red-500 text-center py-8">${esc(/sale_products/.test(error.message) ? 'Falta correr el SQL de supabase/migrations/20261121_sale_products.sql.' : error.message)}</p>`; return; }
         rows = data || [];
         render();
+    }
+
+    function updateTabs() {
+        document.querySelectorAll('#products-view .sub').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
+        $('prod-add').textContent = tab === 'servicios' ? '+ Servicio' : '+ Producto';
     }
 
     function grupos(list) {
@@ -90,11 +110,6 @@
     };
 
     function render() {
-        document.querySelectorAll('#products-view .sub').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
-        if (tab === 'servicios') {
-            $('prod-body').innerHTML = `<div class="card p-8 text-center text-sm opacity-70">La lista de servicios y sus precios va aquí. Todavía no está armada.</div>`;
-            return;
-        }
         const activos = rows.filter(p => p.active);
         const unidades = activos.reduce((s, p) => s + Math.max(0, p.stock_qty), 0);
         const alCosto = activos.reduce((s, p) => s + Math.max(0, p.stock_qty) * Number(p.cost || 0), 0);
@@ -199,5 +214,112 @@
         if (typeof loadPayProducts === 'function') loadPayProducts();
     }
 
-    window.Prod = { open, abrir, eliminar };
+    function renderServices() {
+        if (serviceError) {
+            $('prod-body').innerHTML = `<p class="text-sm text-red-700 py-4" role="alert">No se pudo cargar Servicios. ${esc(serviceError)}</p>`;
+            return;
+        }
+        const visible = services.filter(s => s.active || showArchived);
+        $('prod-body').innerHTML = `
+          <div class="card p-4 mb-4 text-sm space-y-2">
+            <p>Montos en USD por la unidad indicada. NYC es una referencia de mercado basada en una muestra pequeña. Tarifario interno muestra importes por confirmar.</p>
+            <p>En Cobros, elige el servicio y confirma el monto acordado. Usa el precio Piel Spa o la promoción si corresponde. Si solo realiza la consulta, registra su tarifa. Si realiza un tratamiento, registra el tratamiento una sola vez con la consulta incluida.</p>
+            <p>El pago registrado aparece en Contabilidad → Ingresos. Guarda el comprobante y usa el registro de Cobros al conciliar para evitar duplicados.</p>
+          </div>
+          <label class="flex items-center gap-2 text-sm mb-3"><input type="checkbox" id="svc-archived" ${showArchived ? 'checked' : ''}> Ver archivados</label>
+          ${visible.length ? `<div class="card overflow-x-auto"><table class="t">
+            <thead><tr><th>Servicio</th><th>Estado</th><th class="num">Sugerido NYC</th><th class="num">Precio Piel Spa</th><th class="num">Promoción</th><th class="num">Tarifario interno</th><th><span class="sr-only">Acciones</span></th></tr></thead>
+            <tbody>${visible.map(s => `<tr>
+              <td class="min-w-[210px]"><strong>${esc(s.name)}</strong><div class="text-xs opacity-70">${esc(s.category)} · ${esc(s.unit)} · ${esc(s.code)}</div></td>
+              <td>${s.active ? esc(SERVICE_STATUS[s.status]) : 'Archivado'}</td>
+              <td class="num">${money(s.nyc_price)}</td><td class="num">${money(s.sale_price)}</td><td class="num">${money(s.promo_price)}</td>
+              <td class="num">${money(s.reference_price)}${s.reference_promo == null ? '' : `<div class="text-xs">Promo ${money(s.reference_promo)}</div>`}</td>
+              <td><button type="button" class="soft" data-service-code="${esc(s.code)}">Editar</button></td></tr>`).join('')}</tbody>
+          </table></div>` : '<p class="text-sm opacity-60 py-4">No hay servicios en esta vista.</p>'}`;
+        $('svc-archived').onchange = e => { showArchived = e.target.checked; renderServices(); };
+        $('prod-body').querySelectorAll('[data-service-code]').forEach(b => b.onclick = () => editService(b.dataset.serviceCode));
+    }
+
+    const SERVICE_FIELDS = { code: 'Código', name: 'Servicio', category: 'Categoría', unit: 'Unidad de cobro', nyc_price: 'Sugerido NYC', sale_price: 'Precio Piel Spa', promo_price: 'Promoción' };
+    const SERVICE_DIALOG = `<dialog id="svc-dialog" class="prod" aria-labelledby="svc-title"><form id="svc-form" class="p-6 space-y-3">
+        <h3 class="text-2xl italic" id="svc-title" style="font-family:'Cormorant Garamond',serif"></h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          ${Object.entries(SERVICE_FIELDS).map(([key, label]) => `<div><label class="lbl" for="svc-${key}">${label}</label><input id="svc-${key}"
+            ${key.endsWith('_price') ? 'type="number" min="0" max="99999999.99" step="0.01" inputmode="decimal"' : 'required'}
+            ${key === 'code' ? 'maxlength="40" pattern="[A-Za-z0-9][A-Za-z0-9_\\-]{0,39}" title="Letras, números, guion o guion bajo"' : ''}></div>`).join('')}
+          <div><label class="lbl" for="svc-status">Estado</label><select id="svc-status">${Object.entries(SERVICE_STATUS).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}</select></div>
+        </div>
+        <p class="text-xs opacity-70" id="svc-reference"></p>
+        <div><label class="lbl" for="svc-notes">Notas</label><textarea id="svc-notes" rows="3"></textarea></div>
+        <p id="svc-error" class="text-sm text-red-700" role="alert"></p>
+        <div class="dlg-actions flex flex-wrap justify-between gap-2 pt-2">
+          <button type="button" class="soft text-red-700" id="svc-archive" onclick="Prod.archiveService()">Archivar</button>
+          <div class="flex gap-2"><button type="button" class="soft" onclick="this.closest('dialog').close()">Cancelar</button><button class="pbtn dark" id="svc-save">Guardar</button></div>
+        </div>
+      </form></dialog>`;
+
+    function editService(code) {
+        const service = services.find(s => s.code === code);
+        $('svc-title').textContent = service ? 'Editar servicio' : 'Nuevo servicio';
+        for (const key of Object.keys(SERVICE_FIELDS)) $('svc-' + key).value = service?.[key] ?? '';
+        $('svc-code').readOnly = !!service;
+        $('svc-status').value = service?.status || 'pending';
+        $('svc-notes').value = service?.notes || '';
+        $('svc-reference').textContent = service?.reference_price == null ? '' :
+            `Tarifario interno ${service.source_code || ''} · Regular ${money(service.reference_price)} · Promoción ${money(service.reference_promo)}`;
+        $('svc-error').textContent = '';
+        $('svc-archive').classList.toggle('invisible', !service);
+        $('svc-archive').textContent = service?.active === false ? 'Restaurar' : 'Archivar';
+        $('svc-dialog').showModal();
+    }
+
+    async function writeService(query) {
+        const save = $('svc-save'), archive = $('svc-archive');
+        if (save.disabled) return;
+        save.disabled = archive.disabled = true;
+        $('svc-error').textContent = '';
+        try {
+            const { error } = await query.select('code').single();
+            if (error) throw error;
+            $('svc-dialog').close();
+            toast('Catálogo actualizado.');
+            if (tab === 'servicios') open();
+            if (typeof loadPayServices === 'function') loadPayServices();
+        } catch (error) {
+            $('svc-error').textContent = `No se pudo guardar. ${error.message}`;
+        } finally {
+            save.disabled = archive.disabled = false;
+        }
+    }
+
+    function saveService(event) {
+        event.preventDefault();
+        const code = $('svc-code').value.trim().toUpperCase();
+        const row = Object.fromEntries(Object.keys(SERVICE_FIELDS).filter(key => key !== 'code').map(key => {
+            const value = $('svc-' + key).value.trim();
+            return [key, key.endsWith('_price') ? num(value) : value];
+        }));
+        if (!row.name || !row.category || !row.unit) {
+            $('svc-error').textContent = 'Completa el nombre, la categoría y la unidad.';
+            return;
+        }
+        row.status = $('svc-status').value;
+        row.notes = $('svc-notes').value.trim() || null;
+        row.updated_at = new Date().toISOString();
+        const table = _supabase.from('sale_services');
+        return writeService($('svc-code').readOnly ? table.update(row).eq('code', code) : table.insert({ code, ...row }));
+    }
+
+    function archiveService() {
+        const service = services.find(s => s.code === $('svc-code').value);
+        if (!service || (service.active && !confirm(`¿Archivar "${service.name}"? Se conservarán los cobros registrados.`))) return;
+        return writeService(_supabase.from('sale_services').update({ active: !service.active, updated_at: new Date().toISOString() }).eq('code', service.code));
+    }
+
+    function add() {
+        if (tab === 'servicios') editService();
+        else abrir();
+    }
+
+    window.Prod = { open, add, abrir, eliminar, archiveService };
 })();

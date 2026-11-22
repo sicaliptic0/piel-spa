@@ -446,6 +446,11 @@
                             </div>
                         </div>
                         <div>
+                            <label for="pay-service" class="enc-label mb-1 block">Servicio del catálogo (opcional)</label>
+                            <select id="pay-service" onchange="renderPayServicePrices()"><option value="">Sin servicio del catálogo</option></select>
+                            <div id="pay-service-prices" class="flex flex-wrap gap-2 mt-2" aria-live="polite"></div>
+                        </div>
+                        <div>
                             <label for="pay-product" class="enc-label mb-1 block">Producto vendido (opcional)</label>
                             <div class="grid grid-cols-4 gap-2">
                                 <select id="pay-product" class="col-span-3" onchange="onPayProductChange()" style="font-size: 13px; padding: 7px 8px;"><option value="">Sin producto</option></select>
@@ -2495,7 +2500,7 @@
             'messages-view': ['Mensajes', 'WhatsApp de la clínica. Los chats sin leer salen resaltados en verde.'],
             'schedule-view': ['Horarios', 'Días y horas en que se puede agendar en cada clínica.'],
             'payments-view': ['Cobros', 'Elige paciente y encuentro, el método de pago y marca el pago. Abajo, todos los pagos por día.'],
-            'products-view': ['Productos y servicios', 'Productos que vende Piel Spa: precios, stock y vencimientos. Cobros vende desde esta lista.'],
+            'products-view': ['Productos y servicios', 'Catálogo de venta, precios de servicios, stock y vencimientos.'],
             'accounting-view': ['Contabilidad', 'Gastos, aportes de los socios, estado de cuenta mensual y reportes para la contadora.'],
         };
 
@@ -4013,7 +4018,53 @@
             if (!month.value) month.value = clinicDateIso(0).slice(0, 7);
             if (!allPatients.length) fetchPatients();
             renderPayTotals();
-            await Promise.all([loadPaymentsList(), loadFriendCoupons(), loadPayRates(), loadPayProducts()]);
+            await Promise.all([loadPaymentsList(), loadFriendCoupons(), loadPayRates(), loadPayProducts(), loadPayServices()]);
+        }
+
+        let payServices = [], payServicesUnavailable = false, payServiceRequest = 0;
+        async function loadPayServices() {
+            const request = ++payServiceRequest;
+            const { data, error } = await _supabase.from('sale_services').select('code, name, unit, sale_price, promo_price')
+                .eq('active', true).in('status', ['available', 'assessment']).order('sort_order').order('name');
+            if (request !== payServiceRequest) return;
+            payServicesUnavailable = !!error;
+            payServices = data || [];
+            const select = document.getElementById('pay-service');
+            const previous = select.value;
+            select.replaceChildren(new Option('Sin servicio del catálogo', ''), ...payServices.map(
+                service => new Option(`${service.name} · ${service.unit}`, service.code)));
+            if (previous) {
+                if (!payServices.some(service => service.code === previous)) {
+                    select.add(new Option('Servicio ya no disponible. Cambia la selección.', previous));
+                }
+                select.value = previous;
+            }
+            renderPayServicePrices();
+        }
+
+        function renderPayServicePrices() {
+            const code = document.getElementById('pay-service').value;
+            const service = payServices.find(row => row.code === code);
+            const box = document.getElementById('pay-service-prices');
+            box.textContent = payServicesUnavailable ? 'Catálogo no disponible. Puedes registrar el cobro manualmente.' : '';
+            if (!service) return;
+            for (const [field, label] of [['sale_price', 'Usar precio Piel Spa'], ['promo_price', 'Usar promoción']]) {
+                if (service[field] == null) continue;
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'rounded-full border border-[#EDE1E7] px-3 py-1 text-xs font-semibold';
+                button.textContent = `${label} · ${formatAmount(service[field])}`;
+                button.onclick = () => {
+                    const amount = document.getElementById('pay-amount');
+                    const selected = Number(service[field]).toFixed(2);
+                    if (amount.value && parseAmount(amount.value) !== Number(selected)
+                        && !confirm(`¿Cambiar el monto a ${formatAmount(selected)}?`)) return;
+                    amount.value = selected;
+                    renderPayTotals();
+                };
+                box.appendChild(button);
+            }
+            if (!box.children.length) box.textContent = 'Sin tarifa aprobada en el catálogo. Ingresa el monto acordado.';
         }
 
         // Products for sale: the skincare catalog's "in stock" items (Contabilidad → Productos).
@@ -4098,6 +4149,8 @@
         }
 
         function onPayEncounterChange() {
+            document.getElementById('pay-service').value = '';
+            renderPayServicePrices();
             const id = document.getElementById('pay-encounter').value;
             const encounter = payEncounters[id];
             const amount = document.getElementById('pay-amount');
@@ -4239,6 +4292,8 @@
             select.disabled = true;
             document.getElementById('pay-encounter-note').innerText = '';
             document.getElementById('pay-amount').value = '';
+            document.getElementById('pay-service').value = '';
+            renderPayServicePrices();
             document.getElementById('pay-method').value = 'cash';
             document.getElementById('pay-date').value = clinicDateIso(0);
             document.getElementById('pay-friend').checked = false;
@@ -4269,6 +4324,10 @@
             if (f.product && !productName) { alert('Escribe qué producto se vendió.'); document.getElementById('pay-product-desc').focus(); return; }
             const productDesc = f.product ? productName + (f.productQty > 1 ? ` x${f.productQty}` : '') + (f.productTaxable ? '' : ' (sin sales tax)') : '';
             const encounterForText = payEncounters[document.getElementById('pay-encounter').value];
+            const serviceCode = document.getElementById('pay-service').value;
+            const service = payServices.find(row => row.code === serviceCode);
+            if (serviceCode && !service) { alert('Elige un servicio disponible o registra el cobro manualmente.'); return; }
+            const encounterText = encounterForText ? encounterSummaryText(encounterForText) : '';
             let card = null;
             if (PAY_CARD_METHODS.includes(f.method)) {
                 card = await confirmQuickAccept(f.total, f.method, f.surcharge);
@@ -4284,7 +4343,8 @@
                     category: document.getElementById('pay-category').value,
                     ledger,
                     service_tax: f.serviceTax,
-                    service_desc: encounterForText ? (encounterSummaryText(encounterForText) || null) : null,
+                    service_desc: service ? [`${service.name} (${service.code})`, encounterText].filter(Boolean).join(' · ') : encounterText || null,
+                    ...(service ? { service_catalog_code: service.code } : {}),
                     product_desc: productDesc || null,
                     product_id: f.product && productId !== '__otro' ? productId : null,
                     product_qty: f.product ? f.productQty : null,

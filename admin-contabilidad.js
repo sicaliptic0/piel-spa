@@ -95,7 +95,7 @@
                 ...pay.map(p => {
                     const servBase = r2(Number(p.amount) - Number(p.discount || 0)), prod = Number(p.product_amount || 0);
                     return { id: 'pay:' + p.id, tabla: 'payments', pid: p.id, fecha: p.paid_on, cliente: p.patient_name,
-                        servicio: [p.service_desc || p.category, p.product_desc].filter(Boolean).join(' + ') || 'Cobro', descuento: Number(p.discount || 0), categoria: p.category || 'Sin categoría',
+                        servicio: [p.service_desc || p.category, p.product_desc].filter(Boolean).join(' + ') || 'Cobro', codigo_servicio: p.service_catalog_code || '', descuento: Number(p.discount || 0), categoria: p.category || 'Sin categoría',
                         metodo: PAY_LABEL[p.method] || p.method, monto: r2(servBase + prod), baseServ: servBase, baseProd: prod,
                         taxServ: Number(p.service_tax || 0) || (prod ? 0 : Number(p.tax || 0)), taxProd: Number(p.product_tax || 0), impuesto: Number(p.tax || 0),
                         recargo: Number(p.surcharge || 0), total: Number(p.total), comision: Number(p.processor_fee || 0), libro: p.ledger || 'LLC',
@@ -707,7 +707,7 @@
         add('Resumen 1065', lineas1065(f).map(([a, b, c]) => ({ Línea: a, Concepto: b, Monto: c })), [8, 60, 14]);
         add('K-1', SOCIOS.map(s => ({ Socio: s, Participación: SHARE(s), 'Box 1 Resultado ordinario': r2(f.ordinario * SHARE(s)), 'Box 12 Sec. 179': r2(f.s179 * SHARE(s)), 'Box 18 No deducibles': r2((f.nodeduc + f.comidasNoDed) * SHARE(s)) })));
         add('M-2 Capital', SOCIOS.map(s => { const c = capitalSocio(s, anio); return { Socio: s, 'Saldo inicial': c.inicial, Aportes: c.aportes, 'Resultado asignado': c.resultado, Retiros: c.retiros, 'Saldo final': c.final }; }));
-        add('Ingresos', db.ingresos.filter(i => enAnio(i) && i.libro === 'LLC' && !i.anulado).map(i => ({ Fecha: asDate(i.fecha), Cliente: i.cliente, Servicio: i.servicio, Categoría: i.categoria, Método: i.metodo, 'Venta sin impuesto': i.monto, Impuesto: i.impuesto || 0, 'Recargo tarjeta': i.recargo || 0, 'Total cobrado': i.total, Nota: i.nota })), [11, 22, 40, 14, 16, 14, 10, 12, 12, 40]);
+        add('Ingresos', db.ingresos.filter(i => enAnio(i) && i.libro === 'LLC' && !i.anulado).map(i => ({ Fecha: asDate(i.fecha), Cliente: i.cliente, Servicio: i.servicio, 'Código Servicio': i.codigo_servicio || '', Categoría: i.categoria, Método: i.metodo, 'Venta sin impuesto': i.monto, Impuesto: i.impuesto || 0, 'Recargo tarjeta': i.recargo || 0, 'Total cobrado': i.total, Nota: i.nota })), [11, 22, 40, 20, 14, 16, 14, 10, 12, 12, 40]);
         add('Gastos', db.gastos.filter(g => enAnio(g) && g.libro === 'LLC').map(g => { const c = db.categorias.find(x => x.name === g.categoria) || {};
             return { Fecha: asDate(g.fecha), Descripción: g.descripcion, Proveedor: g.proveedor, Categoría: g.categoria, Tipo: c.kind || 'Revisar', 'Línea 1065': c.form_line || '', Monto: g.monto,
                 Deducible: g.categoria === 'Comidas de negocio (50%)' ? r2(g.monto / 2) : (['Costo de ventas', 'Gasto operativo', 'Activo'].includes(c.kind) ? g.monto : 0), 'Pagado por': g.pagado_por, Cuenta: g.cuenta, Nota: g.nota }; }), [11, 45, 20, 30, 15, 30, 12, 12, 14, 22, 40]);
@@ -727,9 +727,9 @@
     async function exportFormatoSheet() {
         try { await needXlsx(); } catch (e) { alert(e.message); return; }
         const wb = XLSX.utils.book_new(), mes = f => f ? asDate(f.slice(0, 7) + '-01') : '';
-        XLSX.utils.book_append_sheet(wb, sheet(db.ingresos.map(i => ({ Fecha: asDate(i.fecha), Mes: mes(i.fecha), Cliente: i.cliente, 'Servicio realizado': i.servicio, Categoría: i.categoria,
+        XLSX.utils.book_append_sheet(wb, sheet(db.ingresos.map(i => ({ Fecha: asDate(i.fecha), Mes: mes(i.fecha), Cliente: i.cliente, 'Servicio realizado': i.servicio, 'Código Servicio': i.codigo_servicio || '', Categoría: i.categoria,
             'Método de pago': i.metodo, Libro: i.anulado ? 'Anulado' : i.libro, 'Monto del servicio ($)': i.monto, 'Lleva impuesto': i.impuesto ? 'Sí' : 'No', 'Impuesto ($)': i.impuesto || 0,
-            'Recargo tarjeta ($)': i.recargo || 0, 'Total cobrado ($)': i.total, Nota: i.nota, Origen: i.tabla === 'payments' ? 'Cobros' : 'Libro original' })), [11, 11, 22, 40, 16, 15, 20, 14, 10, 12, 12, 14, 50, 14]), 'Ingresos');
+            'Recargo tarjeta ($)': i.recargo || 0, 'Total cobrado ($)': i.total, Nota: i.nota, Origen: i.tabla === 'payments' ? 'Cobros' : 'Libro original' })), [11, 11, 22, 40, 20, 16, 15, 20, 14, 10, 12, 12, 14, 50, 14]), 'Ingresos');
         XLSX.utils.book_append_sheet(wb, sheet(db.gastos.map(g => ({ Fecha: asDate(g.fecha), Mes: mes(g.fecha), Descripción: g.descripcion, Proveedor: g.proveedor, Categoría: g.categoria, Tipo: catTipo(g.categoria),
             Libro: g.libro, 'Monto ($)': g.monto, 'Cuenta / tarjeta': g.cuenta, 'Método original': '', 'Pagado por': g.pagado_por, 'Estado reembolso': g.estado, 'Fecha reembolso': asDate(g.fecha_reembolso),
             'Mes reembolso': g.estado === 'Reembolsado' ? mes(g.fecha_reembolso || g.fecha) : '', Reembolsable: reembolsable(g) ? 'Sí' : 'No', Nota: g.nota, Origen: g.source })), [11, 11, 45, 20, 30, 15, 20, 12, 22, 10, 14, 22, 12, 11, 11, 50, 12]), 'Gastos');
