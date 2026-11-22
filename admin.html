@@ -1747,14 +1747,33 @@
                   <div class="space-y-2 mt-2">${rows.map(s => {
                     const value = saved[s.code];
                     const byUnit = s.unit_price != null;
+                    const regular = s.unit_price ?? s.sale_price;
+                    const promo = s.promo_price != null && regular != null && Number(s.promo_price) < Number(regular) ? s.promo_price : null;
+                    const pricing = value?.pricing;
+                    const mode = pricing?.mode || (value && !byUnit && value.amount != null ? 'manual' : regular != null ? 'regular' : 'manual');
+                    const manual = pricing?.mode === 'manual' ? pricing.unit_price : value && !byUnit ? value.amount : null;
                     return `<div class="flex items-center gap-2 flex-wrap" data-enc-service="${escapeHtml(s.code)}">
                       <label class="flex flex-1 gap-2 items-center text-sm"><input type="checkbox" data-enc-pick ${value ? 'checked' : ''}>
                         <span>${escapeHtml(s.name)}</span></label>
-                      <div data-enc-input class="${value ? '' : 'hidden'}">
-                        ${byUnit ? `<label class="text-xs">${escapeHtml(s.unit)} · cantidad
-                          <input type="number" class="enc-qty" data-enc-service-qty min="1" max="100000" step="1" value="${escapeHtml(value?.qty ?? '')}"></label>`
-                          : `<label class="text-xs">Monto USD (opcional)
-                          <input type="text" class="enc-qty" data-enc-service-amount inputmode="decimal" value="${escapeHtml(value?.amount ?? '')}"></label>`}
+                      <div data-enc-input class="w-full rounded-lg bg-[#FDF7FA] p-3 ${value ? '' : 'hidden'}">
+                        ${s.historical ? `<p class="text-xs">Guardado: ${escapeHtml(value?.qty ?? 1)} × ${escapeHtml(s.unit || 'servicio')} · ${escapeHtml(formatAmount(value?.amount))}</p>` : `
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div><label for="enc-qty-${escapeHtml(s.code)}" class="text-xs font-semibold">Cantidad · ${escapeHtml(s.unit || 'servicio')}</label>
+                            <div class="flex items-center gap-2">
+                              <button type="button" data-enc-step="-1" class="w-9 h-9 shrink-0 border rounded-md" aria-label="Reducir cantidad">−</button>
+                              <input id="enc-qty-${escapeHtml(s.code)}" type="number" data-enc-service-qty min="1" max="100000" step="1" value="${escapeHtml(value?.qty ?? (byUnit ? '' : 1))}">
+                              <button type="button" data-enc-step="1" class="w-9 h-9 shrink-0 border rounded-md" aria-label="Aumentar cantidad">+</button>
+                            </div></div>
+                          <label class="text-xs font-semibold">Tarifa por unidad
+                            <select data-enc-service-price-mode>
+                              ${regular != null || pricing?.mode === 'regular' ? `<option value="regular" ${mode === 'regular' ? 'selected' : ''}>Precio regular · ${escapeHtml(formatAmount(pricing?.mode === 'regular' ? pricing.unit_price : regular))}</option>` : ''}
+                              ${promo != null || pricing?.mode === 'promo' ? `<option value="promo" ${mode === 'promo' ? 'selected' : ''}>Promoción · ${escapeHtml(formatAmount(pricing?.mode === 'promo' ? pricing.unit_price : promo))}</option>` : ''}
+                              <option value="manual" ${mode === 'manual' ? 'selected' : ''}>Precio manual</option>
+                            </select></label>
+                          <label data-enc-manual-wrap class="text-xs font-semibold ${mode === 'manual' ? '' : 'hidden'}">Precio manual por unidad (USD)
+                            <input type="text" data-enc-service-amount inputmode="decimal" value="${escapeHtml(manual ?? '')}"></label>
+                        </div>
+                        <p data-enc-service-total class="mt-2 text-sm font-semibold" aria-live="polite"></p>`}
                       </div></div>`;
                   }).join('')}</div></details>`).join('');
             root.querySelectorAll('[data-enc-service]').forEach(row => {
@@ -1763,17 +1782,67 @@
                 row.savedService = saved[service.code];
                 row.querySelector('[data-enc-pick]').onchange = event => {
                     row.querySelector('[data-enc-input]').classList.toggle('hidden', !event.target.checked);
+                    if (event.target.checked) row.querySelector('[data-enc-service-qty]')?.focus();
+                    refreshEncounterServicePrice(row);
                     refreshEncounterSummary();
                     refreshEncounterTotal();
                 };
-                row.oninput = event => {
-                    if (event.target.matches('[data-enc-service-qty], [data-enc-service-amount]')) {
+                const refreshPricing = event => {
+                    if (event.target.matches('[data-enc-service-qty], [data-enc-service-amount], [data-enc-service-price-mode]')) {
+                        refreshEncounterServicePrice(row);
                         encTotalAuto = true;
                         refreshEncounterSummary();
                         refreshEncounterTotal();
                     }
                 };
+                row.oninput = refreshPricing;
+                row.onchange = refreshPricing;
+                for (const button of row.querySelectorAll('[data-enc-step]')) button.onclick = () => {
+                    const field = row.querySelector('[data-enc-service-qty]');
+                    if (!field.value) field.value = '1';
+                    else if (button.dataset.encStep === '1') field.stepUp();
+                    else field.stepDown();
+                    field.dispatchEvent(new Event('input', { bubbles:true }));
+                };
+                refreshEncounterServicePrice(row);
             });
+        }
+
+        function readEncounterServicePrice(row) {
+            const service = row.catalogService;
+            const saved = row.savedService?.pricing;
+            const mode = row.querySelector('[data-enc-service-price-mode]').value;
+            const regular = service.unit_price ?? service.sale_price;
+            const selected = mode === 'manual' ? parseAmount(row.querySelector('[data-enc-service-amount]').value)
+                : saved?.mode === mode ? saved.unit_price : mode === 'promo' ? service.promo_price : regular;
+            if (selected == null) return null;
+            const regularPrice = mode === 'promo' ? (saved?.mode === mode ? saved.regular_unit_price : regular) : selected;
+            return { mode, unit_price: Number(selected), regular_unit_price: Number(regularPrice) };
+        }
+
+        function encounterPricedFigures(service, quantity, pricing, courtesyRequested = false) {
+            if (!pricing || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 100000) return null;
+            const unit = Number(pricing.unit_price), regular = Number(pricing.regular_unit_price);
+            if (!Number.isFinite(unit) || unit < 0 || !Number.isFinite(regular) || regular < unit) return null;
+            const amount = roundTo(regular * quantity, 2);
+            if (amount > 99999999.99) return null;
+            const selectedAmount = roundTo(unit * quantity, 2);
+            const computed = service.unit_price != null && unit > 0
+                ? unitServiceFigures({ ...service, unit_price: unit }, quantity, courtesyRequested) : null;
+            const priceDiscount = roundTo(amount - selectedAmount, 2);
+            const volume = computed?.volume || 0, courtesy = computed?.courtesy || 0;
+            return { quantity, amount, volume, courtesy, priceDiscount, discount: roundTo(priceDiscount + volume + courtesy, 2),
+                courtesyPercent: computed?.courtesyPercent || 0 };
+        }
+
+        function refreshEncounterServicePrice(row) {
+            const display = row.querySelector('[data-enc-service-total]');
+            if (!display) return;
+            row.querySelector('[data-enc-manual-wrap]').classList.toggle('hidden', row.querySelector('[data-enc-service-price-mode]').value !== 'manual');
+            const pricing = readEncounterServicePrice(row);
+            const figures = encounterPricedFigures(row.catalogService, Number(row.querySelector('[data-enc-service-qty]').value), pricing);
+            display.textContent = figures ? `${figures.quantity} × ${formatAmount(pricing.unit_price)} = ${formatAmount(figures.amount - figures.discount)}`
+                + (figures.volume ? ` · Descuento por volumen ${formatAmount(figures.volume)}` : '') : 'Indica la cantidad y el precio para calcular el monto.';
         }
 
         function getEncounterCatalogProcedures() {
@@ -1782,14 +1851,13 @@
                 if (!row.querySelector('[data-enc-pick]').checked) return;
                 const service = row.catalogService;
                 const saved = row.savedService;
-                const quantityField = row.querySelector('[data-enc-service-qty]');
-                const quantity = Number(quantityField?.value ?? saved?.qty);
+                if (service.historical) { marked[service.code] = saved; return; }
+                const quantity = Number(row.querySelector('[data-enc-service-qty]').value);
                 const qty = Number.isSafeInteger(quantity) && quantity >= 1 && quantity <= 100000 ? quantity : null;
-                const unitFigures = unitServiceFigures(service, qty, false);
-                const enteredAmount = parseAmount(row.querySelector('[data-enc-service-amount]')?.value);
+                const pricing = readEncounterServicePrice(row);
+                const figures = encounterPricedFigures(service, qty, pricing);
                 marked[service.code] = { name: saved?.name || service.name, unit: saved?.unit || service.unit,
-                    qty, unit_price: service.unit_price ?? null,
-                    amount: service.historical ? (saved?.amount ?? null) : unitFigures ? unitFigures.amount - unitFigures.volume : enteredAmount ?? null };
+                    qty, unit_price: service.unit_price ?? null, pricing, amount: figures ? roundTo(figures.amount - figures.discount, 2) : null };
             });
             return marked;
         }
@@ -4204,24 +4272,30 @@
                 [row.dataset.payServiceLine, { checked: row.querySelector('[data-pay-include]').checked, amount: row.querySelector('[data-pay-line-amount]')?.value,
                     promo: row.querySelector('[data-pay-line-promo]')?.checked,
                     courtesy: document.querySelector(`[data-pay-line-courtesy="${row.dataset.payServiceLine}"]`)?.checked }])) : new Map();
-            const combined = marked.length > 1;
+            const combined = marked.length > 1 || marked.some(service => Object.hasOwn(encounter?.procedures_detail?.catalog_services?.[service.code] || {}, 'pricing'));
             root.dataset.encounter = encounter?.id || '';
             document.getElementById('pay-single-service').classList.toggle('hidden', combined);
             root.innerHTML = combined ? '<p class="enc-label mb-1">Servicios del encuentro</p>' + marked.map(service => {
                 const saved = encounter.procedures_detail?.catalog_services?.[service.code];
+                const pricing = saved?.pricing;
                 const amount = previous.get(service.code)?.amount ?? saved?.amount ?? service.sale_price ?? '';
                 const qty = serviceEncounterQuantity(service, encounter);
                 return `<div class="rounded-lg border border-[#EDE1E7] p-3 space-y-2" data-pay-service-line="${escapeHtml(service.code)}">
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" data-pay-include ${previous.get(service.code)?.checked === false ? '' : 'checked'}>
                     <span>${escapeHtml(service.name)} <small class="opacity-60">${escapeHtml(service.billing_code || service.code)}</small></span></label>
-                    ${service.unit_price == null ? `<label class="text-xs">Monto USD<input data-pay-line-amount inputmode="decimal" value="${escapeHtml(amount)}"></label>
+                    ${Object.hasOwn(saved || {}, 'pricing') ? `<div class="text-xs">${pricing
+                        ? `${qty ?? 'Cantidad pendiente'} × ${escapeHtml(formatAmount(pricing.unit_price))} · ${escapeHtml(({ regular: 'Precio regular', promo: 'Promoción', manual: 'Precio manual' })[pricing.mode] || 'Precio del encuentro')} · Edita en el encuentro`
+                        : 'Falta elegir el precio en el encuentro.'}</div>`
+                      : service.unit_price == null ? `<label class="text-xs">Monto USD<input data-pay-line-amount inputmode="decimal" value="${escapeHtml(amount)}"></label>
                         ${service.promo_price != null && Number(service.promo_price) < Number(service.sale_price)
                           ? `<label class="flex gap-2 items-center text-xs"><input type="checkbox" data-pay-line-promo ${previous.get(service.code)?.promo ? 'checked' : ''}> Usar promoción · ${escapeHtml(formatAmount(service.promo_price))}</label>` : ''}`
                         : `<div class="text-xs">${qty == null ? 'Falta registrar la cantidad en el encuentro' : `${qty} × ${escapeHtml(formatAmount(service.unit_price))} por ${escapeHtml(service.unit)}`}</div>`}
                     <div class="text-xs opacity-70" data-pay-line-total></div></div>`;
             }).join('') : '';
             document.getElementById('pay-line-courtesies').innerHTML = combined ? marked.filter(service =>
-                unitServiceFigures(service,serviceEncounterQuantity(service,encounter),false)?.courtesyAvailable).map(service =>
+                unitServiceFigures({ ...service, unit_price: service.unit_price == null ? null
+                    : encounter.procedures_detail?.catalog_services?.[service.code]?.pricing?.unit_price ?? service.unit_price },
+                    serviceEncounterQuantity(service,encounter),false)?.courtesyAvailable).map(service =>
                 `<label class="flex items-center gap-2 text-xs"><input type="checkbox" data-pay-line-courtesy="${escapeHtml(service.code)}" ${previous.get(service.code)?.courtesy ? 'checked' : ''}>
                     Cortesía ${escapeHtml(service.courtesy_percent)} % · ${escapeHtml(service.name)}</label>`).join('') : '';
             root.oninput = renderPayTotals;
@@ -4233,13 +4307,18 @@
             const rows = [...document.querySelectorAll('[data-pay-service-line]')].filter(row => row.querySelector('[data-pay-include]').checked);
             return rows.map(row => {
                 const service = payServices.find(s => s.code === row.dataset.payServiceLine);
+                const saved = encounter?.procedures_detail?.catalog_services?.[service?.code];
+                const pricing = saved?.pricing;
+                const fromEncounter = Object.hasOwn(saved || {}, 'pricing');
                 const courtesy = document.querySelector(`[data-pay-line-courtesy="${row.dataset.payServiceLine}"]`)?.checked;
                 const unitMode = service?.unit_price != null;
-                const units = unitMode ? unitServiceFigures(service, serviceEncounterQuantity(service, encounter), courtesy) : null;
+                const qty = serviceEncounterQuantity(service, encounter);
                 const included = service?.code === 'CONSULTA' && rows.length > 1;
+                const units = !included && fromEncounter ? encounterPricedFigures(service, qty, pricing, courtesy)
+                    : unitMode && !included ? unitServiceFigures(service, qty, courtesy) : null;
                 const promo = !included && !unitMode && row.querySelector('[data-pay-line-promo]')?.checked;
-                const amount = included ? 0 : unitMode ? units?.amount : promo ? Number(service.sale_price) : parseAmount(row.querySelector('[data-pay-line-amount]')?.value);
-                return { row, service, units, amount, discount: units ? roundTo(units.volume + units.courtesy, 2)
+                const amount = included ? 0 : fromEncounter || unitMode ? units?.amount : promo ? Number(service.sale_price) : parseAmount(row.querySelector('[data-pay-line-amount]')?.value);
+                return { row, service, units, amount, pricing, discount: units ? units.discount ?? roundTo(units.volume + units.courtesy, 2)
                     : promo ? roundTo(amount - Number(service.promo_price), 2) : 0, included };
             });
         }
@@ -4696,7 +4775,7 @@
             const addStock = (id, quantity) => { if (id) stockNeeded.set(id, (stockNeeded.get(id) || 0) + quantity); };
             for (const line of f.lines) addStock(line.product_id, line.quantity);
             if (f.units) addStock(f.service.inventory_product_id, f.units.quantity);
-            for (const line of f.serviceLines) if (line.units) addStock(line.service.inventory_product_id, line.units.quantity);
+            for (const line of f.serviceLines) if (line.units && line.service.unit_price != null) addStock(line.service.inventory_product_id, line.units.quantity);
             for (const [id, quantity] of stockNeeded) {
                 const record = payProducts.find(product => product.id === id);
                 if (!record || record.stock_qty < quantity || record.expires_on && record.expires_on < paidOn) {
@@ -4714,9 +4793,9 @@
             if (!guest && !f.combined && f.amount > 0 && !serviceCode) { alert('Elige el servicio. Si no está en la lista, elige "Otro servicio" y escribe qué fue.'); document.getElementById('pay-service').focus(); return; }
             if (serviceCode === '__otro' && !otherService) { alert('Escribe qué servicio fue.'); document.getElementById('pay-service-other').focus(); return; }
             if (serviceCode && serviceCode !== '__otro' && !service) { alert('Ese servicio ya no está disponible. Elige otro.'); return; }
-            const servicesToSave = f.serviceLines.map(({ service: entry, units, amount, discount }) => ({
+            const servicesToSave = f.serviceLines.map(({ service: entry, units, amount, discount, pricing }) => ({
                 service_id: entry.code, name: entry.name, unit: entry.unit, category: entry.category,
-                quantity: units?.quantity || 1, unit_price: units ? Number(entry.unit_price) : amount,
+                quantity: units?.quantity || 1, unit_price: units ? Number(pricing?.regular_unit_price ?? entry.unit_price) : amount,
                 amount, discount, courtesy_percent: units?.courtesyPercent || 0,
             }));
             const combinedCategories = [...new Set(servicesToSave.map(line => line.category))];
@@ -6312,9 +6391,10 @@
                 return false;
             }
             const detail = getEncounterProcedures();
-            const incomplete = Object.values(detail.catalog_services || {}).find(row => row.unit_price != null && row.qty == null);
+            const incomplete = Object.values(detail.catalog_services || {}).find(row => Object.hasOwn(row, 'pricing')
+                && (row.qty == null || row.unit_price != null && !row.pricing));
             if (incomplete) {
-                alert(`Registra la cantidad de unidades usadas para ${incomplete.name}.`);
+                alert(`Completa la cantidad y el precio por unidad para ${incomplete.name}.`);
                 return false;
             }
 
