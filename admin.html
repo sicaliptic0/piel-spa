@@ -414,12 +414,20 @@
                 <!-- Checkout: left the visit, right what the patient sees -->
                 <div class="bg-white border border-[#EDE1E7] rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-2">
                     <div class="p-5 md:p-8 space-y-5 border-b md:border-b-0 md:border-r border-[#EDE1E7]">
-                        <div class="relative">
+                        <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="pay-guest" onchange="setPayGuestMode()"> Venta de producto a comprador sin cuenta</label>
+                        <div id="pay-guest-fields" class="hidden space-y-2">
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="text-sm">Nombre<input id="pay-buyer-first" autocomplete="off" maxlength="100"></label>
+                                <label class="text-sm">Apellido<input id="pay-buyer-last" autocomplete="off" maxlength="100"></label>
+                            </div>
+                            <label class="text-sm block">Teléfono<input id="pay-buyer-phone" type="tel" autocomplete="off" placeholder="(212) 555-0100"></label>
+                        </div>
+                        <div class="relative" id="pay-patient-fields">
                             <label for="pay-patient" class="enc-label mb-1 block">Paciente</label>
                             <input type="text" id="pay-patient" autocomplete="off" placeholder="Escribe nombre o teléfono…" oninput="renderPayPatientResults()" onfocus="renderPayPatientResults()">
                             <div id="pay-patient-results" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white border border-[#EDE1E7] rounded-lg shadow-lg max-h-64 overflow-y-auto"></div>
                         </div>
-                        <div>
+                        <div id="pay-encounter-fields">
                             <label for="pay-encounter" class="enc-label mb-1 block">Encuentro</label>
                             <select id="pay-encounter" onchange="onPayEncounterChange()" disabled><option value="">Primero elige un paciente</option></select>
                             <p id="pay-encounter-note" class="text-xs mt-2 min-h-[1rem]"></p>
@@ -445,7 +453,7 @@
                                 </select>
                             </div>
                         </div>
-                        <div>
+                        <div id="pay-service-fields">
                             <label for="pay-service" class="enc-label mb-1 block">Servicio del catálogo (opcional)</label>
                             <select id="pay-service" onchange="renderPayServicePrices()"><option value="">Sin servicio del catálogo</option></select>
                             <div id="pay-service-prices" class="flex flex-wrap gap-2 mt-2" aria-live="polite"></div>
@@ -2390,11 +2398,12 @@
         async function uploadEncounterPhotos(noteStorageId) {
             const uploaded = [];
             for (const { file } of encPhotos.pending) {
-                const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+                const photo = await optimizeEncounterPhoto(file);
+                const ext = photo === file ? (file.name.split('.').pop() || 'jpg').toLowerCase() : 'jpg';
                 const fileName = `${noteStorageId}/photo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
                 const { error: uploadError } = await _supabase.storage
                     .from(CLINICAL_PHOTOS_BUCKET)
-                    .upload(fileName, file, { upsert: false });
+                    .upload(fileName, photo, { upsert: false, contentType: photo.type || undefined });
                 if (uploadError) throw new Error(uploadError.message || 'Upload failed');
                 const { data: publicData } = _supabase.storage
                     .from(CLINICAL_PHOTOS_BUCKET)
@@ -2402,6 +2411,28 @@
                 if (publicData?.publicUrl) uploaded.push(publicData.publicUrl);
             }
             return uploaded;
+        }
+
+        async function optimizeEncounterPhoto(file) {
+            if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size < 1024 * 1024) return file;
+            let bitmap;
+            try {
+                bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+                const scale = Math.min(1, 2400 / Math.max(bitmap.width, bitmap.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+                canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+                const context = canvas.getContext('2d', { alpha: false });
+                context.fillStyle = '#fff';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+                const jpeg = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.88));
+                return jpeg && jpeg.size < file.size ? jpeg : file;
+            } catch (_) {
+                return file;
+            } finally {
+                bitmap?.close();
+            }
         }
 
         window.openImageLightbox = (src) => {
@@ -4168,19 +4199,40 @@
             document.getElementById('pay-extras').classList.toggle('hidden');
         }
 
+        let payPreviousCategory = '';
+        function setPayGuestMode() {
+            const guest = document.getElementById('pay-guest').checked;
+            document.getElementById('pay-guest-fields').classList.toggle('hidden', !guest);
+            for (const id of ['pay-patient-fields', 'pay-encounter-fields', 'pay-service-fields']) {
+                document.getElementById(id).classList.toggle('hidden', guest);
+            }
+            const category = document.getElementById('pay-category');
+            if (guest && !category.disabled) {
+                payPreviousCategory = category.value;
+                category.value = 'Solo producto';
+            } else if (!guest && category.disabled) {
+                category.value = payPreviousCategory;
+            }
+            category.disabled = guest;
+            document.getElementById('pay-amount').disabled = guest;
+            document.getElementById('pay-friend').disabled = guest || !payFriendLeft;
+            renderPayTotals();
+        }
+
         // Base, discount, taxes, surcharge and total from what's on screen. amount is undefined when mistyped.
         function payFigures() {
-            const amount = parseAmount(document.getElementById('pay-amount').value);
+            const guest = document.getElementById('pay-guest').checked;
+            const amount = guest ? 0 : parseAmount(document.getElementById('pay-amount').value);
             const hasProduct = !!document.getElementById('pay-product').value;
             const productQty = Math.max(1, parseInt(document.getElementById('pay-product-qty').value, 10) || 1);
             const productUnit = hasProduct ? (parseAmount(document.getElementById('pay-product-amount').value) || 0) : 0;
             const product = roundTo(productUnit * productQty, 2);
             const productTaxable = document.getElementById('pay-product-taxable').checked;
             const method = document.getElementById('pay-method').value;
-            const friend = document.getElementById('pay-friend').checked;
+            const friend = !guest && document.getElementById('pay-friend').checked;
             const discount = friend ? Math.min(FRIEND_COUPON_AMOUNT, amount || 0) : 0;
             const base = (amount || 0) - discount;
-            const serviceRate = payRates.services_taxed && document.getElementById('pay-servtax-on').checked ? Number(payRates.tax_services) : 0;
+            const serviceRate = !guest && payRates.services_taxed && document.getElementById('pay-servtax-on').checked ? Number(payRates.tax_services) : 0;
             const serviceTax = roundTo(base * serviceRate, 2);
             const productTax = productTaxable ? roundTo(product * Number(payRates.tax_products), 2) : 0;
             const tax = roundTo(serviceTax + productTax, 2);
@@ -4278,7 +4330,7 @@
             payFriendLeft = Math.max(0, FRIEND_COUPONS_PER_MONTH - (count || 0));
             left.innerText = `te quedan ${payFriendLeft} de ${FRIEND_COUPONS_PER_MONTH} este mes`;
             const check = document.getElementById('pay-friend');
-            check.disabled = !payFriendLeft;
+            check.disabled = document.getElementById('pay-guest').checked || !payFriendLeft;
             if (!payFriendLeft) { check.checked = false; renderPayTotals(); }
         }
 
@@ -4306,25 +4358,45 @@
             document.getElementById('pay-surcharge-on').checked = false;
             document.getElementById('pay-servtax-on').checked = true;
             document.getElementById('pay-ledger').value = 'LLC';
-            renderPayTotals();
+            document.getElementById('pay-guest').checked = false;
+            for (const id of ['pay-buyer-first', 'pay-buyer-last', 'pay-buyer-phone']) document.getElementById(id).value = '';
+            setPayGuestMode();
         }
 
         async function submitPayment() {
-            if (!payPatient) { alert('Elige primero el paciente.'); return; }
+            const guest = document.getElementById('pay-guest').checked;
+            if (!guest && !payPatient) { alert('Elige primero el paciente.'); return; }
+            let buyerPhone = null;
+            let paymentName;
+            if (guest) {
+                const first = document.getElementById('pay-buyer-first').value.trim();
+                const last = document.getElementById('pay-buyer-last').value.trim();
+                const raw = document.getElementById('pay-buyer-phone').value.trim();
+                const digits = raw.replace(/\D/g, '');
+                const international = raw.startsWith('+') || digits.length === 11 && digits.startsWith('1');
+                if (!first || !last || !/^\+?[\d().\s-]+$/.test(raw)
+                    || (international ? digits.length < 8 || digits.length > 15 : digits.length !== 10)) {
+                    alert('Escribe nombre, apellido y un teléfono válido. Para números fuera de EE. UU., incluye + y el código de país.');
+                    return;
+                }
+                buyerPhone = '+' + (international ? digits : '1' + digits);
+                paymentName = `${first} ${last}`;
+            } else paymentName = payPatientLabel(payPatient);
             const f = payFigures();
+            if (guest && !(f.product > 0)) { alert('Selecciona un producto con un precio mayor que cero.'); return; }
             if (f.amount === undefined || f.amount === null) { alert('Escribe el monto, por ejemplo 250 o 250.50.'); document.getElementById('pay-amount').focus(); return; }
             const paidOn = document.getElementById('pay-date').value;
             if (!paidOn) { alert('Elige la fecha del pago.'); return; }
             if (f.friend && !payFriendLeft) { alert('Ya no quedan cupos este mes.'); return; }
-            const encounterId = document.getElementById('pay-encounter').value || null;
+            const encounterId = guest ? null : document.getElementById('pay-encounter').value || null;
             if (encounterId && payPaidEncounters[encounterId] && !confirm('Este encuentro ya tiene un pago. ¿Registrar otro?')) return;
             const productId = document.getElementById('pay-product').value;
             const productName = document.getElementById('pay-product-desc').value.trim();
             if (productId && !f.product) { alert('Escribe el precio del producto.'); document.getElementById('pay-product-amount').focus(); return; }
             if (f.product && !productName) { alert('Escribe qué producto se vendió.'); document.getElementById('pay-product-desc').focus(); return; }
             const productDesc = f.product ? productName + (f.productQty > 1 ? ` x${f.productQty}` : '') + (f.productTaxable ? '' : ' (sin sales tax)') : '';
-            const encounterForText = payEncounters[document.getElementById('pay-encounter').value];
-            const serviceCode = document.getElementById('pay-service').value;
+            const encounterForText = payEncounters[encounterId];
+            const serviceCode = guest ? '' : document.getElementById('pay-service').value;
             const service = payServices.find(row => row.code === serviceCode);
             if (serviceCode && !service) { alert('Elige un servicio disponible o registra el cobro manualmente.'); return; }
             const encounterText = encounterForText ? encounterSummaryText(encounterForText) : '';
@@ -4340,7 +4412,7 @@
                 const { data: { user } } = await _supabase.auth.getUser();
                 const ledger = document.getElementById('pay-ledger').value;
                 const { data: saved, error } = await _supabase.from('payments').insert({
-                    category: document.getElementById('pay-category').value,
+                    category: guest ? 'Solo producto' : document.getElementById('pay-category').value,
                     ledger,
                     service_tax: f.serviceTax,
                     service_desc: service ? [`${service.name} (${service.code})`, encounterText].filter(Boolean).join(' · ') : encounterText || null,
@@ -4354,8 +4426,9 @@
                     processor_fee: f.fee,
                     card_last4: card?.last4 || null,
                     card_receipt: card?.receipt || null,
-                    patient_id: payPatient.id,
-                    patient_name: payPatientLabel(payPatient),
+                    patient_id: guest ? null : payPatient.id,
+                    patient_name: paymentName,
+                    ...(guest ? { buyer_phone: buyerPhone } : {}),
                     encounter_id: encounterId,
                     visit_date: payEncounters[encounterId]?.visit_date || null,
                     paid_on: paidOn,
@@ -4372,7 +4445,7 @@
                 // The card fee is an LLC expense, linked to the payment.
                 if (f.fee) {
                     const { error: feeError } = await _supabase.from('acct_expenses').insert({
-                        spent_on: paidOn, description: `Comisión ${payRates.processor}, cobro a ${payPatientLabel(payPatient)}`, vendor: payRates.processor,
+                        spent_on: paidOn, description: `Comisión ${payRates.processor}, cobro a ${paymentName}`, vendor: payRates.processor,
                         category: 'Comisiones bancarias y de tarjeta', ledger, amount: f.fee, account: 'Débito Chase Business', paid_by: 'LLC',
                         reimb_status: 'No aplica (pagó la LLC)', note: 'Automático desde Cobros. Comisión estimada.', payment_id: saved.id, source: 'cobros', created_by: user?.id || null,
                     });
@@ -4421,7 +4494,7 @@
                     <table class="w-full text-sm">
                         <caption class="px-4 py-3 text-left font-semibold capitalize border-b border-[#EDE1E7]">${escapeHtml(formatDateLongEs(day))}</caption>
                         <thead><tr>
-                            <th class="${th}">Paciente</th><th class="${th}">Encuentro</th><th class="${th}">Fecha de pago</th><th class="${th}">Método</th>
+                            <th class="${th}">Paciente o comprador</th><th class="${th}">Encuentro</th><th class="${th}">Fecha de pago</th><th class="${th}">Método</th>
                             <th class="${th} text-right">Impuesto</th><th class="${th} text-right">Promoción</th><th class="${th} text-right">Monto total</th><th class="${th}">Observaciones</th>
                         </tr></thead>
                         <tbody>${list.map(paymentRowHtml).join('')}</tbody>
@@ -4432,6 +4505,9 @@
                         </tr></tfoot>
                     </table>
                 </div>`).join('');
+            box.querySelectorAll('[data-void-buyer-payment]').forEach(button => {
+                button.onclick = () => voidPayment(button.dataset.voidBuyerPayment);
+            });
             box.querySelectorAll('.pay-notes').forEach(textarea => {
                 textarea.dataset.saved = textarea.value;
                 textarea.addEventListener('blur', () => savePaymentNotes(textarea));
@@ -4446,7 +4522,9 @@
             const voidItem = { label: '🗑 Anular pago', danger: true, run: () => voidPayment(r.id) };
             const name = r.patient_id
                 ? patientNameCell(r.patient_id, r.patient_name, [{ label: '📋 Ver ficha', run: () => openHistoryById(r.patient_id) }, voidItem])
-                : escapeHtml(r.patient_name);
+                : escapeHtml(r.patient_name) + (r.buyer_phone
+                    ? `<div class="text-xs opacity-60">${escapeHtml(formatPhone(r.buyer_phone))}</div>
+                       <button type="button" class="text-xs text-red-700" data-void-buyer-payment="${escapeHtml(r.id)}">Anular pago</button>` : '');
             return `
                 <tr class="border-t border-gray-100 align-top">
                     <td class="px-4 py-3 whitespace-nowrap">${name}</td>
@@ -9428,6 +9506,6 @@
         }
     </script>
     <script src="admin-contabilidad.js?v=20261122-services"></script>
-    <script src="admin-productos.js?v=20261124-order"></script>
+    <script src="admin-productos.js?v=20261125-groups"></script>
 </body>
 </html>

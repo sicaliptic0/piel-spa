@@ -7,6 +7,9 @@
     const VENCE_PRONTO_DIAS = 60;
     let rows = [], built = false, tab = 'productos', filtro = 'todos', q = '', verEliminados = false;
     const SERVICE_STATUS = { available: 'Disponible', assessment: 'Tras valoración', soon: 'Próximamente', pending: 'Pendiente', category: 'Categoría' };
+    const WEB_SERVICE_GROUPS = ['Consulta', 'Mantenimiento de mi piel', 'Manchas y melasma', 'Acné y brotes', 'Textura y poros',
+        'Vello no deseado', 'Relajación y drenaje', 'Arrugas', 'Flacidez', 'Luminosidad e hidratación', 'Pérdida de volumen', 'Ojeras'];
+    const groupRank = category => WEB_SERVICE_GROUPS.includes(category) ? WEB_SERVICE_GROUPS.indexOf(category) : WEB_SERVICE_GROUPS.length;
     let services = [], serviceError = '', showArchived = false, request = 0;
     let serviceBusy = false;
     const selectedServices = new Set();
@@ -227,7 +230,8 @@
             $('prod-body').innerHTML = `<p class="text-sm text-red-700 py-4" role="alert">No se pudo cargar Servicios. ${esc(serviceError)}</p>`;
             return;
         }
-        const visible = services.filter(s => s.active !== showArchived);
+        const visible = services.filter(s => s.active !== showArchived).sort((a, b) =>
+            groupRank(a.category) - groupRank(b.category) || a.category.localeCompare(b.category, 'es'));
         const visibleCodes = new Set(visible.map(s => s.code));
         for (const code of selectedServices) if (!visibleCodes.has(code)) selectedServices.delete(code);
         const action = showArchived ? 'Desarchivar' : 'Archivar';
@@ -243,14 +247,14 @@
             <button class="soft" type="button" id="svc-bulk" disabled>${action} seleccionados</button>
             <span class="text-sm opacity-70" id="svc-count" aria-live="polite"></span>
           </div>
-          ${!showArchived && visible.length > 1 ? '<p class="text-xs opacity-70 mb-3">Arrastra por el asa para cambiar el orden. Si marcas varias filas, puedes moverlas juntas. También puedes usar Subir y Bajar.</p>' : ''}
+          ${!showArchived && visible.length > 1 ? '<p class="text-xs opacity-70 mb-3">Arrastra por el asa o usa Subir y Bajar para ordenar dentro de cada categoría. Puedes arrastrar juntas las filas marcadas de la misma categoría.</p>' : ''}
           ${visible.length ? `<div class="card overflow-x-auto"><table class="t">
             <thead><tr><th><input type="checkbox" id="svc-select-all" aria-label="Seleccionar todos los servicios visibles" ${disabled}></th>${showArchived ? '' : '<th>Orden</th>'}<th>Servicio</th><th>Estado</th><th class="num">Sugerido NYC</th><th class="num">Precio Piel Spa</th><th class="num">Promoción</th><th class="num">Tarifario interno</th><th><span class="sr-only">Acciones</span></th></tr></thead>
-            <tbody>${visible.map((s, index) => `<tr data-svc-row="${esc(s.code)}">
+            <tbody>${visible.map((s, index) => `${visible[index - 1]?.category !== s.category ? `<tr><th colspan="${showArchived ? 8 : 9}" scope="rowgroup">${esc(s.category)}</th></tr>` : ''}<tr data-svc-row="${esc(s.code)}">
               <td><input type="checkbox" data-svc-select="${esc(s.code)}" aria-label="Seleccionar ${esc(s.name)}" ${selectedServices.has(s.code) ? 'checked' : ''} ${disabled}></td>
               ${showArchived ? '' : `<td class="whitespace-nowrap"><span class="svc-grip" draggable="${!serviceBusy}" data-svc-drag="${esc(s.code)}" aria-hidden="true" title="Arrastrar">⠿</span>
-                <button type="button" class="svc-order" data-svc-move="-1" aria-label="Subir ${esc(s.name)}" title="Subir" ${disabled || (index === 0 ? 'disabled' : '')}>↑</button>
-                <button type="button" class="svc-order" data-svc-move="1" aria-label="Bajar ${esc(s.name)}" title="Bajar" ${disabled || (index === visible.length - 1 ? 'disabled' : '')}>↓</button></td>`}
+                <button type="button" class="svc-order" data-svc-move="-1" aria-label="Subir ${esc(s.name)}" title="Subir" ${disabled || (visible[index - 1]?.category !== s.category ? 'disabled' : '')}>↑</button>
+                <button type="button" class="svc-order" data-svc-move="1" aria-label="Bajar ${esc(s.name)}" title="Bajar" ${disabled || (visible[index + 1]?.category !== s.category ? 'disabled' : '')}>↓</button></td>`}
               <td class="min-w-[210px]"><strong>${esc(s.name)}</strong><div class="text-xs opacity-70">${esc(s.category)} · ${esc(s.unit)} · ${esc(s.code)}</div></td>
               <td>${s.active ? esc(SERVICE_STATUS[s.status]) : 'Archivado'}</td>
               <td class="num">${money(s.nyc_price)}</td><td class="num">${money(s.sale_price)}</td><td class="num">${money(s.promo_price)}</td>
@@ -292,6 +296,7 @@
 
     function bindServiceOrder(body, visible) {
         const codes = visible.map(s => s.code);
+        const categoryByCode = new Map(visible.map(s => [s.code, s.category]));
         let dragging = null, marker = null;
         function clearMarker() {
             marker?.classList.remove('svc-drop-before', 'svc-drop-after');
@@ -300,7 +305,7 @@
         body.querySelectorAll('[data-svc-drag]').forEach(grip => {
             grip.ondragstart = event => {
                 const code = grip.dataset.svcDrag;
-                dragging = selectedServices.has(code) ? codes.filter(item => selectedServices.has(item)) : [code];
+                dragging = selectedServices.has(code) ? codes.filter(item => selectedServices.has(item) && categoryByCode.get(item) === categoryByCode.get(code)) : [code];
                 event.dataTransfer.setData('text/plain', code);
                 event.dataTransfer.effectAllowed = 'move';
             };
@@ -308,12 +313,13 @@
         });
         body.querySelectorAll('[data-svc-row]').forEach(row => {
             const target = row.dataset.svcRow;
+            const canDrop = () => dragging && !dragging.includes(target) && categoryByCode.get(dragging[0]) === categoryByCode.get(target);
             const after = event => {
                 const bounds = row.getBoundingClientRect();
                 return event.clientY > bounds.top + bounds.height / 2;
             };
             row.ondragover = event => {
-                if (!dragging || dragging.includes(target)) { clearMarker(); return; }
+                if (!canDrop()) { clearMarker(); return; }
                 event.preventDefault();
                 clearMarker();
                 marker = row;
@@ -322,7 +328,7 @@
             row.ondrop = event => {
                 event.preventDefault();
                 clearMarker();
-                if (dragging && !dragging.includes(target)) moveServices(codes, dragging, target, after(event));
+                if (canDrop()) moveServices(codes, dragging, target, after(event));
                 dragging = null;
             };
             row.querySelectorAll('[data-svc-move]').forEach(button => button.onclick = () => {
