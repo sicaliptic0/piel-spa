@@ -74,7 +74,7 @@
             q(_supabase.from('acct_expenses').select('*').is('deleted_at', null).order('spent_on', { ascending: false }).limit(5000)),
             q(_supabase.from('acct_partner_movements').select('*').is('deleted_at', null)),
             q(_supabase.from('acct_income').select('*').is('deleted_at', null)),
-            q(_supabase.from('payments').select('*').limit(5000)),
+            q(_supabase.from('payments').select('*, service:sale_services!payments_service_catalog_code_fkey(billing_code)').limit(5000)),
             q(_supabase.from('acct_recurring').select('*').order('description')),
             q(_supabase.from('acct_accounts').select('name').order('sort').order('name')).catch(() => []),
         ]);
@@ -94,8 +94,12 @@
                     libro: i.ledger, nota: i.note || '', anulado: false })),
                 ...pay.map(p => {
                     const servBase = r2(Number(p.amount) - Number(p.discount || 0)), prod = Number(p.product_amount || 0);
+                    const recordedCode = p.service_code_snapshot || p.service_catalog_code;
+                    const currentCode = p.service?.billing_code || recordedCode;
+                    const serviceDescription = recordedCode && currentCode !== recordedCode
+                        ? p.service_desc?.replaceAll(` (${recordedCode})`, ` (${currentCode})`) : p.service_desc;
                     return { id: 'pay:' + p.id, tabla: 'payments', pid: p.id, fecha: p.paid_on, cliente: p.patient_name,
-                        servicio: [p.service_desc || p.category, p.product_desc].filter(Boolean).join(' + ') || 'Cobro', codigo_servicio: p.service_code_snapshot || p.service_catalog_code || '', descuento: Number(p.discount || 0), categoria: p.category || 'Sin categoría',
+                        servicio: [serviceDescription || p.category, p.product_desc].filter(Boolean).join(' + ') || 'Cobro', codigo_servicio: currentCode || '', descuento: Number(p.discount || 0), categoria: p.category || 'Sin categoría',
                         metodo: PAY_LABEL[p.method] || p.method, monto: r2(servBase + prod), baseServ: servBase, baseProd: prod,
                         taxServ: Number(p.service_tax || 0) || (prod ? 0 : Number(p.tax || 0)), taxProd: Number(p.product_tax || 0), impuesto: Number(p.tax || 0),
                         recargo: Number(p.surcharge || 0), total: Number(p.total), comision: Number(p.processor_fee || 0), libro: p.ledger || 'LLC',

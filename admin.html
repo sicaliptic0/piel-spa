@@ -4411,7 +4411,7 @@
                     category: payCategory,
                     ledger,
                     service_tax: f.serviceTax,
-                    service_desc: service ? [`${service.name} (${service.billing_code || service.code})`, encounterText].filter(Boolean).join(' · ')
+                    service_desc: service ? [service.name, encounterText].filter(Boolean).join(' · ')
                         : [otherService, encounterText].filter(Boolean).join(' · ') || null,
                     ...(service ? { service_catalog_code: service.code } : {}),
                     product_desc: productDesc || null,
@@ -9502,7 +9502,7 @@
             catch (e) { alert('No se pudo generar el PDF: ' + e.message); }
         }
     </script>
-    <script src="admin-contabilidad.js?v=20261126-codes"></script>
-    <script src="admin-productos.js?v=20261126-codes"></script>
+    <script src="admin-contabilidad.js?v=20261127-current-codes"></script>
+    <script src="admin-productos.js?v=20261127-current-codes"></script>
 </body>
 </html>

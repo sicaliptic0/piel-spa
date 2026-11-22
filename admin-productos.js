@@ -387,7 +387,7 @@
             ${key === 'billing_code' ? 'maxlength="40" autocomplete="off" autocapitalize="characters" aria-describedby="svc-code-help"' : ''}></div>`).join('')}
           <div><label class="lbl" for="svc-status">Estado</label><select id="svc-status">${Object.entries(SERVICE_STATUS).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}</select></div>
         </div>
-        <p class="text-xs opacity-70" id="svc-code-help">Usa letras, números, guion o guion bajo. El cambio se aplica a los cobros nuevos.</p>
+        <p class="text-xs opacity-70" id="svc-code-help">Usa letras, números, guion o guion bajo. El Libro Contable usa el código vigente en todos los cobros vinculados a este servicio.</p>
         <p class="text-xs opacity-70" id="svc-reference"></p>
         <div><label class="lbl" for="svc-notes">Notas</label><textarea id="svc-notes" rows="3"></textarea></div>
         <p id="svc-error" class="text-sm text-red-700" role="alert"></p>
