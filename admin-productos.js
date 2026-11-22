@@ -8,6 +8,8 @@
     let rows = [], built = false, tab = 'productos', filtro = 'todos', q = '', verEliminados = false;
     const SERVICE_STATUS = { available: 'Disponible', assessment: 'Tras valoración', soon: 'Próximamente', pending: 'Pendiente', category: 'Categoría' };
     let services = [], serviceError = '', showArchived = false, request = 0;
+    let serviceBusy = false;
+    const selectedServices = new Set();
 
     const $ = id => document.getElementById(id);
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -50,6 +52,12 @@
       .prod table.t td { padding:9px 10px; border-bottom:1px solid #F4EDF1; vertical-align:top; }
       .prod table.t tbody tr { cursor:pointer; } .prod table.t tbody tr:hover td { background:#FDF7FA; }
       .prod .num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; } .prod th.num { text-align:right; }
+      .prod .svc-grip { cursor:grab; padding:6px; font-size:18px; color:#71364c; }
+      .prod .svc-order { min-width:32px; min-height:32px; border-radius:6px; }
+      .prod .svc-order:hover:not(:disabled) { background:#F4EDF1; }
+      .prod .svc-order:disabled { opacity:.25; }
+      .prod .svc-drop-before { box-shadow:inset 0 2px #B76E88; }
+      .prod .svc-drop-after { box-shadow:inset 0 -2px #B76E88; }
       .prod table.t tbody tr.brand-row { cursor:default; } .prod table.t tbody tr.brand-row td, .prod table.t tbody tr.brand-row:hover td { background:#FBF0F3; }
       .prod .pcard { background:#fff; border:1px solid #EDE1E7; border-radius:12px; padding:12px; cursor:pointer; }
       dialog.prod { border:none; border-radius:16px; padding:0; width:min(620px, calc(100vw - 32px)); }
@@ -79,7 +87,7 @@
         updateTabs();
         $('prod-body').innerHTML = '<p class="text-sm opacity-60 text-center py-8">Cargando…</p>';
         if (tab === 'servicios') {
-            const { data, error } = await _supabase.from('sale_services').select('*').order('sort_order').order('name');
+            const { data, error } = await _supabase.from('sale_services').select('*').order('sort_order').order('name').order('code');
             if (current !== request) return;
             services = data || [];
             serviceError = error ? error.message : '';
@@ -219,25 +227,148 @@
             $('prod-body').innerHTML = `<p class="text-sm text-red-700 py-4" role="alert">No se pudo cargar Servicios. ${esc(serviceError)}</p>`;
             return;
         }
-        const visible = services.filter(s => s.active || showArchived);
+        const visible = services.filter(s => s.active !== showArchived);
+        const visibleCodes = new Set(visible.map(s => s.code));
+        for (const code of selectedServices) if (!visibleCodes.has(code)) selectedServices.delete(code);
+        const action = showArchived ? 'Desarchivar' : 'Archivar';
+        const disabled = serviceBusy ? 'disabled' : '';
         $('prod-body').innerHTML = `
           <div class="card p-4 mb-4 text-sm space-y-2">
             <p>Montos en USD por la unidad indicada. NYC es una referencia de mercado basada en una muestra pequeña. Tarifario interno muestra importes por confirmar.</p>
             <p>En Cobros, elige el servicio y confirma el monto acordado. Usa el precio Piel Spa o la promoción si corresponde. Si solo realiza la consulta, registra su tarifa. Si realiza un tratamiento, registra el tratamiento una sola vez con la consulta incluida.</p>
             <p>El pago registrado aparece en Contabilidad → Ingresos. Guarda el comprobante y usa el registro de Cobros al conciliar para evitar duplicados.</p>
           </div>
-          <label class="flex items-center gap-2 text-sm mb-3"><input type="checkbox" id="svc-archived" ${showArchived ? 'checked' : ''}> Ver archivados</label>
+          <div class="flex flex-wrap items-center gap-3 mb-3">
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="svc-archived" ${showArchived ? 'checked' : ''} ${disabled}> Solo archivados</label>
+            <button class="soft" type="button" id="svc-bulk" disabled>${action} seleccionados</button>
+            <span class="text-sm opacity-70" id="svc-count" aria-live="polite"></span>
+          </div>
+          ${!showArchived && visible.length > 1 ? '<p class="text-xs opacity-70 mb-3">Arrastra por el asa para cambiar el orden. Si marcas varias filas, puedes moverlas juntas. También puedes usar Subir y Bajar.</p>' : ''}
           ${visible.length ? `<div class="card overflow-x-auto"><table class="t">
-            <thead><tr><th>Servicio</th><th>Estado</th><th class="num">Sugerido NYC</th><th class="num">Precio Piel Spa</th><th class="num">Promoción</th><th class="num">Tarifario interno</th><th><span class="sr-only">Acciones</span></th></tr></thead>
-            <tbody>${visible.map(s => `<tr>
+            <thead><tr><th><input type="checkbox" id="svc-select-all" aria-label="Seleccionar todos los servicios visibles" ${disabled}></th>${showArchived ? '' : '<th>Orden</th>'}<th>Servicio</th><th>Estado</th><th class="num">Sugerido NYC</th><th class="num">Precio Piel Spa</th><th class="num">Promoción</th><th class="num">Tarifario interno</th><th><span class="sr-only">Acciones</span></th></tr></thead>
+            <tbody>${visible.map((s, index) => `<tr data-svc-row="${esc(s.code)}">
+              <td><input type="checkbox" data-svc-select="${esc(s.code)}" aria-label="Seleccionar ${esc(s.name)}" ${selectedServices.has(s.code) ? 'checked' : ''} ${disabled}></td>
+              ${showArchived ? '' : `<td class="whitespace-nowrap"><span class="svc-grip" draggable="${!serviceBusy}" data-svc-drag="${esc(s.code)}" aria-hidden="true" title="Arrastrar">⠿</span>
+                <button type="button" class="svc-order" data-svc-move="-1" aria-label="Subir ${esc(s.name)}" title="Subir" ${disabled || (index === 0 ? 'disabled' : '')}>↑</button>
+                <button type="button" class="svc-order" data-svc-move="1" aria-label="Bajar ${esc(s.name)}" title="Bajar" ${disabled || (index === visible.length - 1 ? 'disabled' : '')}>↓</button></td>`}
               <td class="min-w-[210px]"><strong>${esc(s.name)}</strong><div class="text-xs opacity-70">${esc(s.category)} · ${esc(s.unit)} · ${esc(s.code)}</div></td>
               <td>${s.active ? esc(SERVICE_STATUS[s.status]) : 'Archivado'}</td>
               <td class="num">${money(s.nyc_price)}</td><td class="num">${money(s.sale_price)}</td><td class="num">${money(s.promo_price)}</td>
               <td class="num">${money(s.reference_price)}${s.reference_promo == null ? '' : `<div class="text-xs">Promo ${money(s.reference_promo)}</div>`}</td>
-              <td><button type="button" class="soft" data-service-code="${esc(s.code)}">Editar</button></td></tr>`).join('')}</tbody>
+              <td class="whitespace-nowrap"><button type="button" class="soft" data-service-code="${esc(s.code)}" ${disabled}>Editar</button>
+                <button type="button" class="soft" data-svc-toggle="${esc(s.code)}" aria-label="${action} ${esc(s.name)}" ${disabled}>${action}</button></td></tr>`).join('')}</tbody>
           </table></div>` : '<p class="text-sm opacity-60 py-4">No hay servicios en esta vista.</p>'}`;
-        $('svc-archived').onchange = e => { showArchived = e.target.checked; renderServices(); };
-        $('prod-body').querySelectorAll('[data-service-code]').forEach(b => b.onclick = () => editService(b.dataset.serviceCode));
+        $('svc-archived').onchange = e => { showArchived = e.target.checked; selectedServices.clear(); renderServices(); };
+        const body = $('prod-body');
+        const checks = [...body.querySelectorAll('[data-svc-select]')];
+        const all = $('svc-select-all');
+        function updateSelection() {
+            $('svc-count').textContent = serviceBusy ? 'Guardando…' : `${selectedServices.size} seleccionados`;
+            $('svc-bulk').disabled = serviceBusy || !selectedServices.size;
+            if (all) {
+                all.checked = selectedServices.size === checks.length;
+                all.indeterminate = !all.checked && selectedServices.size > 0;
+            }
+        }
+        checks.forEach(box => box.onchange = () => {
+            if (box.checked) selectedServices.add(box.dataset.svcSelect);
+            else selectedServices.delete(box.dataset.svcSelect);
+            updateSelection();
+        });
+        if (all) all.onchange = () => {
+            selectedServices.clear();
+            for (const box of checks) {
+                box.checked = all.checked;
+                if (all.checked) selectedServices.add(box.dataset.svcSelect);
+            }
+            updateSelection();
+        };
+        $('svc-bulk').onclick = () => setServiceActive([...selectedServices], showArchived);
+        body.querySelectorAll('[data-service-code]').forEach(b => b.onclick = () => editService(b.dataset.serviceCode));
+        body.querySelectorAll('[data-svc-toggle]').forEach(b => b.onclick = () => setServiceActive([b.dataset.svcToggle], showArchived));
+        updateSelection();
+        if (!showArchived && !serviceBusy) bindServiceOrder(body, visible);
+    }
+
+    function bindServiceOrder(body, visible) {
+        const codes = visible.map(s => s.code);
+        let dragging = null, marker = null;
+        function clearMarker() {
+            marker?.classList.remove('svc-drop-before', 'svc-drop-after');
+            marker = null;
+        }
+        body.querySelectorAll('[data-svc-drag]').forEach(grip => {
+            grip.ondragstart = event => {
+                const code = grip.dataset.svcDrag;
+                dragging = selectedServices.has(code) ? codes.filter(item => selectedServices.has(item)) : [code];
+                event.dataTransfer.setData('text/plain', code);
+                event.dataTransfer.effectAllowed = 'move';
+            };
+            grip.ondragend = () => { dragging = null; clearMarker(); };
+        });
+        body.querySelectorAll('[data-svc-row]').forEach(row => {
+            const target = row.dataset.svcRow;
+            const after = event => {
+                const bounds = row.getBoundingClientRect();
+                return event.clientY > bounds.top + bounds.height / 2;
+            };
+            row.ondragover = event => {
+                if (!dragging || dragging.includes(target)) { clearMarker(); return; }
+                event.preventDefault();
+                clearMarker();
+                marker = row;
+                row.classList.add(after(event) ? 'svc-drop-after' : 'svc-drop-before');
+            };
+            row.ondrop = event => {
+                event.preventDefault();
+                clearMarker();
+                if (dragging && !dragging.includes(target)) moveServices(codes, dragging, target, after(event));
+                dragging = null;
+            };
+            row.querySelectorAll('[data-svc-move]').forEach(button => button.onclick = () => {
+                const delta = Number(button.dataset.svcMove);
+                return moveServices(codes, [target], codes[codes.indexOf(target) + delta], delta > 0);
+            });
+        });
+    }
+
+    function moveServices(codes, moving, target, after) {
+        const next = codes.filter(code => !moving.includes(code));
+        const index = next.indexOf(target);
+        if (index < 0) return;
+        next.splice(index + Number(after), 0, ...moving);
+        if (next.every((code, position) => code === codes[position])) return;
+        return updateServices(() => _supabase.rpc('reorder_sale_services', { p_codes: next }), 'Orden guardado.');
+    }
+
+    async function updateServices(save, message) {
+        if (serviceBusy) return;
+        serviceBusy = true;
+        renderServices();
+        try {
+            const { error } = await save();
+            if (error) throw error;
+            toast(message);
+            if (typeof loadPayServices === 'function') loadPayServices();
+        } catch (error) {
+            alert(`No se pudo actualizar el catálogo. ${error.message}`);
+        } finally {
+            serviceBusy = false;
+            if (tab === 'servicios') await open();
+        }
+    }
+
+    function setServiceActive(codes, active) {
+        if (!codes.length) return;
+        const verb = active ? 'Desarchivar' : 'Archivar';
+        const label = codes.length === 1 ? services.find(s => s.code === codes[0])?.name : `${codes.length} servicios`;
+        if (!confirm(`¿${verb} ${label}?`)) return;
+        return updateServices(async () => {
+            const result = await _supabase.from('sale_services').update({ active, updated_at: new Date().toISOString() })
+                .in('code', codes).eq('active', !active).select('code');
+            if (!result.error) for (const row of result.data) selectedServices.delete(row.code);
+            return result;
+        }, active ? 'Servicios desarchivados.' : 'Servicios archivados.');
     }
 
     const SERVICE_FIELDS = { code: 'Código', name: 'Servicio', category: 'Categoría', unit: 'Unidad de cobro', nyc_price: 'Sugerido NYC', sale_price: 'Precio Piel Spa', promo_price: 'Promoción' };
@@ -317,7 +448,9 @@
     }
 
     function add() {
-        if (tab === 'servicios') editService();
+        if (tab === 'servicios') {
+            if (!serviceBusy) editService();
+        }
         else abrir();
     }
 
