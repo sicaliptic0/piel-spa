@@ -48,6 +48,7 @@
       .prod table.t td { padding:9px 10px; border-bottom:1px solid #F4EDF1; vertical-align:top; }
       .prod table.t tbody tr { cursor:pointer; } .prod table.t tbody tr:hover td { background:#FDF7FA; }
       .prod .num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; } .prod th.num { text-align:right; }
+      .prod table.t tbody tr.brand-row { cursor:default; } .prod table.t tbody tr.brand-row td, .prod table.t tbody tr.brand-row:hover td { background:#FBF0F3; }
       .prod .pcard { background:#fff; border:1px solid #EDE1E7; border-radius:12px; padding:12px; cursor:pointer; }
       dialog.prod { border:none; border-radius:16px; padding:0; width:min(620px, calc(100vw - 32px)); }
       dialog.prod::backdrop { background:rgba(42,35,48,.35); }
@@ -77,6 +78,17 @@
         render();
     }
 
+    function grupos(list) {
+        const m = new Map();
+        list.slice().sort((a, b) => a.brand.localeCompare(b.brand, 'es', { sensitivity: 'base' }) || a.name.localeCompare(b.name, 'es'))
+            .forEach(p => { const k = p.brand.trim().toLowerCase(); if (!m.has(k)) m.set(k, [p.brand.trim(), []]); m.get(k)[1].push(p); });
+        return [...m.values()];
+    }
+    const resumenMarca = items => {
+        const u = items.reduce((s, p) => s + Math.max(0, p.stock_qty), 0), c = items.reduce((s, p) => s + Math.max(0, p.stock_qty) * Number(p.cost || 0), 0);
+        return `${items.length} ${items.length === 1 ? 'producto' : 'productos'} · ${u} en stock · ${money(c)} al costo`;
+    };
+
     function render() {
         document.querySelectorAll('#products-view .sub').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
         if (tab === 'servicios') {
@@ -102,15 +114,15 @@
             <div><label class="lbl" for="prod-f">Mostrar</label><select id="prod-f"><option value="todos">Todos</option><option value="vencer">Por vencer</option><option value="stock">Stock bajo</option></select></div>
             <label class="flex items-center gap-2 text-xs pb-2"><input type="checkbox" id="prod-del" class="accent-[#B76E88]" ${verEliminados ? 'checked' : ''}> Ver eliminados</label>
           </div>
-          <div class="card overflow-hidden hidden md:block"><div class="overflow-x-auto"><table class="t"><thead><tr><th>Producto</th><th>Categoría</th><th class="num">Precio sugerido</th><th class="num">Precio Piel Spa</th><th class="num">Costo</th><th class="num">Margen</th><th class="num">Stock</th><th>Vence</th><th></th></tr></thead><tbody>
-            ${list.map(p => `<tr onclick="Prod.abrir('${p.id}')" class="${p.active ? '' : 'opacity-50'}"><td><div class="font-medium">${esc(p.name)}</div><div class="text-[11px] opacity-60">${esc(p.brand)}${p.size ? ' · ' + esc(p.size) : ''}${p.sku ? ' · ' + esc(p.sku) : ''}</div></td>
+          <div class="card overflow-hidden hidden md:block"><div class="overflow-x-auto"><table class="t"><thead><tr><th>Marca</th><th>Producto</th><th>Categoría</th><th class="num">Precio sugerido</th><th class="num">Precio Piel Spa</th><th class="num">Costo</th><th class="num">Margen</th><th class="num">Stock</th><th>Vence</th><th></th></tr></thead><tbody>
+            ${grupos(list).map(([marca, items]) => `<tr class="brand-row"><td colspan="10"><span class="font-bold">${esc(marca)}</span> <span class="text-[11px] opacity-60">· ${resumenMarca(items)}</span></td></tr>` + items.map(p => `<tr onclick="Prod.abrir('${p.id}')" class="${p.active ? '' : 'opacity-50'}"><td class="text-xs whitespace-nowrap opacity-70">${esc(p.brand)}</td><td><div class="font-medium">${esc(p.name)}</div><div class="text-[11px] opacity-60">${p.size ? esc(p.size) : ''}${p.sku ? (p.size ? ' · ' : '') + esc(p.sku) : ''}</div></td>
               <td class="text-xs">${esc(p.category || '')}</td><td class="num">${money(p.suggested_price)}</td><td class="num font-semibold">${money(p.sale_price)}</td><td class="num">${money(p.cost)}</td>
-              <td class="num">${margen(p) != null ? margen(p) + '%' : '–'}</td><td class="num">${p.stock_qty}</td><td class="whitespace-nowrap text-xs">${fdate(p.expires_on)}</td><td><div class="flex flex-wrap gap-1">${estado(p)}</div></td></tr>`).join('')}
+              <td class="num">${margen(p) != null ? margen(p) + '%' : '–'}</td><td class="num">${p.stock_qty}</td><td class="whitespace-nowrap text-xs">${fdate(p.expires_on)}</td><td><div class="flex flex-wrap gap-1">${estado(p)}</div></td></tr>`).join('')).join('')}
           </tbody></table></div></div>
-          <div class="md:hidden space-y-2">${list.map(p => `<div class="pcard ${p.active ? '' : 'opacity-50'}" onclick="Prod.abrir('${p.id}')">
+          <div class="md:hidden space-y-2">${grupos(list).map(([marca, items]) => `<p class="pt-3 pb-1 font-bold text-[#B76E88] uppercase text-[11px] tracking-widest">${esc(marca)} <span class="normal-case tracking-normal font-normal opacity-70">· ${resumenMarca(items)}</span></p>` + items.map(p => `<div class="pcard ${p.active ? '' : 'opacity-50'}" onclick="Prod.abrir('${p.id}')">
               <div class="flex justify-between gap-2"><div class="min-w-0"><p class="font-medium leading-snug">${esc(p.name)}</p><p class="text-[12px] opacity-60">${esc(p.brand)}${p.size ? ' · ' + esc(p.size) : ''}</p></div>
               <div class="text-right"><p class="font-semibold">${money(precio(p))}</p><p class="text-[11px] opacity-60">${p.stock_qty} en stock</p></div></div>
-              <div class="flex flex-wrap gap-1 mt-1.5">${estado(p)}${p.expires_on ? `<span class="text-[11px] opacity-60">vence ${fdate(p.expires_on)}</span>` : ''}</div></div>`).join('')}</div>
+              <div class="flex flex-wrap gap-1 mt-1.5">${estado(p)}${p.expires_on ? `<span class="text-[11px] opacity-60">vence ${fdate(p.expires_on)}</span>` : ''}</div></div>`).join('')).join('')}</div>
           ${list.length ? '' : '<p class="text-sm opacity-60 text-center py-8">No hay productos con este filtro.</p>'}
           <p class="text-[12px] opacity-60 mt-4">Los protectores solares están sin sales tax, como indicaron. Confírmenlo con la contadora: en NY depende de si se venden como medicamento OTC (con "Drug Facts") o como cosmético. El inventario al costo del 31 de diciembre es el que pide la contadora para el costo de ventas.</p>`;
         $('prod-q').oninput = e => { q = e.target.value; const pos = e.target.selectionStart; render(); const el = $('prod-q'); el.focus(); el.setSelectionRange(pos, pos); };
