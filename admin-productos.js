@@ -255,7 +255,7 @@
               ${showArchived ? '' : `<td class="whitespace-nowrap"><span class="svc-grip" draggable="${!serviceBusy}" data-svc-drag="${esc(s.code)}" aria-hidden="true" title="Arrastrar">⠿</span>
                 <button type="button" class="svc-order" data-svc-move="-1" aria-label="Subir ${esc(s.name)}" title="Subir" ${disabled || (visible[index - 1]?.category !== s.category ? 'disabled' : '')}>↑</button>
                 <button type="button" class="svc-order" data-svc-move="1" aria-label="Bajar ${esc(s.name)}" title="Bajar" ${disabled || (visible[index + 1]?.category !== s.category ? 'disabled' : '')}>↓</button></td>`}
-              <td class="min-w-[210px]"><strong>${esc(s.name)}</strong><div class="text-xs opacity-70">${esc(s.category)} · ${esc(s.unit)} · ${esc(s.code)}</div></td>
+              <td class="min-w-[210px]"><strong>${esc(s.name)}</strong><div class="text-xs opacity-70">${esc(s.category)} · ${esc(s.unit)} · ${esc(s.billing_code || s.code)}</div></td>
               <td>${s.active ? esc(SERVICE_STATUS[s.status]) : 'Archivado'}</td>
               <td class="num">${money(s.nyc_price)}</td><td class="num">${money(s.sale_price)}</td><td class="num">${money(s.promo_price)}</td>
               <td class="num">${money(s.reference_price)}${s.reference_promo == null ? '' : `<div class="text-xs">Promo ${money(s.reference_promo)}</div>`}</td>
@@ -377,15 +377,17 @@
         }, active ? 'Servicios desarchivados.' : 'Servicios archivados.');
     }
 
-    const SERVICE_FIELDS = { code: 'Código', name: 'Servicio', category: 'Categoría', unit: 'Unidad de cobro', nyc_price: 'Sugerido NYC', sale_price: 'Precio Piel Spa', promo_price: 'Promoción' };
+    const SERVICE_FIELDS = { billing_code: 'Código de servicio', name: 'Servicio', category: 'Categoría', unit: 'Unidad de cobro', nyc_price: 'Sugerido NYC', sale_price: 'Precio Piel Spa', promo_price: 'Promoción' };
     const SERVICE_DIALOG = `<dialog id="svc-dialog" class="prod" aria-labelledby="svc-title"><form id="svc-form" class="p-6 space-y-3">
         <h3 class="text-2xl italic" id="svc-title" style="font-family:'Cormorant Garamond',serif"></h3>
+        <input type="hidden" id="svc-identity">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           ${Object.entries(SERVICE_FIELDS).map(([key, label]) => `<div><label class="lbl" for="svc-${key}">${label}</label><input id="svc-${key}"
             ${key.endsWith('_price') ? 'type="number" min="0" max="99999999.99" step="0.01" inputmode="decimal"' : 'required'}
-            ${key === 'code' ? 'maxlength="40" pattern="[A-Za-z0-9][A-Za-z0-9_\\-]{0,39}" title="Letras, números, guion o guion bajo"' : ''}></div>`).join('')}
+            ${key === 'billing_code' ? 'maxlength="40" autocomplete="off" autocapitalize="characters" aria-describedby="svc-code-help"' : ''}></div>`).join('')}
           <div><label class="lbl" for="svc-status">Estado</label><select id="svc-status">${Object.entries(SERVICE_STATUS).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}</select></div>
         </div>
+        <p class="text-xs opacity-70" id="svc-code-help">Usa letras, números, guion o guion bajo. El cambio se aplica a los cobros nuevos.</p>
         <p class="text-xs opacity-70" id="svc-reference"></p>
         <div><label class="lbl" for="svc-notes">Notas</label><textarea id="svc-notes" rows="3"></textarea></div>
         <p id="svc-error" class="text-sm text-red-700" role="alert"></p>
@@ -399,7 +401,8 @@
         const service = services.find(s => s.code === code);
         $('svc-title').textContent = service ? 'Editar servicio' : 'Nuevo servicio';
         for (const key of Object.keys(SERVICE_FIELDS)) $('svc-' + key).value = service?.[key] ?? '';
-        $('svc-code').readOnly = !!service;
+        $('svc-identity').value = service?.code || '';
+        $('svc-billing_code').value = service?.billing_code || service?.code || '';
         $('svc-status').value = service?.status || 'pending';
         $('svc-notes').value = service?.notes || '';
         $('svc-reference').textContent = service?.reference_price == null ? '' :
@@ -423,7 +426,7 @@
             if (tab === 'servicios') open();
             if (typeof loadPayServices === 'function') loadPayServices();
         } catch (error) {
-            $('svc-error').textContent = `No se pudo guardar. ${error.message}`;
+            $('svc-error').textContent = error.code === '23505' ? 'Ese código ya está en uso. Escribe uno diferente.' : `No se pudo guardar. ${error.message}`;
         } finally {
             save.disabled = archive.disabled = false;
         }
@@ -431,11 +434,17 @@
 
     function saveService(event) {
         event.preventDefault();
-        const code = $('svc-code').value.trim().toUpperCase();
-        const row = Object.fromEntries(Object.keys(SERVICE_FIELDS).filter(key => key !== 'code').map(key => {
+        const identity = $('svc-identity').value;
+        const row = Object.fromEntries(Object.keys(SERVICE_FIELDS).map(key => {
             const value = $('svc-' + key).value.trim();
             return [key, key.endsWith('_price') ? num(value) : value];
         }));
+        row.billing_code = row.billing_code.toUpperCase();
+        if (!/^[A-Z0-9][A-Z0-9_-]{0,39}$/.test(row.billing_code)) {
+            $('svc-error').textContent = 'Escribe un código de hasta 40 caracteres. Empieza con una letra o número y usa solo letras, números, guiones o guion bajo.';
+            $('svc-billing_code').focus();
+            return;
+        }
         if (!row.name || !row.category || !row.unit) {
             $('svc-error').textContent = 'Completa el nombre, la categoría y la unidad.';
             return;
@@ -444,11 +453,11 @@
         row.notes = $('svc-notes').value.trim() || null;
         row.updated_at = new Date().toISOString();
         const table = _supabase.from('sale_services');
-        return writeService($('svc-code').readOnly ? table.update(row).eq('code', code) : table.insert({ code, ...row }));
+        return writeService(identity ? table.update(row).eq('code', identity) : table.insert(row));
     }
 
     function archiveService() {
-        const service = services.find(s => s.code === $('svc-code').value);
+        const service = services.find(s => s.code === $('svc-identity').value);
         if (!service || (service.active && !confirm(`¿Archivar "${service.name}"? Se conservarán los cobros registrados.`))) return;
         return writeService(_supabase.from('sale_services').update({ active: !service.active, updated_at: new Date().toISOString() }).eq('code', service.code));
     }
