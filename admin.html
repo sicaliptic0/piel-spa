@@ -466,6 +466,13 @@
                             <input type="date" id="pay-date" style="max-width: 12rem;">
                         </div>
                         <div id="pay-service-fields">
+                            <label class="flex items-center gap-2 mb-3 text-sm"><input type="checkbox" id="pay-package-mode" onchange="setPayPackageMode()" disabled> Comprar o ampliar sesiones prepagadas</label>
+                            <div id="pay-package-panel" class="hidden rounded-lg bg-[#FDF7FA] p-3 space-y-2">
+                                <label class="block text-sm font-semibold">Servicio del paquete<select id="pay-package-service" onchange="initializePayPackage()"></select></label>
+                                <label class="block text-sm font-semibold">Sesiones a comprar<input id="pay-package-qty" type="number" min="1" max="1000" step="1" oninput="renderPayTotals()"></label>
+                                <p id="pay-package-note" class="text-sm" aria-live="polite"></p>
+                            </div>
+                            <div id="pay-standard-services">
                             <div id="pay-encounter-service-lines" class="space-y-2"></div>
                             <div id="pay-single-service">
                             <label for="pay-service" class="enc-label mb-1 block">Servicio</label>
@@ -476,6 +483,7 @@
                                 <label for="pay-service-qty" class="enc-label">Cantidad</label>
                                 <input id="pay-service-qty" type="number" min="1" max="100000" step="1" oninput="renderPayTotals()">
                                 <p id="pay-service-unit-note" class="mt-1 text-xs opacity-70"></p>
+                            </div>
                             </div>
                             <p class="text-[11px] opacity-60 mt-1">La categoría para la contabilidad sale del servicio (Productos y servicios → Servicios).</p>
                             </div>
@@ -1133,6 +1141,7 @@
                 </div>
 
                 <div id="skincare-routines-list" class="admin-only space-y-3 mb-6"></div>
+                <div id="patient-packages" class="admin-only hidden mb-4"></div>
 
                 <div id="notes-container" class="pr-2 md:pr-4 space-y-6 pb-10"></div>
 
@@ -1753,7 +1762,7 @@
             general_consultation: 'CONSULTA', radiesse: 'BE-01', sculptra: 'BE-02',
             endolaser: 'ENDOLIFTING', nctf_skin_boosting: 'NCTF',
         };
-        let encounterCatalog = [], encounterCatalogError = false;
+        let encounterCatalog = [], encounterPackages = [], encounterCatalogError = false;
 
         function renderEncounterCatalog(saved = {}) {
             const root = document.getElementById('enc-service-catalog');
@@ -1775,6 +1784,10 @@
                   <summary class="cursor-pointer text-sm font-semibold">${escapeHtml(category)}</summary>
                   <div class="space-y-2 mt-2">${rows.map(s => {
                     const value = saved[s.code];
+                    const active = encounterPackages.find(p => p.service_catalog_code === s.code && p.purchased > p.used);
+                    const packageId = value?.package_id || active?.id;
+                    const packageLabel = value?.package_id ? 'Sesión prepagada registrada'
+                        : active ? `Sesión ${active.used + 1} de ${active.purchased} · ${active.purchased - active.used} disponibles` : '';
                     const byUnit = s.unit_price != null;
                     const regular = s.unit_price ?? s.sale_price;
                     const promo = s.promo_price != null && regular != null && Number(s.promo_price) < Number(regular) ? s.promo_price : null;
@@ -1786,7 +1799,9 @@
                         <span>${escapeHtml(s.name)}</span></label>
                       <div data-enc-input class="w-full rounded-lg bg-[#FDF7FA] p-3 ${value ? '' : 'hidden'}">
                         ${s.historical ? `<p class="text-xs">Guardado: ${escapeHtml(value?.qty ?? 1)} × ${escapeHtml(s.unit || 'servicio')} · ${escapeHtml(formatAmount(value?.amount))}</p>` : `
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        ${packageId ? `<label class="flex gap-2 items-center mb-2 text-sm"><input type="checkbox" data-enc-package value="${escapeHtml(packageId)}" ${!value || value.package_id ? 'checked' : ''}> Usar una sesión del paquete</label>
+                          <p data-enc-package-label class="hidden">${escapeHtml(packageLabel)}</p>` : ''}
+                        <div data-enc-rate-controls class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div><label for="enc-qty-${escapeHtml(s.code)}" class="text-xs font-semibold">Cantidad · ${escapeHtml(s.unit || 'servicio')}</label>
                             <div class="flex items-center gap-2">
                               <button type="button" data-enc-step="-1" class="w-9 h-9 shrink-0 border rounded-md" aria-label="Reducir cantidad">−</button>
@@ -1817,7 +1832,7 @@
                     refreshEncounterTotal();
                 };
                 const refreshPricing = event => {
-                    if (event.target.matches('[data-enc-service-qty], [data-enc-service-amount], [data-enc-service-price-mode]')) {
+                    if (event.target.matches('[data-enc-service-qty], [data-enc-service-amount], [data-enc-service-price-mode], [data-enc-package]')) {
                         refreshEncounterServicePrice(row);
                         encTotalAuto = true;
                         refreshEncounterSummary();
@@ -1867,6 +1882,12 @@
         function refreshEncounterServicePrice(row) {
             const display = row.querySelector('[data-enc-service-total]');
             if (!display) return;
+            const usePackage = !!row.querySelector('[data-enc-package]')?.checked;
+            row.querySelector('[data-enc-rate-controls]').classList.toggle('hidden', usePackage);
+            if (usePackage) {
+                display.textContent = row.querySelector('[data-enc-package-label]').textContent;
+                return;
+            }
             row.querySelector('[data-enc-manual-wrap]').classList.toggle('hidden', row.querySelector('[data-enc-service-price-mode]').value !== 'manual');
             const pricing = readEncounterServicePrice(row);
             const figures = encounterPricedFigures(row.catalogService, Number(row.querySelector('[data-enc-service-qty]').value), pricing);
@@ -1881,6 +1902,12 @@
                 const service = row.catalogService;
                 const saved = row.savedService;
                 if (service.historical) { marked[service.code] = saved; return; }
+                const packageField = row.querySelector('[data-enc-package]');
+                if (packageField?.checked) {
+                    marked[service.code] = { name: saved?.name || service.name, unit: 'sesión', qty: 1,
+                        unit_price: null, pricing: null, amount: 0, package_id: packageField.value };
+                    return;
+                }
                 const quantity = Number(row.querySelector('[data-enc-service-qty]').value);
                 const qty = Number.isSafeInteger(quantity) && quantity >= 1 && quantity <= 100000 ? quantity : null;
                 const pricing = readEncounterServicePrice(row);
@@ -2429,7 +2456,7 @@
         // e.g. "Consulta · Botox 40 unidades (Perfilado Nasal, Cuello) · Sculptra 2 ampollas"
         function buildProceduresSummary(detail) {
             const parts = Object.values(detail.catalog_services || {}).map(item =>
-                [item.name, item.qty ? `${item.qty} ${item.unit || 'unidad'}${item.qty === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · '));
+                [item.name, item.package_id ? 'Sesión prepagada' : item.qty ? `${item.qty} ${item.unit || 'unidad'}${item.qty === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · '));
             ENCOUNTER_CATEGORIES.forEach(cat => {
                 const entry = detail[cat.id];
                 if (!entry) return;
@@ -4223,6 +4250,55 @@
         let payEncounters = {};
         let payPaidEncounters = {};
         let payFriendLeft = 0;
+        let payPackageBalances = [], payPackageBalancesReady = false;
+
+        function fetchPatientPackages(patientId) {
+            return _supabase.from('treatment_packages').select('id,service_catalog_code,purchased,used,created_at,service:sale_services(name,billing_code)')
+                .eq('patient_id', patientId).gt('purchased', 0).order('created_at').order('id');
+        }
+
+        function packagePurchaseFigures(service, balances, quantity) {
+            if (!service?.package_session_price || !service.package_min_sessions) return null;
+            const active = balances.find(row => row.service_catalog_code === service.code && row.purchased > row.used);
+            const minimum = active ? 1 : Number(service.package_min_sessions);
+            const valid = Number.isSafeInteger(quantity) && quantity >= minimum && quantity <= 1000;
+            return { service, active, minimum, quantity, amount: valid ? roundTo(quantity * Number(service.package_session_price), 2) : null };
+        }
+
+        function getPayPackage() {
+            if (!document.getElementById('pay-package-mode').checked || document.getElementById('pay-guest').checked) return null;
+            const service = payServices.find(row => row.code === document.getElementById('pay-package-service').value);
+            return packagePurchaseFigures(service, payPackageBalances, Number(document.getElementById('pay-package-qty').value));
+        }
+
+        function initializePayPackage() {
+            const pack = getPayPackage();
+            const quantity = document.getElementById('pay-package-qty');
+            quantity.min = pack?.minimum ?? 1;
+            quantity.value = pack?.minimum ?? '';
+            renderPayTotals();
+        }
+
+        function setPayPackageMode() {
+            const enabled = document.getElementById('pay-package-mode').checked && !document.getElementById('pay-guest').checked;
+            document.getElementById('pay-package-panel').classList.toggle('hidden', !enabled);
+            document.getElementById('pay-standard-services').classList.toggle('hidden', enabled);
+            document.getElementById('pay-encounter-fields').classList.toggle('hidden', enabled || document.getElementById('pay-guest').checked);
+            if (enabled) initializePayPackage();
+            else renderPayTotals();
+        }
+
+        function refreshPayPackageOptions() {
+            const select = document.getElementById('pay-package-service');
+            const previous = select.value;
+            const options = payServices.filter(service => service.package_session_price != null);
+            select.replaceChildren(...options.map(service => new Option(service.name, service.code)));
+            if (options.some(service => service.code === previous)) select.value = previous;
+            const mode = document.getElementById('pay-package-mode');
+            mode.disabled = !payPatient || !payPackageBalancesReady || !options.length;
+            if (mode.disabled) mode.checked = false;
+            setPayPackageMode();
+        }
 
         async function loadPaymentsView() {
             const date = document.getElementById('pay-date');
@@ -4236,7 +4312,7 @@
 
         let payServices = [], payServicesUnavailable = false, payServiceRequest = 0;
         function fetchSelectableServices() {
-            return _supabase.from('sale_services').select('code, billing_code, name, unit, sale_price, promo_price, category, unit_price, quantity_source, inventory_product_id, volume_tiers, courtesy_min, courtesy_percent')
+            return _supabase.from('sale_services').select('code, billing_code, name, unit, sale_price, promo_price, category, unit_price, quantity_source, inventory_product_id, volume_tiers, courtesy_min, courtesy_percent, package_session_price, package_min_sessions')
                 .eq('active', true).in('status', ['available', 'assessment']).order('sort_order').order('name');
         }
 
@@ -4340,6 +4416,7 @@
             payServices = data || [];
             const selected = document.getElementById('pay-service').value;
             renderPayServiceOptions(selected, !selected);
+            refreshPayPackageOptions();
         }
 
         function encounterMarkedServices(encounter) {
@@ -4350,6 +4427,7 @@
             const knownCodes = new Set([...legacy].map(id => ENCOUNTER_LEGACY_SERVICE_CODES[id]).filter(Boolean));
             const fillerServices = payServices.filter(service => service.quantity_source === 'fillers');
             return payServices.filter(service => {
+                if (detail.catalog_services?.[service.code]?.package_id) return false;
                 if (detail.catalog_services?.[service.code]) return true;
                 if (detail.catalog_services) return false;
                 if (knownCodes.has(service.code)) return true;
@@ -4366,6 +4444,7 @@
             const markedCodes = new Set(marked.map(s => s.code));
             const groups = new Map();
             payServices.forEach(service => {
+                if (encounter?.procedures_detail?.catalog_services?.[service.code]?.package_id) return;
                 const name = markedCodes.has(service.code) ? 'Registrados en el encuentro' : service.category || 'Otros';
                 if (!groups.has(name)) { const g = document.createElement('optgroup'); g.label = name; groups.set(name, g); }
                 groups.get(name).appendChild(new Option(`${service.name} · ${service.unit}`, service.code));
@@ -4623,14 +4702,22 @@
             if (!payPatient) return;
             document.getElementById('pay-patient').value = payPatientLabel(payPatient);
             document.getElementById('pay-patient-results').classList.add('hidden');
+            payPackageBalances = [];
+            payPackageBalancesReady = false;
+            document.getElementById('pay-package-mode').checked = false;
+            refreshPayPackageOptions();
 
-            const [{ data: encounters, error }, { data: paid }] = await Promise.all([
+            const [{ data: encounters, error }, { data: paid }, packages] = await Promise.all([
                 _supabase.from('clinical_history').select('id, visit_date, visit_time, procedures_summary, procedures_detail, procedures_realized_ids, amount')
                     .eq('patient_id', patientId).order('visit_date', { ascending: false }).order('visit_time', { ascending: false }),
                 _supabase.from('payments').select('encounter_id, total, paid_on').eq('patient_id', patientId).is('voided_at', null),
+                fetchPatientPackages(patientId),
             ]);
             if (error) { alert('No se pudieron cargar los encuentros: ' + error.message); return; }
             if (payPatient?.id !== patientId) return;
+            payPackageBalances = packages.data || [];
+            payPackageBalancesReady = !packages.error;
+            refreshPayPackageOptions();
             payEncounters = Object.fromEntries((encounters || []).map(n => [n.id, n]));
             payPaidEncounters = {};
             (paid || []).forEach(x => { if (x.encounter_id) payPaidEncounters[x.encounter_id] = x; });
@@ -4652,8 +4739,9 @@
             const encounter = payEncounters[id];
             const amount = document.getElementById('pay-amount');
             const marked = encounterMarkedServices(encounter);
+            const prepaid = Object.values(encounter?.procedures_detail?.catalog_services || {}).some(line => line.package_id);
             const markedAmount = marked.length === 1 ? encounter?.procedures_detail?.catalog_services?.[marked[0].code]?.amount : null;
-            const initialAmount = markedAmount ?? (marked.length <= 1 ? encounter?.amount : null);
+            const initialAmount = markedAmount ?? (prepaid ? 0 : marked.length <= 1 ? encounter?.amount : null);
             amount.value = initialAmount == null ? '' : Number(initialAmount).toFixed(2);
             const paid = payPaidEncounters[id];
             const note = document.getElementById('pay-encounter-note');
@@ -4662,6 +4750,9 @@
                 ? `⚠️ Este encuentro ya tiene un pago de ${formatAmount(paid.total)} del ${formatVisitDate(paid.paid_on)}.`
                 : (encounter ? encounterSummaryText(encounter) : '');
             if (marked.length > 1) note.innerText += ' · Puedes cobrar juntos los servicios marcados y los productos.';
+            if (prepaid) {
+                note.innerText += ' · Las sesiones cubiertas por un paquete no se cobran otra vez.';
+            }
             renderPayServiceOptions('', true);
         }
 
@@ -4677,24 +4768,26 @@
             }
             document.getElementById('pay-amount').disabled = guest;
             document.getElementById('pay-friend').disabled = guest || !payFriendLeft;
-            renderPayTotals();
+            setPayPackageMode();
         }
 
         // Base, discount, taxes, surcharge and total from what's on screen. amount is undefined when mistyped.
         function payFigures() {
             const guest = document.getElementById('pay-guest').checked;
-            const combined = !guest && !!document.querySelector('[data-pay-service-line]');
+            const packageMode = !guest && document.getElementById('pay-package-mode').checked;
+            const pack = packageMode ? getPayPackage() : null;
+            const combined = !guest && !packageMode && !!document.querySelector('[data-pay-service-line]');
             const serviceLines = combined ? collectEncounterCheckoutLines() : [];
-            const service = guest || combined ? null : payServices.find(row => row.code === document.getElementById('pay-service').value);
+            const service = guest || combined || packageMode ? null : payServices.find(row => row.code === document.getElementById('pay-service').value);
             const unitMode = service?.unit_price != null;
             const units = unitMode ? unitServiceFigures(service, Number(document.getElementById('pay-service-qty').value), document.getElementById('pay-courtesy').checked) : null;
             const lines = collectPayProducts();
             const product = roundTo(lines.reduce((total, line) => total + (line.selected ? line.subtotal : 0), 0), 2);
             const rawAmount = parseAmount(document.getElementById('pay-amount').value);
-            const amount = guest ? 0 : combined ? roundTo(serviceLines.reduce((sum, line) => sum + (line.amount || 0), 0), 2)
+            const amount = guest ? 0 : packageMode ? pack?.amount : combined ? roundTo(serviceLines.reduce((sum, line) => sum + (line.amount || 0), 0), 2)
                 : unitMode ? units?.amount : rawAmount === null && !service && product > 0 ? 0 : rawAmount;
             const method = document.getElementById('pay-method').value;
-            const friend = !guest && !unitMode && !combined && document.getElementById('pay-friend').checked;
+            const friend = !guest && !unitMode && !combined && !packageMode && document.getElementById('pay-friend').checked;
             const discount = combined ? roundTo(serviceLines.reduce((sum, line) => sum + line.discount, 0), 2)
                 : units ? roundTo(units.volume + units.courtesy, 2) : friend ? Math.min(FRIEND_COUPON_AMOUNT, amount || 0) : 0;
             const base = (amount || 0) - discount;
@@ -4707,7 +4800,7 @@
             const surcharge = isCard && document.getElementById('pay-surcharge-on').checked ? roundTo(beforeSurcharge * Number(payRates.surcharge_credit), 2) : 0;
             const total = roundTo(beforeSurcharge + surcharge, 2);
             const fee = isCard && total ? roundTo(total * Number(payRates.fee_pct) + Number(payRates.fee_fixed), 2) : 0;
-            return { amount, product, lines, service, unitMode, units, combined, serviceLines, method, isCard, friend, discount, taxRate: serviceRate * 100, serviceTax, productTax, tax, surcharge, total, fee };
+            return { amount, product, lines, service, unitMode, units, combined, serviceLines, packageMode, pack, method, isCard, friend, discount, taxRate: serviceRate * 100, serviceTax, productTax, tax, surcharge, total, fee };
         }
 
         function renderPayTotals() {
@@ -4716,8 +4809,13 @@
             breakdown.classList.toggle('hidden', !f.unitMode);
             breakdown.textContent = f.units ? `${f.units.quantity} × ${formatAmount(f.service.unit_price)} = ${formatAmount(f.amount)}`
                 + (f.units.volumePercent ? ` · Volumen ${f.units.volumePercent} %` : '') : 'Ingresa o registra la cantidad para calcular el servicio.';
-            document.getElementById('pay-amount-field').classList.toggle('hidden', f.unitMode || f.combined);
-            document.getElementById('pay-friend').disabled = !!f.unitMode || f.combined || document.getElementById('pay-guest').checked || !payFriendLeft;
+            document.getElementById('pay-amount-field').classList.toggle('hidden', f.unitMode || f.combined || f.packageMode);
+            document.getElementById('pay-friend').disabled = !!f.unitMode || f.combined || f.packageMode || document.getElementById('pay-guest').checked || !payFriendLeft;
+            const pack = f.pack;
+            document.getElementById('pay-package-note').textContent = !pack ? '' :
+                `${formatAmount(pack.service.package_session_price)} por sesión · ${pack.active
+                    ? `Ampliación · saldo actual ${pack.active.purchased - pack.active.used}`
+                    : `Compra nueva · mínimo ${pack.minimum} sesiones`}${pack.amount == null ? '' : ` · Prepago ${formatAmount(pack.amount)}`}`;
             for (const row of document.querySelectorAll('[data-pay-line-total]')) row.textContent = '';
             for (const line of f.serviceLines) {
                 const amountInput = line.row.querySelector('[data-pay-line-amount]');
@@ -4817,12 +4915,16 @@
             left.innerText = `te quedan ${payFriendLeft} de ${FRIEND_COUPONS_PER_MONTH} este mes`;
             const check = document.getElementById('pay-friend');
             const figures = payFigures();
-            check.disabled = document.getElementById('pay-guest').checked || figures.unitMode || figures.combined || !payFriendLeft;
+            check.disabled = document.getElementById('pay-guest').checked || figures.unitMode || figures.combined || figures.packageMode || !payFriendLeft;
             if (!payFriendLeft) { check.checked = false; renderPayTotals(); }
         }
 
         function resetPayForm() {
             payPatient = null;
+            payPackageBalances = [];
+            payPackageBalancesReady = false;
+            document.getElementById('pay-package-mode').checked = false;
+            document.getElementById('pay-package-mode').disabled = true;
             payEncounters = {};
             payPaidEncounters = {};
             document.getElementById('pay-patient').value = '';
@@ -4869,6 +4971,10 @@
                 paymentName = `${first} ${last}`;
             } else paymentName = payPatientLabel(payPatient);
             const f = payFigures();
+            if (f.packageMode && f.pack?.amount == null) {
+                alert(f.pack ? `Para esta compra, indica de ${f.pack.minimum} a 1000 sesiones.` : 'Elige un servicio con paquete de sesiones.');
+                return;
+            }
             if (f.combined && (!f.serviceLines.length || f.serviceLines.some(line => !line.service || line.amount == null))) {
                 alert('Marca al menos un servicio y completa sus montos o las cantidades guardadas en el encuentro.');
                 return;
@@ -4886,7 +4992,12 @@
             const paidOn = document.getElementById('pay-date').value;
             if (!paidOn) { alert('Elige la fecha del pago.'); return; }
             if (f.friend && !payFriendLeft) { alert('Ya no quedan cupos este mes.'); return; }
-            const encounterId = guest ? null : document.getElementById('pay-encounter').value || null;
+            const encounterId = guest || f.packageMode ? null : document.getElementById('pay-encounter').value || null;
+            if (encounterId && f.amount - f.discount + f.product <= 0
+                && Object.values(payEncounters[encounterId]?.procedures_detail?.catalog_services || {}).some(line => line.package_id)) {
+                alert('La sesión ya está cubierta por el paquete. Agrega un servicio o producto pendiente si necesitas registrar otro cobro.');
+                return;
+            }
             if (encounterId && payPaidEncounters[encounterId] && !confirm('Este encuentro ya tiene un pago. ¿Registrar otro?')) return;
             if (f.lines.some(line => !line.selected || !line.name || !Number.isSafeInteger(line.quantity) || line.quantity < 1
                 || line.quantity > 100000 || !(line.unit_price > 0) || line.needs_stock && !line.product_id)) {
@@ -4909,7 +5020,7 @@
                 ({ product_id, quantity, unit_price, name, taxable, tax }));
             const productDesc = productLines.map(line => `${line.name} ×${line.quantity}${line.taxable ? '' : ' (sin sales tax)'}`).join(' + ');
             const encounterForText = payEncounters[encounterId];
-            const serviceCode = guest || f.combined ? '' : document.getElementById('pay-service').value;
+            const serviceCode = f.packageMode ? f.pack.service.code : guest || f.combined ? '' : document.getElementById('pay-service').value;
             const service = payServices.find(row => row.code === serviceCode);
             const otherService = serviceCode === '__otro' ? document.getElementById('pay-service-other').value.trim() : '';
             if (!guest && !f.combined && f.amount > 0 && !serviceCode) { alert('Elige el servicio. Si no está en la lista, elige "Otro servicio" y escribe qué fue.'); document.getElementById('pay-service').focus(); return; }
@@ -4938,10 +5049,12 @@
                     category: payCategory,
                     ledger,
                     service_tax: f.serviceTax,
-                    service_desc: f.combined ? servicesToSave.map(line => `${line.name} ×${line.quantity}`).join(' + ')
+                    service_desc: f.packageMode ? `${service.name} · ${f.pack.active ? 'Ampliación' : 'Prepago'} ×${f.pack.quantity} sesiones`
+                        : f.combined ? servicesToSave.map(line => `${line.name} ×${line.quantity}`).join(' + ')
                         : service ? [f.units ? `${service.name} ×${f.units.quantity} (${service.unit})` : service.name, encounterText].filter(Boolean).join(' · ')
                         : [otherService, encounterText].filter(Boolean).join(' · ') || null,
                     ...(service ? { service_catalog_code: service.code } : {}),
+                    ...(f.packageMode ? { package_sessions: f.pack.quantity, package_unit_price: service.package_session_price } : {}),
                     ...(f.combined ? { service_lines: servicesToSave } : {}),
                     ...(f.units ? {
                         service_quantity: f.units.quantity, unit_price_at_sale: service.unit_price,
@@ -4986,6 +5099,7 @@
                     if (feeError) alert('El cobro se guardó, pero no la comisión de tarjeta (' + feeError.message + '). Agrégala a mano en Contabilidad → Gastos.');
                 }
                 if (stockNeeded.size) loadPayProducts();
+                if (f.packageMode && currentPatientId === payPatient?.id) refreshPatientPackages(currentPatientId);
                 resetPayForm();
                 document.getElementById('pay-month').value = paidOn.slice(0, 7);
                 await Promise.all([loadPaymentsList(), loadFriendCoupons()]);
@@ -5094,6 +5208,16 @@
             const { error: feeError } = await _supabase.from('acct_expenses').update({ deleted_at: now }).eq('payment_id', id).is('deleted_at', null);
             if (feeError) alert('El pago se anuló, pero no su comisión de tarjeta (' + feeError.message + '). Bórrala a mano en Contabilidad → Gastos.');
             await Promise.all([loadPaymentsList(), loadFriendCoupons()]);
+            if (payPatient) {
+                const patientId = payPatient.id;
+                const packages = await fetchPatientPackages(patientId);
+                if (payPatient?.id === patientId) {
+                    payPackageBalances = packages.data || [];
+                    payPackageBalancesReady = !packages.error;
+                    refreshPayPackageOptions();
+                }
+            }
+            if (currentPatientId) refreshPatientPackages(currentPatientId);
         }
 
         // --- WHATSAPP INBOX ("Mensajes") ---
@@ -6014,8 +6138,26 @@
         }
 
         // --- CLINICAL HISTORY (SOAP) LOGIC ---
+        async function refreshPatientPackages(patientId) {
+            const panel = document.getElementById('patient-packages');
+            const { data, error } = await fetchPatientPackages(patientId);
+            if (currentPatientId !== patientId) return;
+            panel.classList.toggle('hidden', !error && !data?.length);
+            panel.innerHTML = error ? '<p class="text-sm">No se pudo consultar el saldo de sesiones.</p>'
+                : data?.length ? `<section class="rounded-lg border border-[#EDE1E7] bg-white p-4">
+                    <h3 class="font-semibold mb-2">Paquetes de sesiones</h3>
+                    <ul class="space-y-2">${[...data].reverse().map(p => {
+                        const balance = p.purchased - p.used;
+                        return `<li class="text-sm"><strong>${escapeHtml(p.service?.name || p.service_catalog_code)}</strong>
+                            · ${balance ? `${balance} disponibles` : 'Agotado'}<br>
+                            ${p.purchased} compradas · ${p.used} realizadas</li>`;
+                    }).join('')}</ul></section>` : '';
+        }
+
         async function openHistory(patientId, name, dob) {
             currentPatientId = patientId;
+            document.getElementById('patient-packages').classList.add('hidden');
+            refreshPatientPackages(patientId);
             currentPatientDob = dob || null;
             currentPatientName = name || '';
             admissionDirty = false;
@@ -6306,9 +6448,10 @@
             const request = ++encounterFormRequest;
             if (show) {
                 const patient = currentPatientId;
-                const { data, error } = await fetchSelectableServices();
+                const [{ data, error }, packages] = await Promise.all([fetchSelectableServices(), fetchPatientPackages(patient)]);
                 if (request !== encounterFormRequest || patient !== currentPatientId) return;
                 encounterCatalog = data || [];
+                encounterPackages = packages.data || [];
                 encounterCatalogError = !!error;
             }
             const container = document.getElementById('soap-form-container');
@@ -6559,6 +6702,7 @@
 
             const savedId = result.data.id;
             soapDirty = false;
+            refreshPatientPackages(noteData.patient_id);
             // The encounter is saved either way; a reminder problem is reported
             // but doesn't undo it.
             const followUpSaveError = await saveEncounterFollowUp(savedId);
@@ -6571,6 +6715,9 @@
                 encNotesStamp = formatStamp();
                 document.getElementById('enc-notes').value = notes ? `${notes}\n\n${encNotesStamp}` : encNotesStamp;
                 resetEncounterPhotos(noteData.photos);
+                const packages = await fetchPatientPackages(noteData.patient_id);
+                encounterPackages = packages.data || [];
+                renderEncounterCatalog(noteData.procedures_detail?.catalog_services || {});
                 await loadNotes();
                 return savedId;
             }
@@ -10049,7 +10196,7 @@
             catch (e) { alert('No se pudo generar el PDF: ' + e.message); }
         }
     </script>
-    <script src="admin-contabilidad.js?v=20261129-multi-service"></script>
-    <script src="admin-productos.js?v=20261128-quantity-checkout"></script>
+    <script src="admin-contabilidad.js?v=20261201-prepaid-sessions"></script>
+    <script src="admin-productos.js?v=20261201-prepaid-sessions"></script>
 </body>
 </html>

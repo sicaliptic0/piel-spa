@@ -97,7 +97,12 @@
                 ...pay.map(p => {
                     const servBase = r2(Number(p.amount) - Number(p.discount || 0)), prod = Number(p.product_amount || 0);
                     const recordedCode = p.service_code_snapshot || p.service_catalog_code;
-                    const details = (p.service_lines || []).map(line => ({ ...line, billing_code: serviceCodes.get(line.service_id) || line.billing_code }));
+                    const packageLine = p.package_sessions ? [{
+                        service_id: p.service_catalog_code, billing_code: p.service?.billing_code || recordedCode,
+                        name: p.service_desc, category: p.category, unit: 'sesión', quantity: p.package_sessions,
+                        unit_price: Number(p.package_unit_price), amount: Number(p.amount), discount: Number(p.discount || 0),
+                    }] : [];
+                    const details = (p.service_lines || packageLine).map(line => ({ ...line, billing_code: serviceCodes.get(line.service_id) || line.billing_code }));
                     const currentCode = details.length ? details.map(line => line.billing_code).join(' · ') : p.service?.billing_code || recordedCode;
                     const serviceDescription = recordedCode && currentCode !== recordedCode
                         ? p.service_desc?.replaceAll(` (${recordedCode})`, ` (${currentCode})`) : p.service_desc;

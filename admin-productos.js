@@ -382,7 +382,26 @@
         }, active ? 'Servicios desarchivados.' : 'Servicios archivados.');
     }
 
-    const SERVICE_FIELDS = { billing_code: 'Código de servicio', name: 'Servicio', category: 'Categoría', unit: 'Unidad de cobro', nyc_price: 'Sugerido NYC', sale_price: 'Precio Piel Spa', promo_price: 'Promoción' };
+    const SERVICE_FIELDS = { billing_code: 'Código de servicio', name: 'Servicio', category: 'Categoría', unit: 'Unidad de cobro', nyc_price: 'Sugerido NYC', sale_price: 'Precio Piel Spa' };
+
+    function servicePromoPrice(base, percent) {
+        if (!(base > 0) || !(percent > 0 && percent <= 100)) return null;
+        const cents = BigInt(Math.round(base * 100));
+        const factor = BigInt(100000000 - Math.round(percent * 1000000));
+        return Number((cents * factor + 9999999999n) / 10000000000n);
+    }
+
+    function previewServicePromo() {
+        const percent = num($('svc-promo-percent').value);
+        const base = num($('svc-unit-price').value) ?? num($('svc-sale_price').value);
+        const price = servicePromoPrice(base, percent);
+        const saved = services.find(s => s.code === $('svc-identity').value);
+        const legacy = saved?.promo_percent == null && percent == null ? saved?.promo_price : null;
+        $('svc-promo-result').value = price != null ? money(price).replace(/\.00$/, '') : legacy != null ? money(legacy) : '';
+        $('svc-promo-preview').textContent = legacy != null
+            ? 'Ingresa un porcentaje para recalcular la promoción guardada.'
+            : 'El resultado se redondea hacia arriba al dólar entero.';
+    }
     const SERVICE_DIALOG = `<dialog id="svc-dialog" class="prod" aria-labelledby="svc-title"><form id="svc-form" class="p-6 space-y-3">
         <h3 class="text-2xl italic" id="svc-title" style="font-family:'Cormorant Garamond',serif"></h3>
         <input type="hidden" id="svc-identity">
@@ -390,6 +409,8 @@
           ${Object.entries(SERVICE_FIELDS).map(([key, label]) => `<div><label class="lbl" for="svc-${key}">${label}</label><input id="svc-${key}"
             ${key.endsWith('_price') ? 'type="number" min="0" max="99999999.99" step="0.01" inputmode="decimal"' : 'required'}
             ${key === 'billing_code' ? 'maxlength="40" autocomplete="off" autocapitalize="characters" aria-describedby="svc-code-help"' : ''}></div>`).join('')}
+          <label class="text-sm">Promoción (% de descuento)<input id="svc-promo-percent" type="number" min="0.000001" max="100" step="0.000001" aria-describedby="svc-promo-preview"></label>
+          <label class="text-sm">Precio promocional (USD)<input id="svc-promo-result" type="text" readonly aria-describedby="svc-promo-preview"><span id="svc-promo-preview" class="text-xs opacity-70" aria-live="polite"></span></label>
           <div><label class="lbl" for="svc-status">Estado</label><select id="svc-status">${Object.entries(SERVICE_STATUS).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}</select></div>
         </div>
         <p class="text-xs opacity-70" id="svc-code-help">Usa letras, números, guion o guion bajo. El Libro Contable usa el código vigente en todos los cobros vinculados a este servicio.</p>
@@ -405,6 +426,14 @@
             <label class="text-sm">Cortesía sobre subtotal rebajado (%)<input id="svc-courtesy-percent" type="number" min="0.01" max="100" step="0.01"></label>
           </div>
           <p class="mt-2 text-xs opacity-70">Si vinculas inventario, se descuenta una unidad de stock por cada unidad cobrada del servicio.</p>
+        </details>
+        <details class="card p-3" id="svc-package-settings">
+          <summary class="cursor-pointer font-semibold text-sm">Sesiones prepagadas</summary>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            <label class="text-sm">Mínimo para iniciar un paquete<input id="svc-package-min" type="number" min="2" max="1000" step="1" placeholder="Ej. 3"></label>
+            <label class="text-sm">Precio por sesión prepagada (USD)<input id="svc-package-price" type="number" min="0.01" max="99999999.99" step="0.01" placeholder="Ej. 200"></label>
+          </div>
+          <p class="mt-2 text-xs opacity-70">Usa Precio Piel Spa para la sesión individual. Con saldo activo se puede añadir desde una sesión. Para láser, crea un servicio por zona.</p>
         </details>
         <div><label class="lbl" for="svc-notes">Notas</label><textarea id="svc-notes" rows="3"></textarea></div>
         <p id="svc-error" class="text-sm text-red-700" role="alert"></p>
@@ -426,6 +455,9 @@
             `Tarifario interno ${service.source_code || ''} · Regular ${money(service.reference_price)} · Promoción ${money(service.reference_promo)}`;
         $('svc-quantity-settings').open = service?.unit_price != null;
         $('svc-unit-price').value = service?.unit_price ?? '';
+        $('svc-promo-percent').value = service?.promo_percent ?? '';
+        for (const id of ['svc-sale_price', 'svc-unit-price', 'svc-promo-percent']) $(id).oninput = previewServicePromo;
+        previewServicePromo();
         $('svc-quantity-source').value = service?.quantity_source || 'manual';
         const linked = service?.inventory_product_id;
         $('svc-inventory').innerHTML = '<option value="">Sin vínculo de inventario</option>' + serviceProducts.filter(p => p.active || p.id === linked)
@@ -437,6 +469,9 @@
         $('svc-tiers').value = (service?.volume_tiers || []).map(tier => `${tier.min}:${tier.percent}`).join(', ');
         $('svc-courtesy-min').value = service?.courtesy_min ?? '';
         $('svc-courtesy-percent').value = service?.courtesy_percent ?? '';
+        $('svc-package-settings').open = service?.package_session_price != null;
+        $('svc-package-min').value = service?.package_min_sessions ?? '';
+        $('svc-package-price').value = service?.package_session_price ?? '';
         $('svc-error').textContent = '';
         $('svc-archive').classList.toggle('invisible', !service);
         $('svc-archive').textContent = service?.active === false ? 'Restaurar' : 'Archivar';
@@ -483,9 +518,27 @@
         const tiersText = $('svc-tiers').value.trim();
         const tiers = tiersText ? tiersText.split(',').map(part => part.trim().match(/^([1-9]\d{0,4})\s*:\s*(\d{1,3}(?:\.\d{1,2})?)$/)) : [];
         const unitPrice = num($('svc-unit-price').value);
+        const percent = num($('svc-promo-percent').value);
+        const promoBase = unitPrice ?? row.sale_price;
+        const promotion = servicePromoPrice(promoBase, percent);
+        if (percent != null && (promotion == null || promotion >= promoBase || promotion > 99999999.99)) {
+            $('svc-error').textContent = 'Ingresa un precio base y un porcentaje que produzca un precio final menor después del redondeo.';
+            return;
+        }
+        const previous = services.find(s => s.code === identity);
+        row.promo_percent = percent;
+        row.promo_price = percent == null && previous?.promo_percent == null ? previous?.promo_price ?? null : promotion;
         const courtesyMin = num($('svc-courtesy-min').value);
         const courtesyPercent = num($('svc-courtesy-percent').value);
         const inventory = $('svc-inventory').value || null;
+        const packageMin = num($('svc-package-min').value);
+        const packagePrice = num($('svc-package-price').value);
+        if ((packageMin === null) !== (packagePrice === null) || (packageMin !== null &&
+            (!Number.isInteger(packageMin) || packageMin < 2 || packageMin > 1000 || !(packagePrice > 0)
+                || row.sale_price == null || packagePrice > row.sale_price || unitPrice !== null))) {
+            $('svc-error').textContent = 'Para usar paquetes, completa el mínimo y el precio del paquete, y usa Precio Piel Spa para la sesión individual.';
+            return;
+        }
         if (tiers.some(m => !m || Number(m[2]) <= 0 || Number(m[2]) > 100)
             || new Set(tiers.map(m => Number(m[1]))).size !== tiers.length) {
             $('svc-error').textContent = 'Escribe escalas únicas con el formato 4:10, 7:15, 11:20.';
@@ -500,6 +553,7 @@
             unit_price: unitPrice, quantity_source: unitPrice === null ? null : $('svc-quantity-source').value,
             inventory_product_id: inventory, volume_tiers: tiers.map(m => ({ min: Number(m[1]), percent: Number(m[2]) })).sort((a, b) => a.min - b.min),
             courtesy_min: courtesyMin, courtesy_percent: courtesyPercent,
+            package_min_sessions: packageMin, package_session_price: packagePrice,
         });
         row.notes = $('svc-notes').value.trim() || null;
         row.updated_at = new Date().toISOString();
