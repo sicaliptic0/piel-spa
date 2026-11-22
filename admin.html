@@ -436,27 +436,19 @@
                             <label for="pay-date" class="enc-label mb-1 block">Fecha del pago</label>
                             <input type="date" id="pay-date" style="max-width: 12rem;">
                         </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label for="pay-category" class="enc-label mb-1 block">Categoría</label>
-                                <select id="pay-category" style="font-size: 13px; padding: 7px 8px;">
-                                    <option>Faciales</option><option>Faciales B</option><option>Faciales R</option><option>Faciales Bio</option>
-                                    <option>Faciales T</option><option>Faciales Reg</option><option>Depilación láser</option><option>Láser</option>
-                                    <option>Consulta</option><option>Otro servicio</option><option>Solo producto</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="pay-ledger" class="enc-label mb-1 block">Dónde</label>
-                                <select id="pay-ledger" style="font-size: 13px; padding: 7px 8px;">
-                                    <option value="LLC">Piel Spa (LLC)</option>
-                                    <option value="NJ (fuera de la LLC)">Jornada NJ (fuera de la LLC)</option>
-                                </select>
-                            </div>
-                        </div>
                         <div id="pay-service-fields">
-                            <label for="pay-service" class="enc-label mb-1 block">Servicio del catálogo (opcional)</label>
-                            <select id="pay-service" onchange="renderPayServicePrices()"><option value="">Sin servicio del catálogo</option></select>
+                            <label for="pay-service" class="enc-label mb-1 block">Servicio</label>
+                            <select id="pay-service" onchange="renderPayServicePrices()"><option value="">Elige el servicio…</option></select>
+                            <input type="text" id="pay-service-other" class="hidden mt-2" placeholder="¿Qué servicio fue?" aria-label="Servicio que no está en el catálogo">
                             <div id="pay-service-prices" class="flex flex-wrap gap-2 mt-2" aria-live="polite"></div>
+                            <p class="text-[11px] opacity-60 mt-1">La categoría para la contabilidad sale del servicio (Productos y servicios → Servicios).</p>
+                        </div>
+                        <div>
+                            <label for="pay-ledger" class="enc-label mb-1 block">Dónde</label>
+                            <select id="pay-ledger" style="font-size: 13px; padding: 7px 8px; max-width: 18rem;">
+                                <option value="LLC">Piel Spa (LLC)</option>
+                                <option value="NJ (fuera de la LLC)">Jornada NJ (fuera de la LLC)</option>
+                            </select>
                         </div>
                         <div>
                             <label for="pay-product" class="enc-label mb-1 block">Producto vendido (opcional)</label>
@@ -4055,15 +4047,21 @@
         let payServices = [], payServicesUnavailable = false, payServiceRequest = 0;
         async function loadPayServices() {
             const request = ++payServiceRequest;
-            const { data, error } = await _supabase.from('sale_services').select('code, name, unit, sale_price, promo_price')
+            const { data, error } = await _supabase.from('sale_services').select('code, name, unit, sale_price, promo_price, category')
                 .eq('active', true).in('status', ['available', 'assessment']).order('sort_order').order('name');
             if (request !== payServiceRequest) return;
             payServicesUnavailable = !!error;
             payServices = data || [];
             const select = document.getElementById('pay-service');
             const previous = select.value;
-            select.replaceChildren(new Option('Sin servicio del catálogo', ''), ...payServices.map(
-                service => new Option(`${service.name} · ${service.unit}`, service.code)));
+            // One group per catalog category; "Otro servicio" for anything not in the catalog.
+            const groups = new Map();
+            payServices.forEach(service => {
+                const name = service.category || 'Otros';
+                if (!groups.has(name)) { const g = document.createElement('optgroup'); g.label = name; groups.set(name, g); }
+                groups.get(name).appendChild(new Option(`${service.name} · ${service.unit}`, service.code));
+            });
+            select.replaceChildren(new Option('Elige el servicio…', ''), ...groups.values(), new Option('Otro servicio (no está en el catálogo)', '__otro'));
             if (previous) {
                 if (!payServices.some(service => service.code === previous)) {
                     select.add(new Option('Servicio ya no disponible. Cambia la selección.', previous));
@@ -4077,7 +4075,10 @@
             const code = document.getElementById('pay-service').value;
             const service = payServices.find(row => row.code === code);
             const box = document.getElementById('pay-service-prices');
-            box.textContent = payServicesUnavailable ? 'Catálogo no disponible. Puedes registrar el cobro manualmente.' : '';
+            const other = document.getElementById('pay-service-other');
+            other.classList.toggle('hidden', code !== '__otro');
+            if (code !== '__otro') other.value = '';
+            box.textContent = payServicesUnavailable ? 'Catálogo no disponible. Elige "Otro servicio" y escribe qué fue.' : '';
             if (!service) return;
             for (const [field, label] of [['sale_price', 'Usar precio Piel Spa'], ['promo_price', 'Usar promoción']]) {
                 if (service[field] == null) continue;
@@ -4199,21 +4200,12 @@
             document.getElementById('pay-extras').classList.toggle('hidden');
         }
 
-        let payPreviousCategory = '';
         function setPayGuestMode() {
             const guest = document.getElementById('pay-guest').checked;
             document.getElementById('pay-guest-fields').classList.toggle('hidden', !guest);
             for (const id of ['pay-patient-fields', 'pay-encounter-fields', 'pay-service-fields']) {
                 document.getElementById(id).classList.toggle('hidden', guest);
             }
-            const category = document.getElementById('pay-category');
-            if (guest && !category.disabled) {
-                payPreviousCategory = category.value;
-                category.value = 'Solo producto';
-            } else if (!guest && category.disabled) {
-                category.value = payPreviousCategory;
-            }
-            category.disabled = guest;
             document.getElementById('pay-amount').disabled = guest;
             document.getElementById('pay-friend').disabled = guest || !payFriendLeft;
             renderPayTotals();
@@ -4398,7 +4390,11 @@
             const encounterForText = payEncounters[encounterId];
             const serviceCode = guest ? '' : document.getElementById('pay-service').value;
             const service = payServices.find(row => row.code === serviceCode);
-            if (serviceCode && !service) { alert('Elige un servicio disponible o registra el cobro manualmente.'); return; }
+            const otherService = serviceCode === '__otro' ? document.getElementById('pay-service-other').value.trim() : '';
+            if (!guest && f.amount > 0 && !serviceCode) { alert('Elige el servicio. Si no está en la lista, elige "Otro servicio" y escribe qué fue.'); document.getElementById('pay-service').focus(); return; }
+            if (serviceCode === '__otro' && !otherService) { alert('Escribe qué servicio fue.'); document.getElementById('pay-service-other').focus(); return; }
+            if (serviceCode && serviceCode !== '__otro' && !service) { alert('Ese servicio ya no está disponible. Elige otro.'); return; }
+            const payCategory = guest || !(f.amount > 0) ? 'Solo producto' : service ? (service.category || 'Otro servicio') : 'Otro servicio';
             const encounterText = encounterForText ? encounterSummaryText(encounterForText) : '';
             let card = null;
             if (PAY_CARD_METHODS.includes(f.method)) {
@@ -4412,10 +4408,11 @@
                 const { data: { user } } = await _supabase.auth.getUser();
                 const ledger = document.getElementById('pay-ledger').value;
                 const { data: saved, error } = await _supabase.from('payments').insert({
-                    category: guest ? 'Solo producto' : document.getElementById('pay-category').value,
+                    category: payCategory,
                     ledger,
                     service_tax: f.serviceTax,
-                    service_desc: service ? [`${service.name} (${service.code})`, encounterText].filter(Boolean).join(' · ') : encounterText || null,
+                    service_desc: service ? [`${service.name} (${service.code})`, encounterText].filter(Boolean).join(' · ')
+                        : [otherService, encounterText].filter(Boolean).join(' · ') || null,
                     ...(service ? { service_catalog_code: service.code } : {}),
                     product_desc: productDesc || null,
                     product_id: f.product && productId !== '__otro' ? productId : null,
