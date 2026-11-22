@@ -11,6 +11,7 @@
         'Vello no deseado', 'Relajación y drenaje', 'Arrugas', 'Flacidez', 'Luminosidad e hidratación', 'Pérdida de volumen', 'Ojeras'];
     const groupRank = category => WEB_SERVICE_GROUPS.includes(category) ? WEB_SERVICE_GROUPS.indexOf(category) : WEB_SERVICE_GROUPS.length;
     let services = [], serviceError = '', showArchived = false, request = 0;
+    let serviceProducts = [];
     let serviceBusy = false;
     const selectedServices = new Set();
 
@@ -90,9 +91,13 @@
         updateTabs();
         $('prod-body').innerHTML = '<p class="text-sm opacity-60 text-center py-8">Cargando…</p>';
         if (tab === 'servicios') {
-            const { data, error } = await _supabase.from('sale_services').select('*').order('sort_order').order('name').order('code');
+            const [{ data, error }, products] = await Promise.all([
+                _supabase.from('sale_services').select('*').order('sort_order').order('name').order('code'),
+                _supabase.from('sale_products').select('id, name, brand, size, stock_qty, active').order('name'),
+            ]);
             if (current !== request) return;
             services = data || [];
+            serviceProducts = products.data || [];
             serviceError = error ? error.message : '';
             renderServices();
             return;
@@ -257,7 +262,7 @@
                 <button type="button" class="svc-order" data-svc-move="1" aria-label="Bajar ${esc(s.name)}" title="Bajar" ${disabled || (visible[index + 1]?.category !== s.category ? 'disabled' : '')}>↓</button></td>`}
               <td class="min-w-[210px]"><strong>${esc(s.name)}</strong><div class="text-xs opacity-70">${esc(s.category)} · ${esc(s.unit)} · ${esc(s.billing_code || s.code)}</div></td>
               <td>${s.active ? esc(SERVICE_STATUS[s.status]) : 'Archivado'}</td>
-              <td class="num">${money(s.nyc_price)}</td><td class="num">${money(s.sale_price)}</td><td class="num">${money(s.promo_price)}</td>
+              <td class="num">${money(s.nyc_price)}</td><td class="num">${money(s.unit_price ?? s.sale_price)}${s.unit_price != null ? ' / unidad' : ''}</td><td class="num">${money(s.promo_price)}</td>
               <td class="num">${money(s.reference_price)}${s.reference_promo == null ? '' : `<div class="text-xs">Promo ${money(s.reference_promo)}</div>`}</td>
               <td class="whitespace-nowrap"><button type="button" class="soft" data-service-code="${esc(s.code)}" ${disabled}>Editar</button>
                 <button type="button" class="soft" data-svc-toggle="${esc(s.code)}" aria-label="${action} ${esc(s.name)}" ${disabled}>${action}</button></td></tr>`).join('')}</tbody>
@@ -389,6 +394,18 @@
         </div>
         <p class="text-xs opacity-70" id="svc-code-help">Usa letras, números, guion o guion bajo. El Libro Contable usa el código vigente en todos los cobros vinculados a este servicio.</p>
         <p class="text-xs opacity-70" id="svc-reference"></p>
+        <details class="card p-3" id="svc-quantity-settings">
+          <summary class="cursor-pointer font-semibold text-sm">Cobro por unidad y descuentos</summary>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            <label class="text-sm">Precio por unidad (USD)<input id="svc-unit-price" type="number" min="0.01" step="0.01" max="99999999.99" placeholder="Vacío para precio fijo"></label>
+            <label class="text-sm">Origen de la cantidad<select id="svc-quantity-source"><option value="manual">Ingresar en Cobros</option><option value="fillers">Jeringas de relleno en el encuentro</option><option value="neuromodulators">Unidades de neuromodulador en el encuentro</option></select></label>
+            <label class="text-sm sm:col-span-2">Producto de inventario usado (opcional)<select id="svc-inventory"></select></label>
+            <label class="text-sm sm:col-span-2">Descuentos por volumen<input id="svc-tiers" placeholder="4:10, 7:15, 11:20"><span class="text-xs opacity-70">Cantidad mínima y porcentaje. Ejemplo 4:10 aplica 10 % desde 4 unidades.</span></label>
+            <label class="text-sm">Cortesía manual desde<input id="svc-courtesy-min" type="number" min="1" max="100000" step="1"></label>
+            <label class="text-sm">Cortesía sobre subtotal rebajado (%)<input id="svc-courtesy-percent" type="number" min="0.01" max="100" step="0.01"></label>
+          </div>
+          <p class="mt-2 text-xs opacity-70">Si vinculas inventario, se descuenta una unidad de stock por cada unidad cobrada del servicio.</p>
+        </details>
         <div><label class="lbl" for="svc-notes">Notas</label><textarea id="svc-notes" rows="3"></textarea></div>
         <p id="svc-error" class="text-sm text-red-700" role="alert"></p>
         <div class="dlg-actions flex flex-wrap justify-between gap-2 pt-2">
@@ -407,6 +424,19 @@
         $('svc-notes').value = service?.notes || '';
         $('svc-reference').textContent = service?.reference_price == null ? '' :
             `Tarifario interno ${service.source_code || ''} · Regular ${money(service.reference_price)} · Promoción ${money(service.reference_promo)}`;
+        $('svc-quantity-settings').open = service?.unit_price != null;
+        $('svc-unit-price').value = service?.unit_price ?? '';
+        $('svc-quantity-source').value = service?.quantity_source || 'manual';
+        const linked = service?.inventory_product_id;
+        $('svc-inventory').innerHTML = '<option value="">Sin vínculo de inventario</option>' + serviceProducts.filter(p => p.active || p.id === linked)
+            .map(p => `<option value="${esc(p.id)}">${esc([p.brand, p.name, p.size].filter(Boolean).join(' · '))} (${p.stock_qty} en stock)</option>`).join('');
+        if (linked && !serviceProducts.some(p => p.id === linked)) {
+            $('svc-inventory').add(new Option('Producto vinculado', linked));
+        }
+        $('svc-inventory').value = linked || '';
+        $('svc-tiers').value = (service?.volume_tiers || []).map(tier => `${tier.min}:${tier.percent}`).join(', ');
+        $('svc-courtesy-min').value = service?.courtesy_min ?? '';
+        $('svc-courtesy-percent').value = service?.courtesy_percent ?? '';
         $('svc-error').textContent = '';
         $('svc-archive').classList.toggle('invisible', !service);
         $('svc-archive').textContent = service?.active === false ? 'Restaurar' : 'Archivar';
@@ -450,6 +480,27 @@
             return;
         }
         row.status = $('svc-status').value;
+        const tiersText = $('svc-tiers').value.trim();
+        const tiers = tiersText ? tiersText.split(',').map(part => part.trim().match(/^([1-9]\d{0,4})\s*:\s*(\d{1,3}(?:\.\d{1,2})?)$/)) : [];
+        const unitPrice = num($('svc-unit-price').value);
+        const courtesyMin = num($('svc-courtesy-min').value);
+        const courtesyPercent = num($('svc-courtesy-percent').value);
+        const inventory = $('svc-inventory').value || null;
+        if (tiers.some(m => !m || Number(m[2]) <= 0 || Number(m[2]) > 100)
+            || new Set(tiers.map(m => Number(m[1]))).size !== tiers.length) {
+            $('svc-error').textContent = 'Escribe escalas únicas con el formato 4:10, 7:15, 11:20.';
+            return;
+        }
+        if ((courtesyMin === null) !== (courtesyPercent === null)
+            || (unitPrice === null && (tiers.length || courtesyMin !== null || inventory))) {
+            $('svc-error').textContent = 'Completa el precio unitario antes de vincular inventario o descuentos. La cortesía necesita cantidad y porcentaje.';
+            return;
+        }
+        Object.assign(row, {
+            unit_price: unitPrice, quantity_source: unitPrice === null ? null : $('svc-quantity-source').value,
+            inventory_product_id: inventory, volume_tiers: tiers.map(m => ({ min: Number(m[1]), percent: Number(m[2]) })).sort((a, b) => a.min - b.min),
+            courtesy_min: courtesyMin, courtesy_percent: courtesyPercent,
+        });
         row.notes = $('svc-notes').value.trim() || null;
         row.updated_at = new Date().toISOString();
         const table = _supabase.from('sale_services');

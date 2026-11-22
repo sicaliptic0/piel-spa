@@ -438,9 +438,14 @@
                         </div>
                         <div id="pay-service-fields">
                             <label for="pay-service" class="enc-label mb-1 block">Servicio</label>
-                            <select id="pay-service" onchange="renderPayServicePrices()"><option value="">Elige el servicio…</option></select>
+                            <select id="pay-service" onchange="onPayServiceChange()"><option value="">Elige el servicio…</option></select>
                             <input type="text" id="pay-service-other" class="hidden mt-2" placeholder="¿Qué servicio fue?" aria-label="Servicio que no está en el catálogo">
                             <div id="pay-service-prices" class="flex flex-wrap gap-2 mt-2" aria-live="polite"></div>
+                            <div id="pay-service-units" class="hidden mt-2">
+                                <label for="pay-service-qty" class="enc-label">Cantidad</label>
+                                <input id="pay-service-qty" type="number" min="1" max="100000" step="1" oninput="renderPayTotals()">
+                                <p id="pay-service-unit-note" class="mt-1 text-xs opacity-70"></p>
+                            </div>
                             <p class="text-[11px] opacity-60 mt-1">La categoría para la contabilidad sale del servicio (Productos y servicios → Servicios).</p>
                         </div>
                         <div>
@@ -451,31 +456,20 @@
                             </select>
                         </div>
                         <div>
-                            <label for="pay-product" class="enc-label mb-1 block">Producto vendido (opcional)</label>
-                            <div class="grid grid-cols-4 gap-2">
-                                <select id="pay-product" class="col-span-3" onchange="onPayProductChange()" style="font-size: 13px; padding: 7px 8px;"><option value="">Sin producto</option></select>
-                                <input type="text" id="pay-product-qty" inputmode="numeric" value="1" oninput="renderPayTotals()" aria-label="Cantidad" title="Cantidad">
-                            </div>
-                            <div id="pay-product-detail" class="hidden mt-2 space-y-2">
-                                <div class="grid grid-cols-3 gap-2">
-                                    <input type="text" id="pay-product-desc" placeholder="Nombre del producto" class="col-span-2" aria-label="Producto vendido">
-                                    <input type="text" id="pay-product-amount" inputmode="decimal" placeholder="$ c/u" oninput="renderPayTotals()" aria-label="Precio por unidad">
-                                </div>
-                                <label class="flex items-center gap-2 text-xs cursor-pointer select-none">
-                                    <input type="checkbox" id="pay-product-taxable" class="accent-[#B76E88]" onchange="renderPayTotals()">
-                                    <span>Lleva sales tax</span>
-                                </label>
-                            </div>
+                            <p class="enc-label mb-2">Productos vendidos</p>
+                            <div id="pay-product-lines" class="space-y-2"></div>
+                            <button type="button" onclick="addPayProduct()" class="mt-2 rounded-full border border-[#EDE1E7] px-3 py-1 text-sm">+ Agregar producto</button>
                         </div>
                     </div>
                     <div class="relative p-5 md:p-8 flex flex-col gap-4 bg-[#FDFBFC] rounded-b-2xl md:rounded-b-none md:rounded-r-2xl">
-                        <div>
+                        <div id="pay-amount-field">
                             <label for="pay-amount" class="enc-label block">Monto</label>
                             <div class="flex items-center gap-1">
                                 <span class="text-4xl font-semibold opacity-50">$</span>
                                 <input type="text" id="pay-amount" inputmode="decimal" placeholder="0.00" oninput="renderPayTotals()" style="font-size: 2.75rem; line-height: 1.1; font-weight: 600; padding: 4px 8px; background: transparent;">
                             </div>
                         </div>
+                        <p id="pay-unit-breakdown" class="hidden text-sm"></p>
                         <div>
                             <label for="pay-method" class="enc-label mb-1 block">Método de pago</label>
                             <select id="pay-method" onchange="onPayMethodChange()" style="max-width: 16rem; font-size: 13px; padding: 7px 8px;">
@@ -503,7 +497,7 @@
                         </div>
                         <div id="pay-product-row" class="hidden flex items-baseline justify-between gap-3">
                             <span class="text-lg">Producto</span>
-                            <span id="pay-product" class="text-2xl font-semibold"></span>
+                            <span id="pay-product-total" class="text-2xl font-semibold"></span>
                         </div>
                         <div id="pay-tax-row" class="hidden flex items-baseline justify-between gap-3">
                             <span class="text-lg" id="pay-tax-label">Impuesto</span>
@@ -526,6 +520,10 @@
                             <label class="flex items-center gap-2 cursor-pointer select-none">
                                 <input type="checkbox" id="pay-friend" class="accent-[#B76E88]" onchange="renderPayTotals()">
                                 <span>Cupo de amigos (−$30) · <span id="pay-friend-left" class="opacity-60"></span></span>
+                            </label>
+                            <label id="pay-courtesy-row" class="hidden flex items-center gap-2 text-sm">
+                                <input type="checkbox" id="pay-courtesy" onchange="renderPayTotals()">
+                                <span id="pay-courtesy-label">Cortesía de armonización</span>
                             </label>
                             <button type="button" onclick="openPayRates()" class="mt-2 underline opacity-70 hover:opacity-100">Tasas de impuesto, recargo y comisión</button>
                         </div>
@@ -1121,7 +1119,11 @@
 
                         <div class="bg-[#FDFBFC] border border-[#EDE1E7] p-4 rounded-lg">
                             <p class="enc-label mb-3">Procedimientos realizados</p>
-                            <div id="enc-procedures" class="space-y-2"></div>
+                            <div id="enc-service-catalog" class="space-y-2"></div>
+                            <details id="enc-legacy-procedures" class="mt-3">
+                                <summary class="cursor-pointer text-sm font-semibold">Procedimientos clínicos especiales e historial anterior</summary>
+                                <div id="enc-procedures" class="space-y-2 mt-2"></div>
+                            </details>
                         </div>
 
                         <div>
@@ -1714,6 +1716,79 @@
             sculptra: ['ampolla', 'ampollas'],
             radiesse: ['jeringa', 'jeringas'],
         };
+        const ENCOUNTER_LEGACY_SERVICE_CODES = {
+            general_consultation: 'CONSULTA', radiesse: 'BE-01', sculptra: 'BE-02',
+            endolaser: 'ENDOLIFTING', nctf_skin_boosting: 'NCTF',
+        };
+        let encounterCatalog = [], encounterCatalogError = false;
+
+        function renderEncounterCatalog(saved = {}) {
+            const root = document.getElementById('enc-service-catalog');
+            const groups = new Map();
+            const list = [...encounterCatalog];
+            for (const [code, value] of Object.entries(saved)) {
+                if (!list.some(service => service.code === code)) {
+                    list.push({ code, name: value.name, unit: value.unit, category: 'Servicios guardados o archivados',
+                        unit_price: value.unit_price, historical: true });
+                }
+            }
+            for (const service of list) {
+                const category = service.category || 'Otros';
+                if (!groups.has(category)) groups.set(category, []);
+                groups.get(category).push(service);
+            }
+            root.innerHTML = (encounterCatalogError ? '<p class="text-sm text-amber-800">No se pudo cargar el catálogo. Las selecciones de este encuentro se conservan.</p>' : '')
+                + [...groups].map(([category, rows]) => `<details class="border border-[#EDE1E7] rounded-lg bg-white p-3" ${rows.some(s => saved[s.code]) ? 'open' : ''}>
+                  <summary class="cursor-pointer text-sm font-semibold">${escapeHtml(category)}</summary>
+                  <div class="space-y-2 mt-2">${rows.map(s => {
+                    const value = saved[s.code];
+                    const byUnit = s.unit_price != null;
+                    return `<div class="flex items-center gap-2 flex-wrap" data-enc-service="${escapeHtml(s.code)}">
+                      <label class="flex flex-1 gap-2 items-center text-sm"><input type="checkbox" data-enc-pick ${value ? 'checked' : ''}>
+                        <span>${escapeHtml(s.name)}</span></label>
+                      <div data-enc-input class="${value ? '' : 'hidden'}">
+                        ${byUnit ? `<label class="text-xs">${escapeHtml(s.unit)} · cantidad
+                          <input type="number" class="enc-qty" data-enc-service-qty min="1" max="100000" step="1" value="${escapeHtml(value?.qty ?? '')}"></label>`
+                          : `<label class="text-xs">Monto USD (opcional)
+                          <input type="text" class="enc-qty" data-enc-service-amount inputmode="decimal" value="${escapeHtml(value?.amount ?? '')}"></label>`}
+                      </div></div>`;
+                  }).join('')}</div></details>`).join('');
+            root.querySelectorAll('[data-enc-service]').forEach(row => {
+                const service = list.find(item => item.code === row.dataset.encService);
+                row.catalogService = service;
+                row.savedService = saved[service.code];
+                row.querySelector('[data-enc-pick]').onchange = event => {
+                    row.querySelector('[data-enc-input]').classList.toggle('hidden', !event.target.checked);
+                    refreshEncounterSummary();
+                    refreshEncounterTotal();
+                };
+                row.oninput = event => {
+                    if (event.target.matches('[data-enc-service-qty], [data-enc-service-amount]')) {
+                        encTotalAuto = true;
+                        refreshEncounterSummary();
+                        refreshEncounterTotal();
+                    }
+                };
+            });
+        }
+
+        function getEncounterCatalogProcedures() {
+            const marked = {};
+            document.querySelectorAll('#enc-service-catalog [data-enc-service]').forEach(row => {
+                if (!row.querySelector('[data-enc-pick]').checked) return;
+                const service = row.catalogService;
+                const saved = row.savedService;
+                const quantityField = row.querySelector('[data-enc-service-qty]');
+                const quantity = Number(quantityField?.value ?? saved?.qty);
+                const qty = Number.isSafeInteger(quantity) && quantity >= 1 && quantity <= 100000 ? quantity : null;
+                const unitFigures = unitServiceFigures(service, qty, false);
+                const enteredAmount = parseAmount(row.querySelector('[data-enc-service-amount]')?.value);
+                marked[service.code] = { name: saved?.name || service.name, unit: saved?.unit || service.unit,
+                    qty, unit_price: service.unit_price ?? null,
+                    amount: service.historical ? (saved?.amount ?? null) : unitFigures ? unitFigures.amount - unitFigures.volume : enteredAmount ?? null };
+            });
+            return marked;
+        }
 
         function encounterItemsFor(catId) {
             return TREATMENT_OPTIONS.filter(o => o.category === catId);
@@ -2091,6 +2166,7 @@
                 (entry.items || []).forEach(item => { sum += Number(item.amount) || 0; });
                 sum += Number(entry.other?.amount) || 0;
             });
+            for (const entry of Object.values(detail.catalog_services || {})) sum += Number(entry.amount) || 0;
             return roundTo(sum, 2);
         }
 
@@ -2113,6 +2189,8 @@
 
         function getEncounterProcedures() {
             const detail = {};
+            const catalog = getEncounterCatalogProcedures();
+            if (Object.keys(catalog).length) detail.catalog_services = catalog;
             document.querySelectorAll('#enc-procedures .enc-cat').forEach(catEl => {
                 if (!catEl.querySelector('.enc-cat-check').checked) return;
                 const catId = catEl.dataset.cat;
@@ -2165,7 +2243,11 @@
                     safe[option.category].items.push({ id });
                 });
             }
+            renderEncounterCatalog(safe.catalog_services || {});
+            document.getElementById('enc-legacy-procedures').open = encounterCatalogError
+                || Object.keys(safe).some(key => key !== 'catalog_services');
             Object.entries(safe).forEach(([catId, entry]) => {
+                if (catId === 'catalog_services') return;
                 const catEl = document.querySelector(`#enc-procedures .enc-cat[data-cat="${catId}"]`);
                 if (!catEl) return;
                 catEl.querySelector('.enc-cat-check').checked = true;
@@ -2223,7 +2305,12 @@
                 if (cat.itemId) ids.push(cat.itemId);
                 (entry.items || []).forEach(item => ids.push(item.id));
             });
-            return ids;
+            for (const [legacy, code] of Object.entries(ENCOUNTER_LEGACY_SERVICE_CODES)) {
+                if (detail.catalog_services?.[code]) ids.push(legacy);
+            }
+            if (Object.keys(detail.catalog_services || {}).some(code => encounterCatalog.some(service =>
+                service.code === code && service.quantity_source === 'fillers'))) ids.push('facial_harmonization');
+            return [...new Set(ids)];
         }
 
         function formatQty(qty, unit) {
@@ -2240,7 +2327,8 @@
 
         // e.g. "Consulta · Botox 40 unidades (Perfilado Nasal, Cuello) · Sculptra 2 ampollas"
         function buildProceduresSummary(detail) {
-            const parts = [];
+            const parts = Object.values(detail.catalog_services || {}).map(item =>
+                [item.name, item.qty ? `${item.qty} ${item.unit || 'unidad'}${item.qty === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · '));
             ENCOUNTER_CATEGORIES.forEach(cat => {
                 const entry = detail[cat.id];
                 if (!entry) return;
@@ -4045,30 +4133,93 @@
         }
 
         let payServices = [], payServicesUnavailable = false, payServiceRequest = 0;
+        function fetchSelectableServices() {
+            return _supabase.from('sale_services').select('code, billing_code, name, unit, sale_price, promo_price, category, unit_price, quantity_source, inventory_product_id, volume_tiers, courtesy_min, courtesy_percent')
+                .eq('active', true).in('status', ['available', 'assessment']).order('sort_order').order('name');
+        }
+
         async function loadPayServices() {
             const request = ++payServiceRequest;
-            const { data, error } = await _supabase.from('sale_services').select('code, billing_code, name, unit, sale_price, promo_price, category')
-                .eq('active', true).in('status', ['available', 'assessment']).order('sort_order').order('name');
+            const { data, error } = await fetchSelectableServices();
             if (request !== payServiceRequest) return;
             payServicesUnavailable = !!error;
             payServices = data || [];
+            const selected = document.getElementById('pay-service').value;
+            renderPayServiceOptions(selected, !selected);
+        }
+
+        function encounterMarkedServices(encounter) {
+            const detail = encounter?.procedures_detail || {};
+            const legacy = new Set(parseProcedureIds(encounter?.procedures_realized_ids));
+            if (detail.consultation) legacy.add('general_consultation');
+            for (const row of Object.values(detail)) (row.items || []).forEach(item => legacy.add(item.id));
+            const knownCodes = new Set([...legacy].map(id => ENCOUNTER_LEGACY_SERVICE_CODES[id]).filter(Boolean));
+            const fillerServices = payServices.filter(service => service.quantity_source === 'fillers');
+            return payServices.filter(service => {
+                if (detail.catalog_services?.[service.code]) return true;
+                if (detail.catalog_services) return false;
+                if (knownCodes.has(service.code)) return true;
+                // Older encounters used category quantities instead of catalog keys.
+                return fillerServices.length === 1 && service.code === fillerServices[0].code && serviceEncounterQuantity(service, encounter) != null;
+            });
+        }
+
+        function renderPayServiceOptions(previous, pickFromEncounter = false) {
             const select = document.getElementById('pay-service');
-            const previous = select.value;
-            // One group per catalog category; "Otro servicio" for anything not in the catalog.
+            const encounter = payEncounters[document.getElementById('pay-encounter').value];
+            const marked = encounterMarkedServices(encounter);
+            const markedCodes = new Set(marked.map(s => s.code));
             const groups = new Map();
             payServices.forEach(service => {
-                const name = service.category || 'Otros';
+                const name = markedCodes.has(service.code) ? 'Registrados en el encuentro' : service.category || 'Otros';
                 if (!groups.has(name)) { const g = document.createElement('optgroup'); g.label = name; groups.set(name, g); }
                 groups.get(name).appendChild(new Option(`${service.name} · ${service.unit}`, service.code));
             });
-            select.replaceChildren(new Option('Elige el servicio…', ''), ...groups.values(), new Option('Otro servicio (no está en el catálogo)', '__otro'));
+            const markedGroup = groups.get('Registrados en el encuentro');
+            groups.delete('Registrados en el encuentro');
+            select.replaceChildren(new Option('Elige el servicio…', ''), ...(markedGroup ? [markedGroup] : []),
+                ...groups.values(), new Option('Otro servicio (no está en el catálogo)', '__otro'));
+            if (pickFromEncounter && marked.length === 1) {
+                previous = marked[0].code;
+                const amount = encounter?.procedures_detail?.catalog_services?.[previous]?.amount;
+                if (amount != null) document.getElementById('pay-amount').value = Number(amount).toFixed(2);
+            }
             if (previous) {
-                if (!payServices.some(service => service.code === previous)) {
+                if (previous !== '__otro' && !payServices.some(service => service.code === previous)) {
                     select.add(new Option('Servicio ya no disponible. Cambia la selección.', previous));
                 }
                 select.value = previous;
             }
             renderPayServicePrices();
+        }
+
+        function onPayServiceChange() {
+            const encounter = payEncounters[document.getElementById('pay-encounter').value];
+            const entries = encounter?.procedures_detail?.catalog_services;
+            if (entries) {
+                const selected = entries[document.getElementById('pay-service').value];
+                document.getElementById('pay-amount').value = selected?.amount == null ? '' : Number(selected.amount).toFixed(2);
+            }
+            renderPayServicePrices();
+        }
+
+        function serviceEncounterQuantity(service, encounter) {
+            const detail = encounter?.procedures_detail;
+            const value = Number(detail?.catalog_services?.[service?.code]?.qty ?? detail?.[service?.quantity_source]?.qty);
+            return Number.isSafeInteger(value) && value > 0 && value <= 100000 ? value : null;
+        }
+
+        function unitServiceFigures(service, quantity, courtesyRequested) {
+            if (!service?.unit_price || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 100000) return null;
+            const amountCents = Math.round(Number(service.unit_price) * 100) * quantity;
+            if (!Number.isSafeInteger(amountCents) || amountCents > 9999999999) return null;
+            const tier = (service.volume_tiers || []).reduce((best, next) => next.min <= quantity && next.min > best.min ? next : best, { min:0, percent:0 });
+            const volumeCents = Math.round(amountCents * Math.round(Number(tier.percent) * 100) / 10000);
+            const courtesyAvailable = Number(service.courtesy_percent) > 0 && service.courtesy_min != null && quantity >= service.courtesy_min;
+            const courtesyPercent = courtesyAvailable && courtesyRequested ? Number(service.courtesy_percent) : 0;
+            const courtesyCents = Math.round((amountCents - volumeCents) * Math.round(courtesyPercent * 100) / 10000);
+            return { quantity, amount: amountCents / 100, volume: volumeCents / 100, courtesy: courtesyCents / 100,
+                volumePercent: Number(tier.percent), courtesyPercent, courtesyAvailable };
         }
 
         function renderPayServicePrices() {
@@ -4079,7 +4230,32 @@
             other.classList.toggle('hidden', code !== '__otro');
             if (code !== '__otro') other.value = '';
             box.textContent = payServicesUnavailable ? 'Catálogo no disponible. Elige "Otro servicio" y escribe qué fue.' : '';
+            const qty = document.getElementById('pay-service-qty');
+            const encounterId = document.getElementById('pay-encounter').value;
+            const quantityKey = code + ':' + encounterId;
+            if (qty.dataset.key !== quantityKey) {
+                qty.dataset.key = quantityKey;
+                qty.value = service?.quantity_source === 'manual' ? '1' : '';
+                document.getElementById('pay-courtesy').checked = false;
+            }
+            document.getElementById('pay-service-units').classList.toggle('hidden', service?.unit_price == null);
+            if (service?.unit_price != null) {
+                const savedQuantity = serviceEncounterQuantity(service, payEncounters[encounterId]);
+                qty.readOnly = service.quantity_source !== 'manual' || savedQuantity !== null;
+                if (qty.readOnly) qty.value = savedQuantity ?? '';
+                document.getElementById('pay-service-unit-note').textContent =
+                    qty.readOnly && !qty.value ? 'Registra las unidades usadas en el encuentro del paciente.'
+                        : `${formatAmount(service.unit_price)} por ${service.unit}${qty.readOnly ? ' · cantidad del encuentro' : ''}`;
+                box.textContent = '';
+            }
+            renderPayTotals();
+            if (service?.unit_price != null) return;
             if (!service) return;
+            const savedAmount = payEncounters[encounterId]?.procedures_detail?.catalog_services?.[service.code]?.amount;
+            if (savedAmount != null && !document.getElementById('pay-amount').value) {
+                document.getElementById('pay-amount').value = Number(savedAmount).toFixed(2);
+                renderPayTotals();
+            }
             for (const [field, label] of [['sale_price', 'Usar precio Piel Spa'], ['promo_price', 'Usar promoción']]) {
                 if (service[field] == null) continue;
                 const button = document.createElement('button');
@@ -4102,26 +4278,65 @@
         // Products for sale: the skincare catalog's "in stock" items (Contabilidad → Productos).
         let payProducts = [];
         async function loadPayProducts() {
-            const { data } = await _supabase.from('sale_products').select('id, name, brand, size, sale_price, suggested_price, sales_taxable, stock_qty, expires_on')
+            const { data, error } = await _supabase.from('sale_products').select('id, name, brand, size, sale_price, suggested_price, sales_taxable, stock_qty, expires_on')
                 .eq('active', true).order('brand').order('name');
+            if (error) return;
             payProducts = data || [];
-            const sel = document.getElementById('pay-product'), keep = sel.value;
-            sel.innerHTML = '<option value="">Sin producto</option>' + payProducts.map(p => {
-                const price = p.sale_price ?? p.suggested_price;
-                const expired = p.expires_on && p.expires_on < clinicDateIso(0);
-                return `<option value="${escapeHtml(p.id)}">${escapeHtml(p.brand + ' · ' + p.name)}${price != null ? ' · ' + escapeHtml(formatAmount(price)) : ''} (${p.stock_qty} en stock${expired ? ', VENCIDO' : ''})</option>`;
-            }).join('') + '<option value="__otro">Otro producto…</option>';
-            sel.value = keep;
+            document.querySelectorAll('#pay-product-lines [data-product-select]').forEach(fillPayProductOptions);
         }
-        function onPayProductChange() {
-            const v = document.getElementById('pay-product').value, p = payProducts.find(x => x.id === v);
-            document.getElementById('pay-product-detail').classList.toggle('hidden', !v);
-            document.getElementById('pay-product-qty').value = '1';
-            document.getElementById('pay-product-desc').value = p ? `${p.brand} · ${p.name}` : '';
-            const price = p ? (p.sale_price ?? p.suggested_price) : null;
-            document.getElementById('pay-product-amount').value = price != null ? Number(price).toFixed(2) : '';
-            document.getElementById('pay-product-taxable').checked = p ? p.sales_taxable !== false : true;
-            renderPayTotals();
+
+        function fillPayProductOptions(select) {
+            const selected = select.value;
+            const available = payProducts.filter(p => p.stock_qty > 0 && (!p.expires_on || p.expires_on >= clinicDateIso(0)));
+            select.replaceChildren(new Option('Elige un producto', ''), ...available.map(p => new Option(
+                `${[p.brand, p.name, p.size].filter(Boolean).join(' · ')} (${p.stock_qty} en stock)`, p.id)), new Option('Otro producto…', '__otro'));
+            if (selected && selected !== '__otro' && !available.some(p => p.id === selected)) {
+                select.add(new Option('Producto sin stock o no disponible', selected));
+            }
+            select.value = selected;
+        }
+
+        function addPayProduct() {
+            const line = document.createElement('div');
+            line.className = 'border border-[#EDE1E7] rounded-lg p-3 space-y-2';
+            line.innerHTML = `<div class="flex gap-2"><select data-product-select aria-label="Producto vendido"></select>
+                <button type="button" data-product-remove class="text-sm text-red-700">Quitar</button></div>
+                <input data-product-name type="text" placeholder="Nombre del producto" aria-label="Nombre del producto" class="hidden">
+                <div class="grid grid-cols-2 gap-2"><label class="text-xs">Cantidad<input data-product-qty type="number" min="1" max="100000" value="1" step="1"></label>
+                <label class="text-xs">Precio unitario<input data-product-price type="text" inputmode="decimal"></label></div>
+                <label class="flex gap-2 items-center text-xs"><input data-product-tax type="checkbox"> Lleva sales tax</label>`;
+            const select = line.querySelector('[data-product-select]');
+            fillPayProductOptions(select);
+            select.onchange = () => {
+                const product = payProducts.find(p => p.id === select.value);
+                const price = product?.sale_price ?? product?.suggested_price;
+                const name = line.querySelector('[data-product-name]');
+                name.classList.toggle('hidden', select.value !== '__otro');
+                name.value = '';
+                line.querySelector('[data-product-qty]').value = '1';
+                line.querySelector('[data-product-price]').value = price == null ? '' : Number(price).toFixed(2);
+                line.querySelector('[data-product-tax]').checked = product?.sales_taxable !== false;
+                renderPayTotals();
+            };
+            line.oninput = renderPayTotals;
+            line.querySelector('[data-product-remove]').onclick = () => { line.remove(); renderPayTotals(); };
+            document.getElementById('pay-product-lines').appendChild(line);
+            select.focus();
+        }
+
+        function collectPayProducts() {
+            return [...document.getElementById('pay-product-lines').children].map(line => {
+                const id = line.querySelector('[data-product-select]').value;
+                const product = payProducts.find(p => p.id === id);
+                const qty = Number(line.querySelector('[data-product-qty]').value);
+                const price = parseAmount(line.querySelector('[data-product-price]').value);
+                const taxable = line.querySelector('[data-product-tax]').checked;
+                const name = product ? [product.brand, product.name, product.size].filter(Boolean).join(' · ')
+                    : line.querySelector('[data-product-name]').value.trim();
+                const subtotal = Number.isSafeInteger(qty) && qty > 0 && price > 0 ? roundTo(qty * price, 2) : 0;
+                return { selected: id, product_id: product?.id || null, quantity: qty, unit_price: price, name, taxable, subtotal,
+                    needs_stock: id !== '__otro', tax: taxable ? roundTo(subtotal * Number(payRates.tax_products), 2) : 0 };
+            });
         }
         // Card surcharge: on by default for credit, off for debit (card networks do not allow it on debit); either can be changed.
         function onPayMethodChange() {
@@ -4181,19 +4396,21 @@
         }
 
         function onPayEncounterChange() {
-            document.getElementById('pay-service').value = '';
-            renderPayServicePrices();
             const id = document.getElementById('pay-encounter').value;
             const encounter = payEncounters[id];
             const amount = document.getElementById('pay-amount');
-            amount.value = encounter && encounter.amount !== null && encounter.amount !== undefined ? Number(encounter.amount).toFixed(2) : '';
+            const marked = encounterMarkedServices(encounter);
+            const markedAmount = marked.length === 1 ? encounter?.procedures_detail?.catalog_services?.[marked[0].code]?.amount : null;
+            const initialAmount = markedAmount ?? (marked.length <= 1 ? encounter?.amount : null);
+            amount.value = initialAmount == null ? '' : Number(initialAmount).toFixed(2);
             const paid = payPaidEncounters[id];
             const note = document.getElementById('pay-encounter-note');
             note.className = 'text-xs mt-2 min-h-[1rem] ' + (paid ? 'text-amber-700 font-semibold' : 'opacity-60');
             note.innerText = paid
                 ? `⚠️ Este encuentro ya tiene un pago de ${formatAmount(paid.total)} del ${formatVisitDate(paid.paid_on)}.`
                 : (encounter ? encounterSummaryText(encounter) : '');
-            renderPayTotals();
+            if (marked.length > 1) note.innerText += ' · Hay varios servicios registrados. Selecciona cuál vas a cobrar.';
+            renderPayServiceOptions('', true);
         }
 
         function togglePayExtras() {
@@ -4214,34 +4431,46 @@
         // Base, discount, taxes, surcharge and total from what's on screen. amount is undefined when mistyped.
         function payFigures() {
             const guest = document.getElementById('pay-guest').checked;
-            const amount = guest ? 0 : parseAmount(document.getElementById('pay-amount').value);
-            const hasProduct = !!document.getElementById('pay-product').value;
-            const productQty = Math.max(1, parseInt(document.getElementById('pay-product-qty').value, 10) || 1);
-            const productUnit = hasProduct ? (parseAmount(document.getElementById('pay-product-amount').value) || 0) : 0;
-            const product = roundTo(productUnit * productQty, 2);
-            const productTaxable = document.getElementById('pay-product-taxable').checked;
+            const service = guest ? null : payServices.find(row => row.code === document.getElementById('pay-service').value);
+            const unitMode = service?.unit_price != null;
+            const units = unitMode ? unitServiceFigures(service, Number(document.getElementById('pay-service-qty').value), document.getElementById('pay-courtesy').checked) : null;
+            const lines = collectPayProducts();
+            const product = roundTo(lines.reduce((total, line) => total + (line.selected ? line.subtotal : 0), 0), 2);
+            const rawAmount = parseAmount(document.getElementById('pay-amount').value);
+            const amount = guest ? 0 : unitMode ? units?.amount : rawAmount === null && !service && product > 0 ? 0 : rawAmount;
             const method = document.getElementById('pay-method').value;
-            const friend = !guest && document.getElementById('pay-friend').checked;
-            const discount = friend ? Math.min(FRIEND_COUPON_AMOUNT, amount || 0) : 0;
+            const friend = !guest && !unitMode && document.getElementById('pay-friend').checked;
+            const discount = units ? roundTo(units.volume + units.courtesy, 2) : friend ? Math.min(FRIEND_COUPON_AMOUNT, amount || 0) : 0;
             const base = (amount || 0) - discount;
             const serviceRate = !guest && payRates.services_taxed && document.getElementById('pay-servtax-on').checked ? Number(payRates.tax_services) : 0;
             const serviceTax = roundTo(base * serviceRate, 2);
-            const productTax = productTaxable ? roundTo(product * Number(payRates.tax_products), 2) : 0;
+            const productTax = roundTo(lines.reduce((total, line) => total + (line.selected ? line.tax : 0), 0), 2);
             const tax = roundTo(serviceTax + productTax, 2);
             const beforeSurcharge = roundTo(base + product + tax, 2);
             const isCard = PAY_CARD_METHODS.includes(method);
             const surcharge = isCard && document.getElementById('pay-surcharge-on').checked ? roundTo(beforeSurcharge * Number(payRates.surcharge_credit), 2) : 0;
             const total = roundTo(beforeSurcharge + surcharge, 2);
             const fee = isCard && total ? roundTo(total * Number(payRates.fee_pct) + Number(payRates.fee_fixed), 2) : 0;
-            return { amount, product, productQty, productTaxable, method, isCard, friend, discount, taxRate: serviceRate * 100, serviceTax, productTax, tax, surcharge, total, fee };
+            return { amount, product, lines, service, unitMode, units, method, isCard, friend, discount, taxRate: serviceRate * 100, serviceTax, productTax, tax, surcharge, total, fee };
         }
 
         function renderPayTotals() {
             const f = payFigures();
-            document.getElementById('pay-promo-row').classList.toggle('hidden', !f.friend);
+            const breakdown = document.getElementById('pay-unit-breakdown');
+            breakdown.classList.toggle('hidden', !f.unitMode);
+            breakdown.textContent = f.units ? `${f.units.quantity} × ${formatAmount(f.service.unit_price)} = ${formatAmount(f.amount)}`
+                + (f.units.volumePercent ? ` · Volumen ${f.units.volumePercent} %` : '') : 'Ingresa o registra la cantidad para calcular el servicio.';
+            document.getElementById('pay-amount-field').classList.toggle('hidden', f.unitMode);
+            document.getElementById('pay-friend').disabled = !!f.unitMode || document.getElementById('pay-guest').checked || !payFriendLeft;
+            document.getElementById('pay-courtesy-row').classList.toggle('hidden', !f.units?.courtesyAvailable);
+            document.getElementById('pay-courtesy-label').textContent = f.service?.quantity_source === 'fillers'
+                ? `Cortesía de armonización · ${f.service.courtesy_percent ?? ''} %`
+                : `Cortesía del servicio · ${f.service?.courtesy_percent ?? ''} %`;
+            if (!f.units?.courtesyAvailable) document.getElementById('pay-courtesy').checked = false;
+            document.getElementById('pay-promo-row').classList.toggle('hidden', !f.discount);
             document.getElementById('pay-promo').innerText = '−' + formatAmount(f.discount);
             document.getElementById('pay-product-row').classList.toggle('hidden', !f.product);
-            document.getElementById('pay-product').innerText = formatAmount(f.product);
+            document.getElementById('pay-product-total').innerText = formatAmount(f.product);
             document.getElementById('pay-tax-row').classList.toggle('hidden', !f.tax);
             document.getElementById('pay-tax-label').innerText = f.productTax && f.serviceTax ? `Impuestos (${payPct(payRates.tax_services)} y ${payPct(payRates.tax_products)})`
                 : f.productTax ? `Sales tax ${payPct(payRates.tax_products)}` : `Tax ${payPct(payRates.tax_services)}`;
@@ -4252,7 +4481,6 @@
             document.getElementById('pay-surcharge-opt-label').innerText = f.method === 'debit'
                 ? `Cobrar recargo de tarjeta (${payPct(payRates.surcharge_credit)}). Ojo: Visa y Mastercard no lo permiten en débito.`
                 : `Cobrar recargo de tarjeta (${payPct(payRates.surcharge_credit)})`;
-            document.getElementById('pay-product-taxable').nextElementSibling.innerText = `Lleva sales tax (${payPct(payRates.tax_products)})`;
             document.getElementById('pay-servtax-label').innerText = `Cobrar impuesto de servicios (${payPct(payRates.tax_services)})`;
             document.getElementById('pay-surcharge').innerText = formatAmount(f.surcharge);
             document.getElementById('pay-total').innerText = formatAmount(f.total);
@@ -4322,7 +4550,7 @@
             payFriendLeft = Math.max(0, FRIEND_COUPONS_PER_MONTH - (count || 0));
             left.innerText = `te quedan ${payFriendLeft} de ${FRIEND_COUPONS_PER_MONTH} este mes`;
             const check = document.getElementById('pay-friend');
-            check.disabled = document.getElementById('pay-guest').checked || !payFriendLeft;
+            check.disabled = document.getElementById('pay-guest').checked || payFigures().unitMode || !payFriendLeft;
             if (!payFriendLeft) { check.checked = false; renderPayTotals(); }
         }
 
@@ -4342,11 +4570,7 @@
             document.getElementById('pay-date').value = clinicDateIso(0);
             document.getElementById('pay-friend').checked = false;
             document.getElementById('pay-extras').classList.add('hidden');
-            document.getElementById('pay-product').value = '';
-            document.getElementById('pay-product-qty').value = '1';
-            document.getElementById('pay-product-detail').classList.add('hidden');
-            document.getElementById('pay-product-desc').value = '';
-            document.getElementById('pay-product-amount').value = '';
+            document.getElementById('pay-product-lines').replaceChildren();
             document.getElementById('pay-surcharge-on').checked = false;
             document.getElementById('pay-servtax-on').checked = true;
             document.getElementById('pay-ledger').value = 'LLC';
@@ -4356,6 +4580,8 @@
         }
 
         async function submitPayment() {
+            const btn = document.getElementById('pay-submit');
+            if (btn.disabled) return;
             const guest = document.getElementById('pay-guest').checked;
             if (!guest && !payPatient) { alert('Elige primero el paciente.'); return; }
             let buyerPhone = null;
@@ -4376,17 +4602,39 @@
             } else paymentName = payPatientLabel(payPatient);
             const f = payFigures();
             if (guest && !(f.product > 0)) { alert('Selecciona un producto con un precio mayor que cero.'); return; }
+            if (f.amount > 99999999.99 || f.product > 99999999.99 || f.total > 99999999.99) {
+                alert('El monto supera el límite de Cobros. Revisa los precios y las cantidades.');
+                return;
+            }
+            if (f.unitMode && !f.units) {
+                alert(f.service.quantity_source === 'manual' ? 'Ingresa una cantidad válida para el servicio.' : 'Guarda las unidades usadas en el encuentro del paciente y vuelve a seleccionarlo.');
+                return;
+            }
             if (f.amount === undefined || f.amount === null) { alert('Escribe el monto, por ejemplo 250 o 250.50.'); document.getElementById('pay-amount').focus(); return; }
             const paidOn = document.getElementById('pay-date').value;
             if (!paidOn) { alert('Elige la fecha del pago.'); return; }
             if (f.friend && !payFriendLeft) { alert('Ya no quedan cupos este mes.'); return; }
             const encounterId = guest ? null : document.getElementById('pay-encounter').value || null;
             if (encounterId && payPaidEncounters[encounterId] && !confirm('Este encuentro ya tiene un pago. ¿Registrar otro?')) return;
-            const productId = document.getElementById('pay-product').value;
-            const productName = document.getElementById('pay-product-desc').value.trim();
-            if (productId && !f.product) { alert('Escribe el precio del producto.'); document.getElementById('pay-product-amount').focus(); return; }
-            if (f.product && !productName) { alert('Escribe qué producto se vendió.'); document.getElementById('pay-product-desc').focus(); return; }
-            const productDesc = f.product ? productName + (f.productQty > 1 ? ` x${f.productQty}` : '') + (f.productTaxable ? '' : ' (sin sales tax)') : '';
+            if (f.lines.some(line => !line.selected || !line.name || !Number.isSafeInteger(line.quantity) || line.quantity < 1
+                || line.quantity > 100000 || !(line.unit_price > 0) || line.needs_stock && !line.product_id)) {
+                alert('Completa cada producto con nombre, cantidad y precio válidos, o quita la fila vacía.');
+                return;
+            }
+            const stockNeeded = new Map();
+            const addStock = (id, quantity) => { if (id) stockNeeded.set(id, (stockNeeded.get(id) || 0) + quantity); };
+            for (const line of f.lines) addStock(line.product_id, line.quantity);
+            if (f.units) addStock(f.service.inventory_product_id, f.units.quantity);
+            for (const [id, quantity] of stockNeeded) {
+                const record = payProducts.find(product => product.id === id);
+                if (!record || record.stock_qty < quantity || record.expires_on && record.expires_on < paidOn) {
+                    alert(`Stock insuficiente o producto no disponible: ${record?.name || 'insumo'}.`);
+                    return;
+                }
+            }
+            const productLines = f.lines.map(({ product_id, quantity, unit_price, name, taxable, tax }) =>
+                ({ product_id, quantity, unit_price, name, taxable, tax }));
+            const productDesc = productLines.map(line => `${line.name} ×${line.quantity}${line.taxable ? '' : ' (sin sales tax)'}`).join(' + ');
             const encounterForText = payEncounters[encounterId];
             const serviceCode = guest ? '' : document.getElementById('pay-service').value;
             const service = payServices.find(row => row.code === serviceCode);
@@ -4395,28 +4643,32 @@
             if (serviceCode === '__otro' && !otherService) { alert('Escribe qué servicio fue.'); document.getElementById('pay-service-other').focus(); return; }
             if (serviceCode && serviceCode !== '__otro' && !service) { alert('Ese servicio ya no está disponible. Elige otro.'); return; }
             const payCategory = guest || !(f.amount > 0) ? 'Solo producto' : service ? (service.category || 'Otro servicio') : 'Otro servicio';
-            const encounterText = encounterForText ? encounterSummaryText(encounterForText) : '';
-            let card = null;
-            if (PAY_CARD_METHODS.includes(f.method)) {
-                card = await confirmQuickAccept(f.total, f.method, f.surcharge);
-                if (!card) return;
-            }
-
-            const btn = document.getElementById('pay-submit');
+            const encounterText = encounterForText && !encounterForText.procedures_detail?.catalog_services
+                ? encounterSummaryText(encounterForText) : '';
             btn.disabled = true;
             try {
+                let card = null;
+                if (PAY_CARD_METHODS.includes(f.method)) {
+                    card = await confirmQuickAccept(f.total, f.method, f.surcharge);
+                    if (!card) return;
+                }
                 const { data: { user } } = await _supabase.auth.getUser();
                 const ledger = document.getElementById('pay-ledger').value;
                 const { data: saved, error } = await _supabase.from('payments').insert({
                     category: payCategory,
                     ledger,
                     service_tax: f.serviceTax,
-                    service_desc: service ? [service.name, encounterText].filter(Boolean).join(' · ')
+                    service_desc: service ? [f.units ? `${service.name} ×${f.units.quantity} (${service.unit})` : service.name, encounterText].filter(Boolean).join(' · ')
                         : [otherService, encounterText].filter(Boolean).join(' · ') || null,
                     ...(service ? { service_catalog_code: service.code } : {}),
+                    ...(f.units ? {
+                        service_quantity: f.units.quantity, unit_price_at_sale: service.unit_price,
+                        discount_detail: { volume_percent: f.units.volumePercent, volume_amount: f.units.volume, courtesy_percent: f.units.courtesyPercent, courtesy_amount: f.units.courtesy },
+                    } : {}),
                     product_desc: productDesc || null,
-                    product_id: f.product && productId !== '__otro' ? productId : null,
-                    product_qty: f.product ? f.productQty : null,
+                    product_lines: productLines,
+                    product_id: productLines.length === 1 ? productLines[0].product_id : null,
+                    product_qty: productLines.length ? productLines.reduce((sum, line) => sum + line.quantity, 0) : null,
                     product_amount: f.product,
                     product_tax: f.productTax,
                     surcharge: f.surcharge,
@@ -4438,7 +4690,10 @@
                     total: f.total,
                     created_by: user?.id || null,
                 }).select('id').single();
-                if (error) { alert('No se pudo registrar el pago: ' + error.message); return; }
+                if (error) {
+                    alert('No se pudo registrar el pago: ' + error.message + (card ? '\nSi el procesador ya aprobó el cargo, no vuelvas a cobrarlo.' : ''));
+                    return;
+                }
                 // The card fee is an LLC expense, linked to the payment.
                 if (f.fee) {
                     const { error: feeError } = await _supabase.from('acct_expenses').insert({
@@ -4448,12 +4703,7 @@
                     });
                     if (feeError) alert('El cobro se guardó, pero no la comisión de tarjeta (' + feeError.message + '). Agrégala a mano en Contabilidad → Gastos.');
                 }
-                // One less unit in stock, when the product's stock is being tracked.
-                const sold = payProducts.find(p => p.id === productId);
-                if (f.product && sold) {
-                    await _supabase.from('sale_products').update({ stock_qty: Math.max(0, sold.stock_qty - f.productQty), updated_at: new Date().toISOString() }).eq('id', sold.id);
-                    loadPayProducts();
-                }
+                if (stockNeeded.size) loadPayProducts();
                 resetPayForm();
                 document.getElementById('pay-month').value = paidOn.slice(0, 7);
                 await Promise.all([loadPaymentsList(), loadFriendCoupons()]);
@@ -5759,6 +6009,7 @@
             return candidates.length ? { ...candidates[0].procedures_detail.weight_loss, visit_date: candidates[0].visit_date } : null;
         }
 
+        let encounterFormRequest = 0;
         async function toggleSoapForm(show, note = null) {
             if (!show && soapDirty) {
                 const choice = await askUnsavedChanges();
@@ -5770,6 +6021,14 @@
                 // choice === 'discard' falls through and hides the form below
             }
 
+            const request = ++encounterFormRequest;
+            if (show) {
+                const patient = currentPatientId;
+                const { data, error } = await fetchSelectableServices();
+                if (request !== encounterFormRequest || patient !== currentPatientId) return;
+                encounterCatalog = data || [];
+                encounterCatalogError = !!error;
+            }
             const container = document.getElementById('soap-form-container');
             container.classList.toggle('hidden', !show);
             // The form's wrapper is its own z-10 layer, which left the history
@@ -5971,6 +6230,12 @@
                 alert(followUpProblem);
                 return false;
             }
+            const detail = getEncounterProcedures();
+            const incomplete = Object.values(detail.catalog_services || {}).find(row => row.unit_price != null && row.qty == null);
+            if (incomplete) {
+                alert(`Registra la cantidad de unidades usadas para ${incomplete.name}.`);
+                return false;
+            }
 
             let uploaded;
             try {
@@ -5982,7 +6247,6 @@
                 return false;
             }
 
-            const detail = getEncounterProcedures();
             const notes = cleanEncounterNotes(document.getElementById('enc-notes').value);
             const noteData = {
                 patient_id: currentPatientId,
@@ -9503,6 +9767,6 @@
         }
     </script>
     <script src="admin-contabilidad.js?v=20261127-current-codes"></script>
-    <script src="admin-productos.js?v=20261127-current-codes"></script>
+    <script src="admin-productos.js?v=20261128-quantity-checkout"></script>
 </body>
 </html>
