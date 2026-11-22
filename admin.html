@@ -102,6 +102,9 @@
             <a onclick="switchAdminView('accounting-view', this)" class="admin-only nav-link block px-4 py-2.5 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">
                 <span>Contabilidad</span><span class="nav-hint">Gastos, socios y reportes</span>
             </a>
+            <a onclick="switchAdminView('products-view', this)" class="admin-only nav-link block px-4 py-2.5 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">
+                <span>Productos y servicios</span><span class="nav-hint">Lo que vendemos, precios y stock</span>
+            </a>
             <a onclick="switchAdminView('schedule-view', this)" class="admin-only nav-link block px-4 py-2.5 opacity-60 hover:opacity-100 text-[10px] uppercase tracking-widest">
                 <span>Horarios</span><span class="nav-hint">Días y horas de atención</span>
             </a>
@@ -480,6 +483,10 @@
                                 <option value="check">Cheque</option>
                                 <option value="other">Otro</option>
                             </select>
+                            <label class="mt-2 flex items-center gap-2 text-xs cursor-pointer select-none">
+                                <input type="checkbox" id="pay-servtax-on" class="accent-[#B76E88]" checked onchange="renderPayTotals()">
+                                <span id="pay-servtax-label">Cobrar impuesto de servicios</span>
+                            </label>
                             <label id="pay-surcharge-opt" class="hidden mt-2 flex items-center gap-2 text-xs cursor-pointer select-none">
                                 <input type="checkbox" id="pay-surcharge-on" class="accent-[#B76E88]" onchange="renderPayTotals()">
                                 <span id="pay-surcharge-opt-label">Cobrar recargo de tarjeta</span>
@@ -538,6 +545,8 @@
         <!-- Recommendations View -->
         <!-- Contabilidad: built by admin-contabilidad.js -->
         <div id="accounting-view" class="admin-only flex-1 overflow-y-auto p-4 md:p-8 hidden"></div>
+        <!-- Productos y servicios: built by admin-productos.js -->
+        <div id="products-view" class="admin-only flex-1 overflow-y-auto p-4 md:p-8 hidden"></div>
 
         <div id="recommendations-view" class="flex-1 overflow-y-auto p-4 md:p-8 hidden">
             <div class="max-w-5xl mx-auto space-y-6">
@@ -2486,6 +2495,7 @@
             'messages-view': ['Mensajes', 'WhatsApp de la clínica. Los chats sin leer salen resaltados en verde.'],
             'schedule-view': ['Horarios', 'Días y horas en que se puede agendar en cada clínica.'],
             'payments-view': ['Cobros', 'Elige paciente y encuentro, el método de pago y marca el pago. Abajo, todos los pagos por día.'],
+            'products-view': ['Productos y servicios', 'Productos que vende Piel Spa: precios, stock y vencimientos. Cobros vende desde esta lista.'],
             'accounting-view': ['Contabilidad', 'Gastos, aportes de los socios, estado de cuenta mensual y reportes para la contadora.'],
         };
 
@@ -2517,6 +2527,7 @@
             else if (viewId === 'schedule-view') loadSchedule();
             else if (viewId === 'payments-view') loadPaymentsView();
             else if (viewId === 'accounting-view') window.Acc?.open();
+            else if (viewId === 'products-view') window.Prod?.open();
             else fetchPatients();
         }
 
@@ -4008,13 +4019,14 @@
         // Products for sale: the skincare catalog's "in stock" items (Contabilidad → Productos).
         let payProducts = [];
         async function loadPayProducts() {
-            const { data } = await _supabase.from('skincare_products').select('id, name, brand, clinic_price_usd, price_usd, sales_taxable, stock_qty')
-                .eq('in_stock', true).order('brand').order('name');
+            const { data } = await _supabase.from('sale_products').select('id, name, brand, size, sale_price, suggested_price, sales_taxable, stock_qty, expires_on')
+                .eq('active', true).order('brand').order('name');
             payProducts = data || [];
             const sel = document.getElementById('pay-product'), keep = sel.value;
             sel.innerHTML = '<option value="">Sin producto</option>' + payProducts.map(p => {
-                const price = p.clinic_price_usd ?? p.price_usd;
-                return `<option value="${escapeHtml(p.id)}">${escapeHtml(p.brand + ' · ' + p.name)}${price != null ? ' · ' + escapeHtml(formatAmount(price)) : ''}${p.stock_qty != null ? ` (${p.stock_qty} en stock)` : ''}</option>`;
+                const price = p.sale_price ?? p.suggested_price;
+                const expired = p.expires_on && p.expires_on < clinicDateIso(0);
+                return `<option value="${escapeHtml(p.id)}">${escapeHtml(p.brand + ' · ' + p.name)}${price != null ? ' · ' + escapeHtml(formatAmount(price)) : ''} (${p.stock_qty} en stock${expired ? ', VENCIDO' : ''})</option>`;
             }).join('') + '<option value="__otro">Otro producto…</option>';
             sel.value = keep;
         }
@@ -4023,7 +4035,7 @@
             document.getElementById('pay-product-detail').classList.toggle('hidden', !v);
             document.getElementById('pay-product-qty').value = '1';
             document.getElementById('pay-product-desc').value = p ? `${p.brand} · ${p.name}` : '';
-            const price = p ? (p.clinic_price_usd ?? p.price_usd) : null;
+            const price = p ? (p.sale_price ?? p.suggested_price) : null;
             document.getElementById('pay-product-amount').value = price != null ? Number(price).toFixed(2) : '';
             document.getElementById('pay-product-taxable').checked = p ? p.sales_taxable !== false : true;
             renderPayTotals();
@@ -4115,7 +4127,7 @@
             const friend = document.getElementById('pay-friend').checked;
             const discount = friend ? Math.min(FRIEND_COUPON_AMOUNT, amount || 0) : 0;
             const base = (amount || 0) - discount;
-            const serviceRate = payRates.services_taxed ? Number(payRates.tax_services) : 0;
+            const serviceRate = payRates.services_taxed && document.getElementById('pay-servtax-on').checked ? Number(payRates.tax_services) : 0;
             const serviceTax = roundTo(base * serviceRate, 2);
             const productTax = productTaxable ? roundTo(product * Number(payRates.tax_products), 2) : 0;
             const tax = roundTo(serviceTax + productTax, 2);
@@ -4144,6 +4156,7 @@
                 ? `Cobrar recargo de tarjeta (${payPct(payRates.surcharge_credit)}). Ojo: Visa y Mastercard no lo permiten en débito.`
                 : `Cobrar recargo de tarjeta (${payPct(payRates.surcharge_credit)})`;
             document.getElementById('pay-product-taxable').nextElementSibling.innerText = `Lleva sales tax (${payPct(payRates.tax_products)})`;
+            document.getElementById('pay-servtax-label').innerText = `Cobrar impuesto de servicios (${payPct(payRates.tax_services)})`;
             document.getElementById('pay-surcharge').innerText = formatAmount(f.surcharge);
             document.getElementById('pay-total').innerText = formatAmount(f.total);
             document.getElementById('pay-fee-note').innerText = f.fee ? `Cobrar en ${payRates.processor}. Comisión estimada ${formatAmount(f.fee)}.` : (f.method === 'cherry' ? 'Cherry deposita menos su comisión: regístrala en Contabilidad cuando llegue.' : '');
@@ -4236,6 +4249,7 @@
             document.getElementById('pay-product-desc').value = '';
             document.getElementById('pay-product-amount').value = '';
             document.getElementById('pay-surcharge-on').checked = false;
+            document.getElementById('pay-servtax-on').checked = true;
             document.getElementById('pay-ledger').value = 'LLC';
             renderPayTotals();
         }
@@ -4306,8 +4320,8 @@
                 }
                 // One less unit in stock, when the product's stock is being tracked.
                 const sold = payProducts.find(p => p.id === productId);
-                if (f.product && sold && sold.stock_qty != null) {
-                    await _supabase.from('skincare_products').update({ stock_qty: Math.max(0, sold.stock_qty - f.productQty) }).eq('id', sold.id);
+                if (f.product && sold) {
+                    await _supabase.from('sale_products').update({ stock_qty: Math.max(0, sold.stock_qty - f.productQty), updated_at: new Date().toISOString() }).eq('id', sold.id);
                     loadPayProducts();
                 }
                 resetPayForm();
@@ -9354,5 +9368,6 @@
         }
     </script>
     <script src="admin-contabilidad.js"></script>
+    <script src="admin-productos.js"></script>
 </body>
 </html>
