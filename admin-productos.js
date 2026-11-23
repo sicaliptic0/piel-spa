@@ -388,7 +388,7 @@
         if (!(base > 0) || !(percent > 0 && percent <= 100)) return null;
         const cents = BigInt(Math.round(base * 100));
         const factor = BigInt(100000000 - Math.round(percent * 1000000));
-        return Number((cents * factor + 9999999999n) / 10000000000n);
+        return Number((cents * factor + 50000000n) / 100000000n) / 100;
     }
 
     function previewServicePromo() {
@@ -397,10 +397,10 @@
         const price = servicePromoPrice(base, percent);
         const saved = services.find(s => s.code === $('svc-identity').value);
         const legacy = saved?.promo_percent == null && percent == null ? saved?.promo_price : null;
-        $('svc-promo-result').value = price != null ? money(price).replace(/\.00$/, '') : legacy != null ? money(legacy) : '';
+        $('svc-promo-result').value = price != null ? money(price) : legacy != null ? money(legacy) : '';
         $('svc-promo-preview').textContent = legacy != null
             ? 'Ingresa un porcentaje para recalcular la promoción guardada.'
-            : 'El resultado se redondea hacia arriba al dólar entero.';
+            : 'El precio promocional se muestra con dos decimales.';
     }
     const SERVICE_DIALOG = `<dialog id="svc-dialog" class="prod" aria-labelledby="svc-title"><form id="svc-form" class="p-6 space-y-3">
         <h3 class="text-2xl italic" id="svc-title" style="font-family:'Cormorant Garamond',serif"></h3>
@@ -522,7 +522,7 @@
         const promoBase = unitPrice ?? row.sale_price;
         const promotion = servicePromoPrice(promoBase, percent);
         if (percent != null && (promotion == null || promotion >= promoBase || promotion > 99999999.99)) {
-            $('svc-error').textContent = 'Ingresa un precio base y un porcentaje que produzca un precio final menor después del redondeo.';
+            $('svc-error').textContent = 'Ingresa un precio base y un porcentaje que produzca un precio final menor.';
             return;
         }
         const previous = services.find(s => s.code === identity);
