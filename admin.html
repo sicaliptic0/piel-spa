@@ -614,6 +614,7 @@
                         <span class="flex items-center gap-3">
                             <span id="wa-live-status" class="text-[9px] uppercase tracking-widest opacity-50"></span>
                             <a href="importar-chats.html" class="text-[9px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100 hover:text-[#B76E88]" title="Importar chats exportados de WhatsApp Business">⬆ Importar chats</a>
+                            <button type="button" onclick="openWaBotSettings()" class="text-[9px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100 hover:text-[#B76E88]" title="Asistente de WhatsApp: encendido, prueba, promoción y horario">🤖 Asistente</button>
                         </span>
                         <span class="flex items-center gap-3">
                             <button id="wa-notify-btn" onclick="enableWhatsAppNotifications()" class="hidden text-[9px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline">🔔 Activar avisos</button>
@@ -5250,7 +5251,19 @@
         // it needed every finished chat to be marked "Resuelto". It comes back with
         // the AI assistant, as the list of chats the bot hands to a person.
         // Set to true to show it again (filter, chips, "Resuelto" button, badge).
-        const WA_SHOW_ATTENTION = false;
+        let WA_SHOW_ATTENTION = false; // turned on when the assistant is on or in test mode
+        // The assistant answers this chat: on for everyone, or the number is in the test list.
+        function waBotOn(c) {
+            return !!(waSettings.bot_enabled || (waSettings.bot_test_phones || []).includes(c?.phone));
+        }
+        function waBotAvailable() {
+            return !!(waSettings.bot_enabled || (waSettings.bot_test_phones || []).length);
+        }
+        const WA_HANDOFF_LABELS = {
+            human: 'Pide hablar con alguien', question: 'Tiene una pregunta', medical: 'Pregunta de salud', photo: 'Envió una foto',
+            after_care: '⚠️ Molestia post-tratamiento', urgent: '🚨 Posible urgencia', complaint: 'Queja', payment: 'Pagos',
+            audio: 'Audio', precios: 'Pide precios', agendar: 'Quiere que le agenden', servicios: 'Pregunta de servicios', unknown: 'El asistente no entendió',
+        };
         // Opens on every chat (unread ones highlighted); "No leídos" narrows it.
         let waFilter = WA_SHOW_ATTENTION ? 'attention' : 'all';
         let waLiveStatus = '';
@@ -5262,6 +5275,7 @@
         async function startWhatsAppInbox() {
             const { data: settings } = await _supabase.from('wa_settings').select('*').eq('id', 1).maybeSingle();
             if (settings) waSettings = settings;
+            WA_SHOW_ATTENTION = waBotAvailable();
             await loadConversations();
             _supabase.channel('wa-inbox')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations' }, onWaConversationChange)
@@ -5346,7 +5360,7 @@
             const filters = WA_SHOW_ATTENTION
                 ? [['unread', 'No leídos'], ['attention', 'Por responder'], ['all', 'Todos'], ['human', 'Atención humana']]
                 : [['all', 'Todos'], ['unread', 'No leídos']];
-            if (waSettings.bot_enabled) filters.push(['bot', 'IA']);
+            if (waBotAvailable()) filters.push(['bot', 'IA']);
             const counts = { attention: waConversations.filter(c => c.needs_attention).length, unread: waConversations.filter(c => c.unread_count > 0).length };
             document.getElementById('wa-filters').innerHTML = filters.map(([id, label]) => `
                 <button onclick="setWaFilter('${id}')" class="text-[9px] uppercase tracking-widest font-bold px-2.5 py-1 rounded-full border transition ${waFilter === id ? 'bg-[#2A2330] text-white border-[#2A2330]' : 'border-[#EDE1E7] opacity-70 hover:opacity-100'}">
@@ -5359,8 +5373,8 @@
                 if (waFilter === 'attention' && !c.needs_attention) return false;
                 // Stays listed while open, so reading it doesn't make it vanish.
                 if (waFilter === 'unread' && !(c.unread_count > 0) && c.id !== waActiveId) return false;
-                if (waFilter === 'human' && (c.bot_active && waSettings.bot_enabled)) return false;
-                if (waFilter === 'bot' && !(c.bot_active && waSettings.bot_enabled)) return false;
+                if (waFilter === 'human' && (c.bot_active && waBotOn(c))) return false;
+                if (waFilter === 'bot' && !(c.bot_active && waBotOn(c))) return false;
                 if (!query) return true;
                 return waName(c).toLowerCase().includes(query) || (digits.length >= 3 && c.phone.includes(digits));
             });
@@ -5391,7 +5405,9 @@
                         <div class="flex gap-2 mt-1 text-[8px] uppercase tracking-widest font-bold">
                             ${WA_SHOW_ATTENTION && c.needs_attention ? '<span class="text-amber-700">● Por responder</span>' : ''}
                             ${!c.patient_id ? '<span class="opacity-40">Nuevo contacto</span>' : ''}
-                            ${waSettings.bot_enabled ? (c.bot_active ? '<span class="text-purple-600">🤖 IA</span>' : '<span class="text-[#B76E88]">👤 Humano</span>') : ''}
+                            ${waBotOn(c) ? (c.bot_active ? '<span class="text-purple-600">🤖 IA</span>' : '<span class="text-[#B76E88]">👤 Humano</span>') : ''}
+                            ${WA_SHOW_ATTENTION && c.needs_attention && c.handoff_reason ? `<span class="text-amber-700 normal-case tracking-normal">${escapeHtml(WA_HANDOFF_LABELS[c.handoff_reason] || c.handoff_reason)}</span>` : ''}
+                            ${c.ad_headline ? `<span class="text-sky-700 normal-case tracking-normal" title="${escapeHtml(c.ad_headline)}">📣 Anuncio</span>` : ''}
                         </div>
                     </div>
                 </button>`;
@@ -5489,20 +5505,23 @@
 
             const mode = document.getElementById('wa-chat-mode');
             const action = document.getElementById('wa-chat-action');
-            if (waSettings.bot_enabled && c.bot_active) {
-                mode.innerHTML = '<span class="text-purple-600">🤖 IA atendiendo</span>';
+            const botHere = waBotOn(c);
+            const adTag = c.ad_headline ? ` <span class="text-sky-700 normal-case tracking-normal">· 📣 Anuncio: ${escapeHtml(c.ad_headline)}</span>` : '';
+            if (botHere && c.bot_active) {
+                mode.innerHTML = '<span class="text-purple-600">🤖 IA atendiendo</span>' + adTag;
                 action.innerText = 'Tomar conversación';
                 action.className = 'flex-shrink-0 text-[9px] uppercase tracking-widest font-bold px-3 py-2 rounded-full transition bg-[#2A2330] text-white hover:bg-[#B76E88]';
                 action.disabled = false;
                 action.classList.remove('hidden');
                 action.onclick = () => takeWaConversation(c.id);
             } else {
-                mode.innerHTML = waSettings.bot_enabled ? '<span class="text-[#B76E88]">👤 Atención humana</span>' : '';
-                action.innerText = waSettings.bot_enabled ? 'Resolver · reactivar IA' : (c.needs_attention ? '✓ Marcar resuelto' : 'Resuelto');
+                const why = c.needs_attention && c.handoff_reason ? ` <span class="text-amber-700 normal-case tracking-normal">· ${escapeHtml(WA_HANDOFF_LABELS[c.handoff_reason] || c.handoff_reason)}</span>` : '';
+                mode.innerHTML = (botHere ? '<span class="text-[#B76E88]">👤 Atención humana</span>' : '') + why + adTag;
+                action.innerText = botHere ? 'Resolver · reactivar IA' : (c.needs_attention ? '✓ Marcar resuelto' : 'Resuelto');
                 action.className = 'flex-shrink-0 text-[9px] uppercase tracking-widest font-bold px-3 py-2 rounded-full transition border border-[#25D366] text-[#128C7E] hover:bg-[#25D366] hover:text-white';
-                action.disabled = !waSettings.bot_enabled && !c.needs_attention;
+                action.disabled = !botHere && !c.needs_attention;
                 action.onclick = () => resolveWaConversation(c.id);
-                action.classList.toggle('hidden', !waSettings.bot_enabled && !WA_SHOW_ATTENTION);
+                action.classList.toggle('hidden', !botHere && !WA_SHOW_ATTENTION);
             }
 
             // Closed chat: text still goes, behind a door-opener template (no files).
@@ -5510,6 +5529,76 @@
             document.getElementById('wa-window-note').classList.toggle('hidden', windowOpen);
             document.getElementById('wa-file').disabled = !windowOpen;
             document.getElementById('wa-input').placeholder = windowOpen ? 'Escribe un mensaje…' : 'Escribe el mensaje que le llegará cuando responda…';
+        }
+
+        // ---- Assistant settings (wa_settings): off / test numbers / on, promotion, human hours ----
+        function openWaBotSettings() {
+            let dlg = document.getElementById('wa-bot-dialog');
+            if (!dlg) {
+                dlg = document.createElement('dialog');
+                dlg.id = 'wa-bot-dialog';
+                dlg.className = 'rounded-2xl p-0 w-[min(520px,calc(100vw-32px))]';
+                dlg.innerHTML = `<form class="p-6 space-y-4 text-sm" onsubmit="event.preventDefault(); saveWaBotSettings()">
+                    <h3 class="text-2xl italic" style="font-family:'Cormorant Garamond',serif">Asistente de WhatsApp</h3>
+                    <fieldset class="space-y-1"><legend class="font-semibold mb-1">¿A quién responde?</legend>
+                        <label class="flex gap-2"><input type="radio" name="wa-bot-mode" value="off"> Apagado: responde solo el equipo</label>
+                        <label class="flex gap-2"><input type="radio" name="wa-bot-mode" value="test"> Prueba: solo a los números de abajo</label>
+                        <label class="flex gap-2"><input type="radio" name="wa-bot-mode" value="on"> Encendido: a todos</label>
+                    </fieldset>
+                    <label class="block">Números de prueba (con código de país, uno por línea)
+                        <textarea id="wa-bot-phones" rows="3" class="w-full border border-[#EDE1E7] rounded-lg p-2 mt-1" placeholder="19295550000"></textarea></label>
+                    <label class="block">Promoción que menciona en cada saludo (vacío = ninguna)
+                        <textarea id="wa-bot-promo" rows="2" maxlength="300" class="w-full border border-[#EDE1E7] rounded-lg p-2 mt-1"></textarea></label>
+                    <fieldset><legend class="font-semibold mb-1">Horario de atención humana (Nueva York)</legend>
+                        <div id="wa-bot-days" class="flex flex-wrap gap-2 mb-2"></div>
+                        <div class="flex items-center gap-2"><input type="time" id="wa-bot-open" class="border border-[#EDE1E7] rounded-lg p-1"> a <input type="time" id="wa-bot-close" class="border border-[#EDE1E7] rounded-lg p-1"></div>
+                    </fieldset>
+                    <p class="text-xs opacity-70">Los precios que muestra el asistente salen de Productos → Servicios, solo de los marcados "Visible en el asistente".</p>
+                    <p id="wa-bot-error" class="text-red-700" role="alert"></p>
+                    <div class="flex justify-end gap-2"><button type="button" class="px-4 py-2 rounded-full border border-[#EDE1E7]" onclick="this.closest('dialog').close()">Cancelar</button>
+                        <button class="px-4 py-2 rounded-full bg-[#2A2330] text-white">Guardar</button></div>
+                </form>`;
+                document.body.appendChild(dlg);
+            }
+            const phones = waSettings.bot_test_phones || [];
+            const modeNow = waSettings.bot_enabled ? 'on' : phones.length ? 'test' : 'off';
+            dlg.querySelectorAll('[name="wa-bot-mode"]').forEach(r => { r.checked = r.value === modeNow; });
+            document.getElementById('wa-bot-phones').value = phones.join('\n');
+            document.getElementById('wa-bot-promo').value = waSettings.promo_text || '';
+            const h = waSettings.human_hours || { days: [1, 2, 3, 4, 5, 6], open: '09:00', close: '19:00' };
+            document.getElementById('wa-bot-days').innerHTML = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((d, i) =>
+                `<label class="flex gap-1 items-center"><input type="checkbox" value="${i}" ${h.days.includes(i) ? 'checked' : ''}> ${d}</label>`).join('');
+            document.getElementById('wa-bot-open').value = h.open;
+            document.getElementById('wa-bot-close').value = h.close;
+            document.getElementById('wa-bot-error').textContent = '';
+            dlg.showModal();
+        }
+
+        async function saveWaBotSettings() {
+            const dlg = document.getElementById('wa-bot-dialog');
+            const mode = dlg.querySelector('[name="wa-bot-mode"]:checked')?.value || 'off';
+            const phones = [...new Set(document.getElementById('wa-bot-phones').value.split(/[\s,;]+/).map(p => p.replace(/\D/g, '')).filter(p => p.length >= 10))];
+            const days = [...document.querySelectorAll('#wa-bot-days input:checked')].map(i => Number(i.value));
+            const open = document.getElementById('wa-bot-open').value, close = document.getElementById('wa-bot-close').value;
+            const err = document.getElementById('wa-bot-error');
+            if (mode === 'test' && !phones.length) { err.textContent = 'Agrega al menos un número de prueba.'; return; }
+            if (!days.length || !open || !close || close <= open) { err.textContent = 'Revisa los días y el horario.'; return; }
+            if (mode === 'on' && !confirm('El asistente responderá a todos los chats de WhatsApp. ¿Encenderlo?')) return;
+            const row = {
+                bot_enabled: mode === 'on',
+                bot_test_phones: mode === 'off' ? [] : phones,
+                promo_text: document.getElementById('wa-bot-promo').value.trim(),
+                human_hours: { days, open, close },
+                updated_at: new Date().toISOString(),
+            };
+            const { data, error } = await _supabase.from('wa_settings').update(row).eq('id', 1).select('*').single();
+            if (error) { err.textContent = 'No se pudo guardar: ' + error.message; return; }
+            waSettings = data;
+            WA_SHOW_ATTENTION = waBotAvailable();
+            dlg.close();
+            renderConversationList();
+            if (waActiveId) renderChatHeader();
+            updateWaBadge();
         }
 
         async function takeWaConversation(id) {
@@ -5520,8 +5609,8 @@
         // "Resolver": nobody needs to answer anymore; with the AI on, it takes
         // the chat back (bot_active = true).
         async function resolveWaConversation(id) {
-            const updates = { needs_attention: false, unread_count: 0 };
-            if (waSettings.bot_enabled) Object.assign(updates, { bot_active: true, human_since: null, human_by: null });
+            const updates = { needs_attention: false, unread_count: 0, handoff_reason: null };
+            if (waBotOn(waConversations.find(c => c.id === id))) Object.assign(updates, { bot_active: true, human_since: null, human_by: null, bot_state: null });
             const { error } = await _supabase.from('wa_conversations').update(updates).eq('id', id);
             if (error) alert('No se pudo actualizar: ' + error.message);
         }

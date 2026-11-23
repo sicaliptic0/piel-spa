@@ -2,6 +2,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 import { clinicDate, emailConfig, escapeHtml, formatTime12h, sendEmail } from "../_shared/clinic.ts";
 import { clinicPlaces, dayEs, placeFor } from "../_shared/appointmentText.ts";
 import { handleRescheduleReply, startReschedule } from "./reschedule.ts";
+import { runBot } from "./bot.ts";
 import { sendPushToStaff } from "../_shared/push.ts";
 import { consentFields, consentReply } from "../_shared/marketing.ts";
 import {
@@ -123,6 +124,17 @@ async function handleMessage(db: SupabaseClient, m: Json, contacts: Json[]) {
     await saveRaw(db, "unsupported", null, m);
   }
 
+  // Came from a Meta ad (click-to-WhatsApp): remember which one on the chat.
+  if (m.referral) {
+    const r = m.referral;
+    await db.from("wa_conversations").update({
+      ad_referral: { source_id: r.source_id ?? null, source_type: r.source_type ?? null, source_url: r.source_url ?? null,
+        headline: r.headline ?? null, body: r.body ?? null, ctwa_clid: r.ctwa_clid ?? null },
+      ad_headline: String(r.headline || r.body || r.source_id || "Anuncio").slice(0, 120),
+      ad_at: row.created_at,
+    }).eq("id", conv.id);
+  }
+
   // Duplicate deliveries from Meta (same wa_message_id) are ignored.
   const { error } = await db.from("wa_messages").insert(row);
   if (error && !String(error.message).includes("duplicate")) console.error("save message:", error.message);
@@ -158,6 +170,13 @@ async function handleMessage(db: SupabaseClient, m: Json, contacts: Json[]) {
   if (m.type === "button" && m.context?.id) {
     const outcome = await handleTemplateButton(db, conv.id, waId, String(m.context.id), String(m.button?.text || m.button?.payload || ""), delivered);
     if (outcome === "done") return;
+  }
+
+  // The WhatsApp assistant (bot.ts) answers when it is on for this chat.
+  try {
+    if (await runBot(db, conv.id, waId, m, String(row.body || ""))) return;
+  } catch (e) {
+    console.error("bot:", (e as Error).message);
   }
 
   const { data: after } = await db.from("wa_conversations").select("needs_attention, profile_name, patient_id").eq("id", conv.id).single();
