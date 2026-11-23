@@ -4,8 +4,9 @@ import { clinicPlaces, dayEs, placeFor } from "../_shared/appointmentText.ts";
 import { sendWhatsAppMessage } from "../_shared/whatsapp.ts";
 import { sendPushToStaff } from "../_shared/push.ts";
 import { startReschedule } from "./reschedule.ts";
+import { matchMenuIntent } from "./intent.ts";
 
-// WhatsApp assistant, phase 1: menus only, no AI.
+// WhatsApp assistant: catalog-backed menus, with intent matching in test mode.
 //
 // Answers only while wa_bot_handles() is true: the bot is on (wa_settings.bot_enabled)
 // or the number is in wa_settings.bot_test_phones, and the chat is not with a
@@ -36,10 +37,9 @@ type Loc = "piel_spa" | "divine_bliss";
 
 const BOOKING_URL = "https://piel-spa.com/agendar.html";
 const MAPS_URL = "https://maps.app.goo.gl/?q=481+8th+Ave+Suite+1221+New+York+NY+10001";
-const GREET_AGAIN_HOURS = 12;
 
 type Hours = { days: number[]; open: string; close: string };
-type Settings = { promo_text: string; promo_text_en: string; human_hours: Hours; product_discount: number };
+type Settings = { promo_text: string; promo_text_en: string; human_hours: Hours; product_discount: number; test_phones: string[]; test_mode: boolean };
 type Conv = {
   id: string; patient_id: string | null; profile_name: string | null; bot_state: string | null; bot_greeted_at: string | null;
   bot_lang: Lang | null; bot_location: Loc | null;
@@ -110,12 +110,14 @@ function dayText(iso: string, lang: Lang): string {
 
 // ---------- settings, hours ----------
 async function loadSettings(db: SupabaseClient): Promise<Settings> {
-  const { data } = await db.from("wa_settings").select("promo_text, promo_text_en, promo_ends_on, product_promo_percent, product_promo_ends_on, human_hours").eq("id", 1).maybeSingle();
+  const { data } = await db.from("wa_settings").select("bot_enabled, bot_test_phones, promo_text, promo_text_en, promo_ends_on, product_promo_percent, product_promo_ends_on, human_hours").eq("id", 1).maybeSingle();
   const expired = data?.promo_ends_on && data.promo_ends_on < clinicDate(0);
   return {
     promo_text: expired ? "" : String(data?.promo_text ?? "").trim(),
     promo_text_en: expired ? "" : String(data?.promo_text_en ?? "").trim(),
     product_discount: (data?.product_promo_ends_on || "") >= clinicDate(0) ? Number(data?.product_promo_percent) || 0 : 0,
+    test_phones: data?.bot_test_phones ?? [],
+    test_mode: data?.bot_enabled === false,
     human_hours: data?.human_hours ?? { days: [1, 2, 3, 4, 5, 6], open: "09:00", close: "19:00" },
   };
 }
@@ -206,9 +208,12 @@ async function patientLocation(db: SupabaseClient, patientId: string): Promise<L
 }
 
 // ---------- first contact: language, location ----------
-async function askLanguage(db: SupabaseClient, conv: Conv, waId: string) {
+const trialNote = (s: Settings, lang: Lang) => s.test_mode ? L(lang, "Asistente virtual · versión de prueba\n\n", "Virtual assistant · trial version\n\n") : "";
+
+async function askLanguage(db: SupabaseClient, conv: Conv, waId: string, s: Settings) {
   await sendButtons(db, conv, waId,
-    "¡Hola! 💕 Gracias por escribirnos. ¿En qué idioma prefieres que te atendamos?\n\nHi! 💕 Thanks for reaching out. Which language do you prefer?",
+    (s.test_mode ? "Versión de prueba · Trial version\n\n" : "") +
+    "¿En qué idioma prefieres que te atendamos?\n\nWhich language do you prefer?",
     [{ id: "bot:lang:es", title: "Español" }, { id: "bot:lang:en", title: "English" }]);
 }
 
@@ -236,16 +241,25 @@ async function welcome(db: SupabaseClient, conv: Conv, waId: string, s: Settings
     : L(lang, "¡Bienvenida/o a Piel Spa Manhattan! 💕 Soy el asistente virtual y te ayudo con servicios, precios y citas.",
       "Welcome to Piel Spa Manhattan! 💕 I'm the virtual assistant and can help with services, prices and appointments.");
   const promo = promoFor(s, lang) ? `\n\n${promoFor(s, lang)}` : "";
-  const body = `${hello}${promo}\n\n` + L(lang,
-    "¿En qué te puedo ayudar? Toca *Ver opciones*. Si prefieres hablar con nuestro equipo, elige \"Hablar con alguien\".",
-    "How can I help? Tap *See options*. If you'd rather talk to our team, choose \"Talk to someone\".");
+  const body = `${trialNote(s, lang)}${hello}${promo}\n\n` + L(lang,
+    "¿Qué estás buscando? Escríbelo con tus palabras o toca *Ver opciones*. Puedes cambiar de idioma o hablar con el equipo desde el menú.",
+    "What are you looking for? Type it in your own words or tap *See options*. You can change the language or talk to our team from the menu.");
   await mainMenu(db, conv, waId, lang, body);
   await saveConv(db, conv, { bot_greeted_at: new Date().toISOString() });
 }
 
 async function mainMenu(db: SupabaseClient, conv: Conv, waId: string, lang: Lang, body?: string) {
+  if (conv.bot_location === "divine_bliss") {
+    await setState(db, conv, null);
+    await sendButtons(db, conv, waId, body ?? L(lang, "¿Cómo podemos ayudarte en Divine Bliss NJ?", "How can we help at Divine Bliss NJ?"), [
+      { id: "bot:products", title: L(lang, "Ver skincare", "Shop skincare") },
+      { id: "bot:human:divine_bliss", title: L(lang, "Hablar con alguien", "Talk to someone") },
+      { id: "bot:lang:choose", title: L(lang, "Cambiar idioma", "Change language") },
+    ]);
+    return;
+  }
   const rows: Row[] = [
-    { id: "bot:question", title: L(lang, "Tengo una pregunta", "I have a question"), description: L(lang, "Escríbela y te responde nuestro equipo", "Type it and our team will reply") },
+    { id: "bot:question", title: L(lang, "Escribir mi consulta", "Type a question"), description: L(lang, "Busca en nuestro menú con tus palabras", "Search our menu in your own words") },
     { id: "bot:services", title: L(lang, "Servicios y precios", "Services & prices"), description: L(lang, "Faciales, peelings, inyectables y más", "Facials, peels, injectables and more") },
     { id: "bot:products", title: L(lang, "Productos de skincare", "Skincare products"), description: L(lang, "Busca por nombre o necesidad", "Browse by name or concern") },
     { id: "bot:book", title: L(lang, "Agendar cita", "Book appointment"), description: L(lang, "Elige día y hora disponibles", "Pick an available day and time") },
@@ -254,6 +268,7 @@ async function mainMenu(db: SupabaseClient, conv: Conv, waId: string, lang: Lang
   if (conv.patient_id) rows.push({ id: "bot:mine", title: L(lang, "Mis citas", "My appointments"), description: L(lang, "Ver o cambiar tu cita", "See or change your appointment") });
   rows.push({ id: "bot:info", title: L(lang, "Ubicación y horario", "Location & hours"), description: L(lang, "481 8th Ave, frente a Penn Station", "481 8th Ave, across from Penn Station") });
   rows.push({ id: "bot:loc:divine_bliss", title: "Divine Bliss (NJ)", description: L(lang, "Consultas sobre nuestra sede de New Jersey", "Questions about our New Jersey location") });
+  rows.push({ id: "bot:lang:choose", title: L(lang, "Cambiar idioma", "Change language"), description: "Español / English" });
   await setState(db, conv, null);
   await sendList(db, conv, waId, body ?? L(lang, "¿En qué más te puedo ayudar?", "Anything else I can help with?"), L(lang, "Ver opciones", "See options"), rows, lang);
 }
@@ -480,6 +495,42 @@ async function categoryDetail(db: SupabaseClient, conv: Conv, waId: string, inde
   }
 }
 
+async function routeQuestion(db: SupabaseClient, conv: Conv, waId: string, lang: Lang, s: Settings, body: string): Promise<boolean> {
+  const { categories, byCat } = await botServices(db);
+  const services = categories.flatMap((category) => byCat[category]);
+  const t = norm(body);
+  const direct = services.find((service) => [service.name, service.bot_name_en].some((name) => name && norm(name).length > 3 && hasWord(t, [norm(name)])));
+  let intent = direct ? `service_${services.indexOf(direct)}` : "unknown";
+  if (!direct && s.test_mode && s.test_phones.includes(waId)) {
+    const choices = Object.fromEntries([
+      ...categories.map((category, index) => [`category_${index}`, `${category} / ${catName(category, "en")}`]),
+      ...services.slice(0, 60).map((service, index) => [`service_${index}`, [service.name, service.bot_name_en].filter(Boolean).join(" / ")]),
+    ]);
+    intent = await matchMenuIntent(body, choices);
+  }
+  const service = /^service_\d+$/.test(intent) ? services[Number(intent.split("_")[1])] : undefined;
+  if (service) {
+    await sendButtons(db, conv, waId, priceLine(service, lang).slice(0, 1000), back(lang));
+    return true;
+  }
+  const category = /^category_\d+$/.test(intent) ? Number(intent.split("_")[1]) : -1;
+  if (category >= 0 && category < categories.length) {
+    if (isConsult(categories[category])) {
+      await sendButtons(db, conv, waId, priceLine(byCat[categories[category]][0], lang).slice(0, 1000), back(lang));
+    } else await categoryDetail(db, conv, waId, category, s, lang);
+    return true;
+  }
+  switch (intent) {
+    case "products": await searchProducts(db, conv, waId, lang, t, s); return true;
+    case "services": await servicesMenu(db, conv, waId, s, lang); return true;
+    case "book": await book(db, conv, waId, lang); return true;
+    case "info": await info(db, conv, waId, s, lang); return true;
+    case "mine": await mine(db, conv, waId, lang); return true;
+    case "human": await handOff(db, conv, waId, "question", s, lang, body); return true;
+    default: return false;
+  }
+}
+
 async function upcoming(db: SupabaseClient, conv: Conv) {
   if (!conv.patient_id) return [];
   const { data } = await db.from("appointments")
@@ -622,8 +673,11 @@ export async function runBot(db: SupabaseClient, conversationId: string, waId: s
   const tapped = m.type === "interactive" ? String(m.interactive?.list_reply?.id || m.interactive?.button_reply?.id || "") : "";
   const [, action, arg] = tapped.startsWith("bot:") ? tapped.split(":") : ["", "", ""];
 
-  // Language: chosen, saved, or (known patients) read from the message.
-  if (action === "lang" && (arg === "es" || arg === "en")) await saveConv(db, conv, { bot_lang: arg });
+  const t = norm(body);
+  const manualLang = action === "lang" && (arg === "es" || arg === "en") ? arg
+    : !tapped && /^(?:espanol|spanish)$/.test(t) ? "es"
+    : !tapped && /^(?:ingles|english)$/.test(t) ? "en" : null;
+  if (manualLang) await saveConv(db, conv, { bot_lang: manualLang, bot_state: null });
   if (!conv.bot_lang && conv.patient_id) await saveConv(db, conv, { bot_lang: detectLang(body) ?? "es" });
   const lang: Lang = conv.bot_lang ?? detectLang(body) ?? "es";
 
@@ -635,7 +689,6 @@ export async function runBot(db: SupabaseClient, conversationId: string, waId: s
   }
 
   // Safety first, whatever the location or step: these always go to a person.
-  const t = norm(body);
   if (!tapped && t) {
     if (has(t, URGENT)) { await handOff(db, conv, waId, "urgent", s, lang, body); return true; }
     if (has(t, AFTER_CARE)) { await handOff(db, conv, waId, "after_care", s, lang, body); return true; }
@@ -643,19 +696,19 @@ export async function runBot(db: SupabaseClient, conversationId: string, waId: s
   }
 
   // Unknown number: ask language, then location.
-  if (!conv.bot_lang) { await askLanguage(db, conv, waId); return true; }
+  if ((action === "lang" && arg === "choose") || (!tapped && /^(?:idioma|cambiar idioma|language|change language)$/.test(t)) || !conv.bot_lang) {
+    await askLanguage(db, conv, waId, s);
+    return true;
+  }
   if (!conv.bot_location) { await askLocation(db, conv, waId, lang); return true; }
 
   const productAction = ["products", "product", "pickup"].includes(action) || (action === "human" && arg === "product_contact");
   const productMessage = (!tapped && has(t, PRODUCTS)) || conv.bot_state?.startsWith("product_");
   // New Jersey uses its own product inventory. Service inquiries go to staff.
   if (conv.bot_location === "divine_bliss" && !productAction && (Boolean(action) || !productMessage)) {
-    if (action === "loc" || action === "menu") {
-      await setState(db, conv, null);
-      await sendButtons(db, conv, waId, L(lang, "¿Cómo podemos ayudarte en Divine Bliss NJ?", "How can we help at Divine Bliss NJ?"), [
-        { id: "bot:products", title: L(lang, "Ver skincare", "Shop skincare") },
-        { id: "bot:human:divine_bliss", title: L(lang, "Hablar con alguien", "Talk to someone") },
-      ]);
+    if (action === "loc" || action === "menu" || manualLang || /^(?:menu|inicio|start)$/.test(t)) {
+      await mainMenu(db, conv, waId, lang, trialNote(s, lang) + L(lang,
+        "¿Qué estás buscando en Divine Bliss NJ?", "What are you looking for at Divine Bliss NJ?"));
       return true;
     }
     await handOff(db, conv, waId, "divine_bliss", s, lang, body || (tapped ? "Eligió Divine Bliss" : ""));
@@ -663,7 +716,7 @@ export async function runBot(db: SupabaseClient, conversationId: string, waId: s
   }
 
   // Piel Spa Manhattan. Just chose language/location → the greeting.
-  if (action === "lang" || action === "loc") { await welcome(db, conv, waId, s, lang); return true; }
+  if (manualLang || action === "loc") { await welcome(db, conv, waId, s, lang); return true; }
 
   switch (action) {
     case "menu": await setState(db, conv, null); await mainMenu(db, conv, waId, lang); return true;
@@ -690,9 +743,9 @@ export async function runBot(db: SupabaseClient, conversationId: string, waId: s
     case "mine": await mine(db, conv, waId, lang); return true;
     case "info": await info(db, conv, waId, s, lang); return true;
     case "question":
-      await setState(db, conv, "await_question");
-      await sendText(db, conv, waId, L(lang, "Claro, cuéntame tu pregunta en un mensaje y se la paso a nuestro equipo. ✍️",
-        "Sure, tell me your question in one message and I'll pass it to our team. ✍️"));
+      await setState(db, conv, "search_menu");
+      await sendText(db, conv, waId, L(lang, "¿Qué estás buscando? Escribe el nombre del tratamiento, producto o tema que quieres consultar.",
+        "What are you looking for? Type the name of the treatment, product, or topic you have in mind."));
       return true;
     case "resched": {
       const outcome = await startReschedule(db, conv.id, waId, arg || null);
@@ -747,20 +800,19 @@ export async function runBot(db: SupabaseClient, conversationId: string, waId: s
   }
   if (conv.bot_location === "divine_bliss") { await handOff(db, conv, waId, "divine_bliss", s, lang, body); return true; }
 
-  const greetedRecently = conv.bot_greeted_at && Date.now() - new Date(conv.bot_greeted_at).getTime() < GREET_AGAIN_HOURS * 3600_000;
-  const short = t.length <= 40;
-  if (!greetedRecently) { await welcome(db, conv, waId, s, lang); return true; }
-  if (short && hasWord(t, GREETING)) { await welcome(db, conv, waId, s, lang); return true; }
-  if (short && hasWord(t, THANKS)) {
+  const simple = t.replace(/[¡!¿?.]+/g, "").trim();
+  if (GREETING.includes(simple)) { await welcome(db, conv, waId, s, lang); return true; }
+  if (THANKS.includes(simple)) {
     await sendText(db, conv, waId, L(lang, "¡Con gusto! 💕 Si necesitas algo más, aquí estoy. Escribe *menú* para ver las opciones.",
       "You're welcome! 💕 If you need anything else, I'm here. Type *menu* to see the options."));
     return true;
   }
   if (has(t, BOOK)) { await book(db, conv, waId, lang); return true; }
   if (has(t, INFO)) { await info(db, conv, waId, s, lang); return true; }
+  if (conv.bot_state === "search_menu") await setState(db, conv, null);
+  if (m.type === "text" && await routeQuestion(db, conv, waId, lang, s, body)) return true;
   if (has(t, SERVICES)) { await servicesMenu(db, conv, waId, s, lang); return true; }
 
-  // Phase 1 doesn't read free text: a person answers.
   await handOff(db, conv, waId, "unknown", s, lang, body);
   return true;
 }

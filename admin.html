@@ -614,7 +614,7 @@
                         <span class="flex items-center gap-3">
                             <span id="wa-live-status" class="text-[9px] uppercase tracking-widest opacity-50"></span>
                             <a href="importar-chats.html" class="text-[9px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100 hover:text-[#B76E88]" title="Importar chats exportados de WhatsApp Business">⬆ Importar chats</a>
-                            <button type="button" onclick="openWaBotSettings()" class="text-[9px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100 hover:text-[#B76E88]" title="Asistente de WhatsApp: encendido, prueba, promoción y horario">🤖 Asistente</button>
+                            <button type="button" id="wa-assistant-settings-btn" onclick="openWaBotSettings()" class="text-[9px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100 hover:text-[#B76E88]" title="Asistente de WhatsApp: encendido, prueba, promoción y horario">🤖 Asistente</button>
                         </span>
                         <span class="flex items-center gap-3">
                             <button id="wa-notify-btn" onclick="enableWhatsAppNotifications()" class="hidden text-[9px] uppercase tracking-widest font-bold text-[#B76E88] hover:underline">🔔 Activar avisos</button>
@@ -5259,6 +5259,10 @@
         function waBotAvailable() {
             return !!(waSettings.bot_enabled || (waSettings.bot_test_phones || []).length);
         }
+        function refreshWaAssistantLabel() {
+            document.getElementById('wa-assistant-settings-btn').textContent = waSettings.bot_enabled
+                ? '🤖 Asistente' : waBotAvailable() ? '🤖 Asistente · versión de prueba' : '🤖 Asistente · apagado';
+        }
         const WA_HANDOFF_LABELS = {
             human: 'Pide hablar con alguien', question: 'Tiene una pregunta', medical: 'Pregunta de salud', photo: 'Envió una foto',
             after_care: '⚠️ Molestia post-tratamiento', urgent: '🚨 Posible urgencia', complaint: 'Queja', payment: 'Pagos',
@@ -5277,6 +5281,7 @@
             const { data: settings } = await _supabase.from('wa_settings').select('*').eq('id', 1).maybeSingle();
             if (settings) waSettings = settings;
             WA_SHOW_ATTENTION = waBotAvailable();
+            refreshWaAssistantLabel();
             await loadConversations();
             _supabase.channel('wa-inbox')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations' }, onWaConversationChange)
@@ -5511,7 +5516,7 @@
                 + (c.bot_location ? ` <span class="normal-case tracking-normal opacity-70">· 📍 ${c.bot_location === 'divine_bliss' ? 'Divine Bliss' : 'Manhattan'}</span>` : '')
                 + (c.bot_lang === 'en' ? ' <span class="normal-case tracking-normal text-sky-700">· 🇺🇸 Inglés</span>' : '');
             if (botHere && c.bot_active) {
-                mode.innerHTML = '<span class="text-purple-600">🤖 IA atendiendo</span>' + adTag;
+                mode.innerHTML = `<span class="text-purple-600">🤖 Asistente atendiendo${waSettings.bot_enabled ? '' : ' · versión de prueba'}</span>` + adTag;
                 action.innerText = 'Tomar conversación';
                 action.className = 'flex-shrink-0 text-[9px] uppercase tracking-widest font-bold px-3 py-2 rounded-full transition bg-[#2A2330] text-white hover:bg-[#B76E88]';
                 action.disabled = false;
@@ -5620,6 +5625,7 @@
             if (error) { err.textContent = 'No se pudo guardar: ' + error.message; return; }
             waSettings = data;
             WA_SHOW_ATTENTION = waBotAvailable();
+            refreshWaAssistantLabel();
             dlg.close();
             renderConversationList();
             if (waActiveId) renderChatHeader();
