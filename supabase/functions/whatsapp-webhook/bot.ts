@@ -359,10 +359,23 @@ async function searchProducts(db: SupabaseClient, conv: Conv, waId: string, lang
     { id: "bot:book", title: L(lang, "Pedir valoración", "Book an assessment") },
     { id: "bot:human", title: L(lang, "Hablar con alguien", "Talk to someone") });
   await setState(db, conv, "product_search");
+  const sunscreen = (steps.includes("spf") || target?.step === "spf") &&
+    catalog.some((p) => p.step === "spf" && !p.is_prescription);
   const body = exact.length ? L(lang, "Encontré este producto en stock.", "I found this product in stock.")
     : products.length ? L(lang, "Estas son las opciones disponibles que coinciden con tu búsqueda.", "These in-stock options match your search.")
-    : L(lang, "No encontré una opción disponible que coincida. Puedes explorar el catálogo o pedir ayuda al equipo.",
-      "I couldn't find an available match. Browse the catalog or ask our team for help.");
+    : sunscreen ? L(lang,
+      `Sí, tenemos protectores solares en el catálogo. Ahora mismo no puedo confirmar disponibilidad para recoger en ${productPlace(conv)}. Si quieres, nuestro equipo puede revisarla.`,
+      `Yes, we carry sunscreen. Right now I can't confirm pickup availability at ${productPlace(conv)}. Our team can check for you.`)
+    : L(lang, `No encontré una opción con disponibilidad confirmada en ${productPlace(conv)}. Nuestro equipo puede revisar qué alternativas hay.`,
+      `I couldn't find a match with confirmed availability at ${productPlace(conv)}. Our team can check for alternatives.`);
+  if (!products.length) {
+    await sendButtons(db, conv, waId, body, [
+      { id: "bot:human:product_contact", title: L(lang, "Consultar stock", "Check availability") },
+      { id: "bot:products:0", title: L(lang, "Ver disponibles", "See what's in stock") },
+      { id: "bot:menu", title: L(lang, "Menú principal", "Main menu") },
+    ]);
+    return;
+  }
   await sendList(db, conv, waId, body + (!types.length && !exact.length
     ? L(lang, " Si no sabes tu tipo de piel, puedes pedir una valoración.", " If you don't know your skin type, you can book an assessment.") : ""),
   L(lang, "Ver opciones", "See options"), rows, lang);
@@ -385,6 +398,15 @@ async function productsMenu(db: SupabaseClient, conv: Conv, waId: string, lang: 
   const { data, error } = await availableProducts(db, conv.bot_location).order("brand").order("name").order("id").range(offset, offset + 7);
   if (error) throw error;
   const items = data ?? [];
+  if (!items.length && page === 0) {
+    await sendButtons(db, conv, waId, L(lang,
+      `Por ahora no hay productos con disponibilidad confirmada en ${productPlace(conv)}. Nuestro equipo puede revisar el stock.`,
+      `There are currently no products with confirmed availability at ${productPlace(conv)}. Our team can check stock.`), [
+      { id: "bot:human:product_contact", title: L(lang, "Consultar stock", "Check availability") },
+      { id: "bot:menu", title: L(lang, "Menú principal", "Main menu") },
+    ]);
+    return;
+  }
   const rows: Row[] = items.slice(0, 7).map((p) => ({
     id: `bot:product:${p.id}`, title: p.name,
     description: [p.brand, p.size, money(productPrice(p.sale_price, conv, s)), L(lang, `${p.stock_qty} disponibles`, `${p.stock_qty} in stock`)].filter(Boolean).join(" · "),
@@ -394,8 +416,8 @@ async function productsMenu(db: SupabaseClient, conv: Conv, waId: string, lang: 
   rows.push({ id: "bot:menu", title: L(lang, "Menú principal", "Main menu") });
   await sendList(db, conv, waId, items.length
     ? L(lang, `Productos disponibles en ${productPlace(conv)}. Elige uno para pedirlo.`, `Products available at ${productPlace(conv)}. Choose one to request it.`)
-    : L(lang, "No hay productos disponibles en esta página. Puedes volver al menú y hablar con el equipo.",
-      "There are no products available on this page. Go back to the menu to talk to our team."),
+    : L(lang, `Por ahora no hay productos con disponibilidad confirmada en ${productPlace(conv)}. Nuestro equipo puede revisar el stock.`,
+      `There are currently no products with confirmed availability at ${productPlace(conv)}. Our team can check stock.`),
     L(lang, "Ver opciones", "See options"), rows, lang);
 }
 
