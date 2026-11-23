@@ -77,7 +77,9 @@ const THANKS = ["gracias", "muchas gracias", "thanks", "thank you", "ok", "okay"
 const SERVICES = ["precio", "cuanto", "cuesta", "costo", "servicio", "tratamiento", "promo", "oferta", "descuento", "black friday",
   "botox", "toxina", "facial", "relleno", "labio", "peeling", "mancha", "acne", "microneedling", "microagujas", "sculptra", "endolaser",
   "papada", "depilacion", "laser", "price", "cost", "how much", "service", "treatment", "discount", "filler", "lip"];
-const BOOK = ["cita", "agendar", "agenda", "reservar", "reserva", "turno", "disponib", "appointment", "book", "schedule", "availab"];
+const BOOK = ["cita", "agendar", "agenda", "reservar", "reserva", "turno", "appointment", "book", "schedule", "time slots"];
+const PROMOTION = ["black friday", "promocion", "promociones", "oferta", "ofertas", "descuento", "descuentos", "promotion", "promotions", "discount", "discounts"];
+const PRICE_INQUIRY = ["precio", "precios", "cuanto cuesta", "cuanto sale", "cost", "price", "prices", "how much"];
 const INFO = ["donde", "direccion", "ubicacion", "ubicados", "como llego", "estacionamiento", "parking", "horario", "abren", "address",
   "location", "hours", "where", "open"];
 const PRODUCTS = ["producto", "comprar", "protector solar", "bloqueador", "spf", "crema", "serum", "limpiador", "rutina", "skincare", "product", "sunscreen", "cleanser", "moisturizer", "routine", "buy"];
@@ -102,6 +104,16 @@ const CATEGORY_EN: Record<string, string> = {
   "perdida de volumen": "Volume loss", "ojeras": "Under-eye circles", "vello no deseado": "Unwanted hair",
 };
 const catName = (cat: string, lang: Lang) => lang === "en" ? (CATEGORY_EN[norm(cat)] ?? cat) : cat;
+const CONCERN_TERMS: Record<string, string[]> = {
+  "mantenimiento de mi piel": ["facial", "faciales", "limpieza facial", "skin maintenance"],
+  "manchas y melasma": ["mancha", "manchas", "melasma", "hiperpigmentacion", "dark spots", "hyperpigmentation"],
+  "acne y brotes": ["acne", "brotes", "granitos", "breakouts"],
+  "arrugas": ["arruga", "arrugas", "lineas de expresion", "wrinkles", "fine lines"],
+  "flacidez": ["flacidez", "sagging skin"],
+  "ojeras": ["ojeras", "under eye circles", "under-eye circles", "dark circles"],
+  "perdida de volumen": ["perdida de volumen", "volume loss"],
+  "relajacion y drenaje": ["drenaje", "drenaje linfatico", "lymphatic drainage"],
+};
 
 function dayText(iso: string, lang: Lang): string {
   if (lang === "es") return dayEs(iso);
@@ -280,7 +292,7 @@ type Service = {
 async function botServices(db: SupabaseClient): Promise<{ categories: string[]; byCat: Record<string, Service[]> }> {
   const { data } = await db.from("sale_services")
     .select("code, name, category, unit, status, sale_price, unit_price, promo_price, bot_description, bot_price_mode, bot_name_en, bot_description_en, sort_order")
-    .eq("active", true).eq("bot_visible", true).in("status", ["available", "assessment", "soon"])
+    .eq("active", true).eq("bot_visible", true).in("status", ["available", "assessment"])
     .order("sort_order").order("name");
   const byCat: Record<string, Service[]> = {};
   (data || []).forEach((s: Service) => { (byCat[s.category] = byCat[s.category] || []).push(s); });
@@ -529,9 +541,13 @@ async function routeQuestion(db: SupabaseClient, conv: Conv, waId: string, lang:
   const { categories, byCat } = await botServices(db);
   const services = categories.flatMap((category) => byCat[category]);
   const t = norm(body);
-  const direct = services.find((service) => [service.name, service.bot_name_en].some((name) => name && norm(name).length > 3 && hasWord(t, [norm(name)])));
-  let intent = direct ? `service_${services.indexOf(direct)}` : "unknown";
-  if (!direct && s.test_mode && s.test_phones.includes(waId)) {
+  const names = services.flatMap((service, index) =>
+    [service.name, service.bot_name_en].filter((name): name is string => Boolean(name)).map((name) => ({ name: norm(name), index })));
+  const direct = names.filter(({ name }) => name.length > 3 && hasWord(t, [name])).sort((a, b) => b.name.length - a.name.length)[0];
+  const concerns = categories.map((category, index) => ({ index, matches: hasWord(t, CONCERN_TERMS[norm(category)] || []) }))
+    .filter((entry) => entry.matches);
+  let intent = direct ? `service_${direct.index}` : concerns.length === 1 ? `category_${concerns[0].index}` : "unknown";
+  if (intent === "unknown" && s.test_mode && s.test_phones.includes(waId)) {
     const choices = Object.fromEntries([
       ...categories.map((category, index) => [`category_${index}`, `${category} / ${catName(category, "en")}`]),
       ...services.slice(0, 60).map((service, index) => [`service_${index}`, [service.name, service.bot_name_en].filter(Boolean).join(" / ")]),
@@ -540,7 +556,12 @@ async function routeQuestion(db: SupabaseClient, conv: Conv, waId: string, lang:
   }
   const service = /^service_\d+$/.test(intent) ? services[Number(intent.split("_")[1])] : undefined;
   if (service) {
-    await sendButtons(db, conv, waId, priceLine(service, lang).slice(0, 1000), back(lang));
+    await sendButtons(db, conv, waId, priceLine(service, lang).slice(0, 1000), [
+      { id: "bot:book", title: L(lang, service.status === "assessment" ? "Pedir valoración" : "Agendar cita",
+        service.status === "assessment" ? "Book an assessment" : "Book appointment") },
+      { id: `bot:cat:${categories.indexOf(service.category)}`, title: L(lang, "Ver opciones afines", "See related options") },
+      { id: "bot:human:servicios", title: L(lang, "Hablar con el equipo", "Talk to our team") },
+    ]);
     return true;
   }
   const category = /^category_\d+$/.test(intent) ? Number(intent.split("_")[1]) : -1;
@@ -841,10 +862,19 @@ export async function runBot(db: SupabaseClient, conversationId: string, waId: s
       "You're welcome! 💕 If you need anything else, I'm here. Type *menu* to see the options."));
     return true;
   }
-  if (has(t, BOOK)) { await book(db, conv, waId, lang); return true; }
+  const isPriceInquiry = hasWord(t, PRICE_INQUIRY);
+  if (!isPriceInquiry && has(t, BOOK)) { await book(db, conv, waId, lang); return true; }
   if (has(t, INFO)) { await info(db, conv, waId, s, lang); return true; }
   if (conv.bot_state === "search_menu") await setState(db, conv, null);
   if (m.type === "text" && await routeQuestion(db, conv, waId, lang, s, body)) return true;
+  if (hasWord(t, PROMOTION) && promoFor(s, lang)) {
+    await sendButtons(db, conv, waId, promoFor(s, lang), [
+      { id: "bot:services", title: L(lang, "Servicios y precios", "Services & prices") },
+      { id: "bot:products", title: L(lang, "Ver productos", "Shop products") },
+      { id: "bot:human:precios", title: L(lang, "Hablar con el equipo", "Talk to our team") },
+    ]);
+    return true;
+  }
   if (has(t, SERVICES)) { await servicesMenu(db, conv, waId, s, lang); return true; }
 
   await handOff(db, conv, waId, "unknown", s, lang, body);
