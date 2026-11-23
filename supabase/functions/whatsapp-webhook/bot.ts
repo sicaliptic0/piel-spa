@@ -80,7 +80,7 @@ const SERVICES = ["precio", "cuanto", "cuesta", "costo", "servicio", "tratamient
 const BOOK = ["cita", "agendar", "agenda", "reservar", "reserva", "turno", "disponib", "appointment", "book", "schedule", "availab"];
 const INFO = ["donde", "direccion", "ubicacion", "ubicados", "como llego", "estacionamiento", "parking", "horario", "abren", "address",
   "location", "hours", "where", "open"];
-const PRODUCTS = ["producto", "comprar", "protector solar", "crema", "serum", "limpiador", "rutina", "skincare", "product", "sunscreen", "cleanser", "moisturizer", "routine", "buy"];
+const PRODUCTS = ["producto", "comprar", "protector solar", "bloqueador", "spf", "crema", "serum", "limpiador", "rutina", "skincare", "product", "sunscreen", "cleanser", "moisturizer", "routine", "buy"];
 
 // Language of a message: which list it matches more. null when it can't tell.
 const EN_WORDS = ["hi", "hello", "hey", "how", "much", "price", "prices", "appointment", "book", "want", "would", "like", "the", "you", "your",
@@ -332,8 +332,14 @@ async function searchProducts(db: SupabaseClient, conv: Conv, waId: string, lang
   if (catalogResult.error) throw catalogResult.error;
   if (stockResult.error) throw stockResult.error;
   const catalog = catalogResult.data ?? [];
-  const target = catalog.filter((p) => norm(p.name).length >= 4 && t.includes(norm(p.name)))
-    .sort((a, b) => norm(b.name).length - norm(a.name).length)[0];
+  const words = (value: string) => norm(value).replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const query = words(t);
+  const named = catalog.filter((p) => words(p.name).length >= 4 && hasWord(query, [words(p.name)]))
+    .sort((a, b) => words(b.name).length - words(a.name).length);
+  const variants = named.length ? [] : catalog.filter((p) =>
+    p.step === "spf" && p.brand && hasWord(query, [words(p.brand)]) &&
+    ["sin color", "con color", "untinted", "tinted"].some((variant) => hasWord(query, [variant]) && hasWord(words(p.name), [variant])));
+  const target = named[0] ?? (variants.length === 1 ? variants[0] : undefined);
   const concerns = productTags(t, PRODUCT_CONCERNS);
   const steps = productTags(t, PRODUCT_STEPS);
   const types = productTags(t, PRODUCT_SKIN_TYPES);
@@ -362,16 +368,18 @@ async function searchProducts(db: SupabaseClient, conv: Conv, waId: string, lang
   const sunscreen = (steps.includes("spf") || target?.step === "spf") &&
     catalog.some((p) => p.step === "spf" && !p.is_prescription);
   const body = exact.length ? L(lang, "Encontré este producto en stock.", "I found this product in stock.")
+    : target && !target.is_prescription ? L(lang,
+      `Por ahora no tenemos *${target.name.slice(0, 140)}* en stock en ${productPlace(conv)}.${products.length ? " Estas son las alternativas que sí tenemos disponibles:" : ""}`,
+      `We're currently out of *${target.name.slice(0, 140)}* at ${productPlace(conv)}.${products.length ? " These alternatives are in stock:" : ""}`)
     : products.length ? L(lang, "Estas son las opciones disponibles que coinciden con tu búsqueda.", "These in-stock options match your search.")
     : sunscreen ? L(lang,
-      `Sí, tenemos protectores solares en el catálogo. Ahora mismo no puedo confirmar disponibilidad para recoger en ${productPlace(conv)}. Si quieres, nuestro equipo puede revisarla.`,
-      `Yes, we carry sunscreen. Right now I can't confirm pickup availability at ${productPlace(conv)}. Our team can check for you.`)
+      `Por ahora no tenemos protectores solares en stock en ${productPlace(conv)}.`,
+      `We're currently out of sunscreen at ${productPlace(conv)}.`)
     : L(lang, `No encontré una opción con disponibilidad confirmada en ${productPlace(conv)}. Nuestro equipo puede revisar qué alternativas hay.`,
       `I couldn't find a match with confirmed availability at ${productPlace(conv)}. Our team can check for alternatives.`);
   if (!products.length) {
     await sendButtons(db, conv, waId, body, [
-      { id: "bot:human:product_contact", title: L(lang, "Consultar stock", "Check availability") },
-      { id: "bot:products:0", title: L(lang, "Ver disponibles", "See what's in stock") },
+      { id: "bot:human:product_contact", title: L(lang, "Hablar con el equipo", "Talk to our team") },
       { id: "bot:menu", title: L(lang, "Menú principal", "Main menu") },
     ]);
     return;
@@ -652,15 +660,19 @@ export async function handOff(db: SupabaseClient, conv: Conv, waId: string, reas
       payment: ["Le paso tu consulta al equipo para que te ayude personalmente.", "I'm passing your question to the team so they can help you personally."],
       product_order: [`Envié tu solicitud al equipo: ${preview}. Te confirmarán disponibilidad y compra por aquí.`,
         `I sent your request to our team: ${preview}. They'll confirm availability and your purchase here.`],
-      product_contact: ["Nuestro equipo te escribirá para ayudarte con la compra.", "Our team will message you to help with the purchase."],
+      product_contact: ["Voy a pasarte con nuestro equipo para que pueda revisar tu consulta y ayudarte con la compra.",
+        "I'll connect you with our team so they can check your request and help with your purchase."],
       audio: ["Recibí tu audio. 🎧 Nuestro equipo lo escucha y te responde por aquí.", "I got your audio. 🎧 Our team will listen to it and reply here."],
       question: ["¡Gracias! Le pasé tu pregunta a nuestro equipo y te responden por aquí.", "Thanks! I passed your question to our team and they'll reply here."],
-      unknown: ["Le pasé tu mensaje a nuestro equipo y te responden por aquí.", "I passed your message to our team and they'll reply here."],
+      unknown: ["Con esa consulta te puede ayudar mejor nuestro equipo de atención. Ya le compartí tu mensaje.",
+        "Our customer care team can help you better with that. I've shared your message with them."],
     };
     const pair = lead[reason] ?? ["Claro, ya le avisé a nuestro equipo y te escriben por aquí en breve.", "Sure, I've let our team know and they'll write to you here shortly."];
     first = L(lang, pair[0], pair[1]);
   }
-  const body = open ? `${first}${reason === "urgent" || reason === "divine_bliss" ? "" : " 😊"}` : `${first}\n\n${later}`;
+  const followUp = ["unknown", "product_contact"].includes(reason)
+    ? L(lang, " Te responderán por aquí en cuanto estén disponibles.", " They'll reply here as soon as they're available.") : "";
+  const body = open ? `${first}${followUp}${reason === "urgent" || reason === "divine_bliss" ? "" : " 😊"}` : `${first}\n\n${later}`;
   const now = new Date().toISOString();
   await saveConv(db, conv, { bot_active: false, needs_attention: true, handoff_reason: reason, handoff_at: now, human_since: now, bot_state: null });
   await sendText(db, conv, waId, body);
