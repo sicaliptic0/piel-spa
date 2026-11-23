@@ -160,10 +160,10 @@ async function mainMenu(db: SupabaseClient, conv: Conv, waId: string, body = "¿
   await sendList(db, conv, waId, body, "Ver opciones", rows);
 }
 
-type Service = { code: string; name: string; category: string; unit: string; status: string; sale_price: number | null; unit_price: number | null; promo_price: number | null; bot_description: string | null };
+type Service = { code: string; name: string; category: string; unit: string; status: string; sale_price: number | null; unit_price: number | null; promo_price: number | null; bot_description: string | null; bot_price_mode: string | null };
 async function botServices(db: SupabaseClient): Promise<{ categories: string[]; byCat: Record<string, Service[]> }> {
   const { data } = await db.from("sale_services")
-    .select("code, name, category, unit, status, sale_price, unit_price, promo_price, bot_description, sort_order")
+    .select("code, name, category, unit, status, sale_price, unit_price, promo_price, bot_description, bot_price_mode, sort_order")
     .eq("active", true).eq("bot_visible", true).in("status", ["available", "assessment", "soon"])
     .order("sort_order").order("name");
   const byCat: Record<string, Service[]> = {};
@@ -171,42 +171,64 @@ async function botServices(db: SupabaseClient): Promise<{ categories: string[]; 
   return { categories: Object.keys(byCat), byCat };
 }
 const money = (n: number) => `$${Number(n).toLocaleString("en-US", { minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2, maximumFractionDigits: 2 })}`;
+// "por unidad", "por vial", "(2 sesiones)"; nothing for a plain session.
+function unitText(unit: string): string {
+  const u = String(unit || "").trim().toLowerCase();
+  if (!u || ["sesión", "sesion", "consulta", "categoría"].includes(u)) return "";
+  return /^\d/.test(u) ? ` (${u})` : ` por ${u}`;
+}
+// bot_price_mode: exact = the price · from = "desde" · consult = no price, it depends on the consultation.
 function priceLine(s: Service): string {
   if (s.status === "soon") return `• *${s.name}*: próximamente`;
   const base = s.unit_price ?? s.sale_price;
-  const per = s.unit_price != null ? ` por ${s.unit || "unidad"}` : "";
+  const mode = s.bot_price_mode || "exact";
+  const per = unitText(s.unit);
+  const from = mode === "from" ? "desde " : "";
   let price = "";
-  if (base != null && s.promo_price != null && s.promo_price < base) price = `${money(s.promo_price)}${per} en promoción (regular ${money(base)})`;
-  else if (base != null) price = `${money(base)}${per}`;
-  else price = "precio en tu valoración";
+  if (mode === "consult" || base == null) price = "precio según tu consulta";
+  else if (s.promo_price != null && s.promo_price < base) price = `${from}${money(s.promo_price)}${per} en promoción (regular ${from}${money(base)})`;
+  else price = `${from}${money(base)}${per}`;
   const note = s.status === "assessment" ? " · requiere valoración" : "";
   return `• *${s.name}*: ${price}${note}${s.bot_description ? `\n  ${s.bot_description}` : ""}`;
 }
 
+// First: what the person wants to treat (categories are concerns: "Manchas y
+// melasma", "Flacidez"…). The consultation is not a concern; its price is shown
+// with every answer.
 async function servicesMenu(db: SupabaseClient, conv: Conv, waId: string, s: Settings) {
   const { categories } = await botServices(db);
-  if (!categories.length) {
+  if (!categories.filter((c) => !isConsult(c)).length) {
     await sendButtons(db, conv, waId,
       "Con gusto te cuento sobre nuestros servicios y precios. 😊 Nuestro equipo te los comparte personalmente según lo que buscas.", [
         { id: "bot:human:precios", title: "Pedir precios" }, { id: "bot:book", title: "Agendar cita" }, { id: "bot:menu", title: "Ver opciones" },
       ]);
     return;
   }
-  const rows: Row[] = categories.slice(0, 9).map((c, i) => ({ id: `bot:cat:${i}`, title: c }));
-  rows.push({ id: "bot:human:servicios", title: "Otra pregunta", description: "Te responde nuestro equipo" });
+  const rows: Row[] = categories.map((c, i) => ({ id: `bot:cat:${i}`, title: c })).filter((r) => !isConsult(r.title)).slice(0, 9);
+  rows.push({ id: "bot:human:servicios", title: "No estoy seguro/a", description: "Cuéntale a nuestro equipo qué buscas" });
   const promo = s.promo_text ? `${s.promo_text}\n\n` : "";
-  await sendList(db, conv, waId, `${promo}¿Qué te interesa? Elige una categoría:`, "Ver servicios", rows);
+  await sendList(db, conv, waId, `${promo}Para recomendarte lo mejor, cuéntame: ¿qué te gustaría tratar o mejorar?`, "Elegir", rows);
 }
+
+const isConsult = (category: string) => norm(category) === "consulta";
 
 async function categoryDetail(db: SupabaseClient, conv: Conv, waId: string, index: number, s: Settings) {
   const { categories, byCat } = await botServices(db);
   const cat = categories[index];
-  if (!cat) return servicesMenu(db, conv, waId, s);
+  if (!cat || isConsult(cat)) return servicesMenu(db, conv, waId, s);
   const lines = byCat[cat].map(priceLine).join("\n");
-  const body = `*${cat}*\n${lines}\n\nEn tu primera visita revisamos tu piel para confirmar el tratamiento ideal para ti.`;
-  await sendButtons(db, conv, waId, body.slice(0, 1024), [
-    { id: "bot:book", title: "Agendar cita" }, { id: "bot:services", title: "Otros servicios" }, { id: "bot:human", title: "Hablar con alguien" },
-  ]);
+  const consult = categories.filter(isConsult).flatMap((c) => byCat[c]).map(priceLine).join("\n");
+  const text = `Para *${cat.toLowerCase()}* te podemos ofrecer:\n${lines}` +
+    (consult ? `\n\nSi no sabes cuál elegir, empieza con una valoración:\n${consult}` : "") +
+    "\n\nEn tu primera visita revisamos tu piel para confirmar el tratamiento ideal para ti.";
+  const buttons: Btn[] = [{ id: "bot:book", title: "Agendar cita" }, { id: "bot:services", title: "Tratar otra cosa" }, { id: "bot:human", title: "Hablar con alguien" }];
+  // Button messages allow 1024 characters: longer lists go as text first.
+  if (text.length <= 1024) {
+    await sendButtons(db, conv, waId, text, buttons);
+  } else {
+    await sendText(db, conv, waId, text.slice(0, 4000));
+    await sendButtons(db, conv, waId, "¿Qué te gustaría hacer?", buttons);
+  }
 }
 
 async function upcoming(db: SupabaseClient, conv: Conv) {

@@ -261,7 +261,7 @@
                 <button type="button" class="svc-order" data-svc-move="-1" aria-label="Subir ${esc(s.name)}" title="Subir" ${disabled || (visible[index - 1]?.category !== s.category ? 'disabled' : '')}>↑</button>
                 <button type="button" class="svc-order" data-svc-move="1" aria-label="Bajar ${esc(s.name)}" title="Bajar" ${disabled || (visible[index + 1]?.category !== s.category ? 'disabled' : '')}>↓</button></td>`}
               <td class="min-w-[210px]"><strong>${esc(s.name)}</strong><div class="text-xs opacity-70">${esc(s.category)} · ${esc(s.unit)} · ${esc(s.billing_code || s.code)}</div></td>
-              <td>${s.active ? esc(SERVICE_STATUS[s.status]) : 'Archivado'}${s.bot_visible ? '<div class="text-xs" title="Visible en el asistente de WhatsApp">🤖 WhatsApp</div>' : ''}</td>
+              <td>${s.active ? esc(SERVICE_STATUS[s.status]) : 'Archivado'}${s.bot_visible ? `<div class="text-xs" title="Visible en el asistente de WhatsApp">🤖 WhatsApp${s.bot_price_mode === 'from' ? ' · desde' : s.bot_price_mode === 'consult' ? ' · según consulta' : ''}</div>` : ''}</td>
               <td class="num">${money(s.nyc_price)}</td><td class="num">${money(s.unit_price ?? s.sale_price)}${s.unit_price != null ? ' / unidad' : ''}</td><td class="num">${money(s.promo_price)}</td>
               <td class="num">${money(s.reference_price)}${s.reference_promo == null ? '' : `<div class="text-xs">Promo ${money(s.reference_promo)}</div>`}</td>
               <td class="whitespace-nowrap"><button type="button" class="soft" data-service-code="${esc(s.code)}" ${disabled}>Editar</button>
@@ -415,6 +415,7 @@
         </div>
         <div class="card p-3 space-y-2">
           <label class="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" id="svc-bot-visible"> Visible en el asistente de WhatsApp</label>
+          <label class="text-sm block">Cómo muestra el precio<select id="svc-bot-price-mode"><option value="exact">Precio exacto</option><option value="from">Desde (precio mínimo)</option><option value="consult">Según consulta (sin precio)</option></select></label>
           <label class="text-sm block">Descripción corta para WhatsApp (opcional)<input id="svc-bot-description" maxlength="140" placeholder="Ej. Limpieza profunda, 60 min"></label>
           <p class="text-xs opacity-70">El asistente muestra el nombre, el precio Piel Spa y la promoción de los servicios marcados. Los servicios en estado Próximamente se muestran sin precio.</p>
         </div>
@@ -458,6 +459,7 @@
         $('svc-notes').value = service?.notes || '';
         $('svc-bot-visible').checked = !!service?.bot_visible;
         $('svc-bot-description').value = service?.bot_description || '';
+        $('svc-bot-price-mode').value = service?.bot_price_mode || 'exact';
         $('svc-reference').textContent = service?.reference_price == null ? '' :
             `Tarifario interno ${service.source_code || ''} · Regular ${money(service.reference_price)} · Promoción ${money(service.reference_promo)}`;
         $('svc-quantity-settings').open = service?.unit_price != null;
@@ -565,6 +567,7 @@
         row.notes = $('svc-notes').value.trim() || null;
         row.bot_visible = $('svc-bot-visible').checked;
         row.bot_description = $('svc-bot-description').value.trim() || null;
+        row.bot_price_mode = $('svc-bot-price-mode').value;
         row.updated_at = new Date().toISOString();
         const table = _supabase.from('sale_services');
         return writeService(identity ? table.update(row).eq('code', identity) : table.insert(row));
