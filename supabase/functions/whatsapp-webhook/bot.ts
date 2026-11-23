@@ -39,7 +39,7 @@ const MAPS_URL = "https://maps.app.goo.gl/?q=481+8th+Ave+Suite+1221+New+York+NY+
 const GREET_AGAIN_HOURS = 12;
 
 type Hours = { days: number[]; open: string; close: string };
-type Settings = { promo_text: string; promo_text_en: string; human_hours: Hours };
+type Settings = { promo_text: string; promo_text_en: string; human_hours: Hours; product_discount: number };
 type Conv = {
   id: string; patient_id: string | null; profile_name: string | null; bot_state: string | null; bot_greeted_at: string | null;
   bot_lang: Lang | null; bot_location: Loc | null;
@@ -64,7 +64,7 @@ const AFTER_CARE = ["hinchaz", "hinchad", "inflamad", "moreton", "morado", "hema
 const MEDICAL = ["embaraz", "lactan", "amamant", "pregnan", "breastfeed", "medicament", "pastilla", "alergi", "allerg", "isotretino", "accutane",
   "roacutan", "anticoagul", "warfarin", "blood thinner", "herpes", "diabet", "cancer", "quimio", "chemo", "enfermedad", "autoinmun", "autoimmun",
   "lupus", "tiroides", "thyroid", "presion alta", "marcapaso", "pacemaker", "piel sensible", "sensitive skin", "rosacea", "dermatitis",
-  "es seguro", "is it safe", "contraindic", "puedo hacerme", "me lo puedo hacer", "medication"];
+  "piel muy sensible", "muy sensible", "very sensitive", "nursing", "es seguro", "is it safe", "contraindic", "puedo hacerme", "me lo puedo hacer", "medication"];
 const COMPLAINT = ["queja", "reclamo", "mala experiencia", "mal servicio", "no me gusto", "molesta", "complaint", "terrible", "estafa", "bad experience"];
 const PAYMENT = ["reembolso", "devolucion", "refund", "me cobraron", "cobro", "factura", "pagar", "pago", "zelle", "tarjeta", "deposito",
   "payment", "deposit", "charged", "invoice"];
@@ -80,6 +80,7 @@ const SERVICES = ["precio", "cuanto", "cuesta", "costo", "servicio", "tratamient
 const BOOK = ["cita", "agendar", "agenda", "reservar", "reserva", "turno", "disponib", "appointment", "book", "schedule", "availab"];
 const INFO = ["donde", "direccion", "ubicacion", "ubicados", "como llego", "estacionamiento", "parking", "horario", "abren", "address",
   "location", "hours", "where", "open"];
+const PRODUCTS = ["producto", "comprar", "protector solar", "crema", "serum", "limpiador", "rutina", "skincare", "product", "sunscreen", "cleanser", "moisturizer", "routine", "buy"];
 
 // Language of a message: which list it matches more. null when it can't tell.
 const EN_WORDS = ["hi", "hello", "hey", "how", "much", "price", "prices", "appointment", "book", "want", "would", "like", "the", "you", "your",
@@ -109,10 +110,12 @@ function dayText(iso: string, lang: Lang): string {
 
 // ---------- settings, hours ----------
 async function loadSettings(db: SupabaseClient): Promise<Settings> {
-  const { data } = await db.from("wa_settings").select("promo_text, promo_text_en, human_hours").eq("id", 1).maybeSingle();
+  const { data } = await db.from("wa_settings").select("promo_text, promo_text_en, promo_ends_on, product_promo_percent, product_promo_ends_on, human_hours").eq("id", 1).maybeSingle();
+  const expired = data?.promo_ends_on && data.promo_ends_on < clinicDate(0);
   return {
-    promo_text: String(data?.promo_text ?? "").trim(),
-    promo_text_en: String(data?.promo_text_en ?? "").trim(),
+    promo_text: expired ? "" : String(data?.promo_text ?? "").trim(),
+    promo_text_en: expired ? "" : String(data?.promo_text_en ?? "").trim(),
+    product_discount: (data?.product_promo_ends_on || "") >= clinicDate(0) ? Number(data?.product_promo_percent) || 0 : 0,
     human_hours: data?.human_hours ?? { days: [1, 2, 3, 4, 5, 6], open: "09:00", close: "19:00" },
   };
 }
@@ -244,6 +247,7 @@ async function mainMenu(db: SupabaseClient, conv: Conv, waId: string, lang: Lang
   const rows: Row[] = [
     { id: "bot:question", title: L(lang, "Tengo una pregunta", "I have a question"), description: L(lang, "Escríbela y te responde nuestro equipo", "Type it and our team will reply") },
     { id: "bot:services", title: L(lang, "Servicios y precios", "Services & prices"), description: L(lang, "Faciales, peelings, inyectables y más", "Facials, peels, injectables and more") },
+    { id: "bot:products", title: L(lang, "Productos de skincare", "Skincare products"), description: L(lang, "Busca por nombre o necesidad", "Browse by name or concern") },
     { id: "bot:book", title: L(lang, "Agendar cita", "Book appointment"), description: L(lang, "Elige día y hora disponibles", "Pick an available day and time") },
     { id: "bot:human", title: L(lang, "Hablar con alguien", "Talk to someone"), description: L(lang, "Te atiende una persona del equipo", "A team member will help you") },
   ];
@@ -269,6 +273,139 @@ async function botServices(db: SupabaseClient): Promise<{ categories: string[]; 
 }
 const isConsult = (category: string) => norm(category) === "consulta";
 const money = (n: number) => `$${Number(n).toLocaleString("en-US", { minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2, maximumFractionDigits: 2 })}`;
+
+function availableProducts(db: SupabaseClient, location: Loc | null) {
+  return db.from("sale_products").select("id, catalog_id, brand, name, size, sale_price, stock_qty, sales_taxable, skincare_products!inner(id)")
+    .eq("skincare_products.active", true).eq("skincare_products.is_prescription", false)
+    .eq("location", location || "piel_spa").eq("active", true).eq("bot_visible", true).gt("stock_qty", 0).gt("sale_price", 0)
+    .or(`expires_on.is.null,expires_on.gte.${clinicDate(0)}`);
+}
+const productPlace = (conv: Conv) => conv.bot_location === "divine_bliss" ? "Divine Bliss NJ" : "Piel Spa Manhattan";
+const productPrice = (value: number, conv: Conv, s: Settings) =>
+  conv.bot_location === "piel_spa" ? Math.round(Math.round(Number(value) * 100) * (10000 - Math.round(s.product_discount * 100)) / 10000) / 100 : Number(value);
+
+const PRODUCT_CONCERNS: Record<string, string[]> = {
+  dehydration: ["hidratacion", "deshidratacion", "hydration", "dehydration"],
+  spots: ["manchas", "dark spots", "uneven tone"],
+  melasma: ["melasma"],
+  acne: ["acne", "brotes", "breakouts"],
+  shine: ["brillo", "grasa", "oily", "shine"],
+  texture: ["textura", "poros", "texture", "pores"],
+  wrinkles: ["arrugas", "lineas", "wrinkles", "fine lines"],
+  redness: ["rojeces", "enrojecimiento", "redness"],
+};
+const PRODUCT_STEPS: Record<string, string[]> = {
+  spf: ["protector solar", "sunscreen", "spf", "bloqueador"],
+  cleanser: ["limpiador", "limpieza", "cleanser"],
+  moisturizer: ["crema", "moisturizer", "hidratante"],
+  serum: ["serum", "suero"],
+};
+const PRODUCT_SKIN_TYPES: Record<string, string[]> = {
+  oily: ["piel grasa", "oily skin"], dry: ["piel seca", "dry skin"],
+  combination: ["piel mixta", "combination skin"], normal: ["piel normal", "normal skin"],
+};
+
+function productTags(t: string, tags: Record<string, string[]>) {
+  return Object.keys(tags).filter((key) => hasWord(t, tags[key]));
+}
+
+async function searchProducts(db: SupabaseClient, conv: Conv, waId: string, lang: Lang, t: string, s: Settings) {
+  const [catalogResult, stockResult] = await Promise.all([
+    db.from("skincare_products").select("id, name, brand, step, concerns, skin_types, is_prescription").eq("active", true),
+    availableProducts(db, conv.bot_location).order("brand").order("name"),
+  ]);
+  if (catalogResult.error) throw catalogResult.error;
+  if (stockResult.error) throw stockResult.error;
+  const catalog = catalogResult.data ?? [];
+  const target = catalog.filter((p) => norm(p.name).length >= 4 && t.includes(norm(p.name)))
+    .sort((a, b) => norm(b.name).length - norm(a.name).length)[0];
+  const concerns = productTags(t, PRODUCT_CONCERNS);
+  const steps = productTags(t, PRODUCT_STEPS);
+  const types = productTags(t, PRODUCT_SKIN_TYPES);
+  const metadata = new Map(catalog.map((p) => [p.id, p]));
+  const stock = stockResult.data ?? [];
+  const exact = target ? stock.filter((p) => p.catalog_id === target.id) : [];
+  const desiredConcerns = concerns.length ? concerns : target?.concerns ?? [];
+  const matches = stock.filter((p) => {
+    const info = metadata.get(p.catalog_id);
+    if (!info || info.is_prescription) return false;
+    const requestedSteps = target ? [target.step] : steps;
+    if (requestedSteps.length && !requestedSteps.includes(info.step)) return false;
+    if (desiredConcerns.length && !desiredConcerns.some((need: string) => info.concerns.includes(need))) return false;
+    if (types.length && !types.some((type) => info.skin_types.includes(type))) return false;
+    return desiredConcerns.length || (!target && steps.length);
+  });
+  const products = exact.length ? exact : target?.is_prescription ? [] : matches;
+  const rows: Row[] = products.slice(0, 7).map((p) => ({
+    id: `bot:product:${p.id}`, title: p.name,
+    description: [p.brand, p.size, money(productPrice(p.sale_price, conv, s))].filter(Boolean).join(" · "),
+  }));
+  rows.push({ id: "bot:products:0", title: L(lang, "Ver disponibles", "See what's in stock") },
+    { id: "bot:book", title: L(lang, "Pedir valoración", "Book an assessment") },
+    { id: "bot:human", title: L(lang, "Hablar con alguien", "Talk to someone") });
+  await setState(db, conv, "product_search");
+  const body = exact.length ? L(lang, "Encontré este producto en stock.", "I found this product in stock.")
+    : products.length ? L(lang, "Estas son las opciones disponibles que coinciden con tu búsqueda.", "These in-stock options match your search.")
+    : L(lang, "No encontré una opción disponible que coincida. Puedes explorar el catálogo o pedir ayuda al equipo.",
+      "I couldn't find an available match. Browse the catalog or ask our team for help.");
+  await sendList(db, conv, waId, body + (!types.length && !exact.length
+    ? L(lang, " Si no sabes tu tipo de piel, puedes pedir una valoración.", " If you don't know your skin type, you can book an assessment.") : ""),
+  L(lang, "Ver opciones", "See options"), rows, lang);
+}
+
+async function productsHome(db: SupabaseClient, conv: Conv, waId: string, lang: Lang) {
+  await setState(db, conv, "product_search");
+  await sendButtons(db, conv, waId, L(lang,
+    "Dime qué producto buscas o qué quieres atender, por ejemplo hidratación o manchas. Si sabes tu tipo de piel, inclúyelo. Si tienes dudas, podemos ayudarte con una valoración.",
+    "Tell me the product name or what you're looking for, such as hydration or dark spots. Include your skin type if you know it. If you're unsure, we can help with an assessment."), [
+    { id: "bot:products:0", title: L(lang, "Ver disponibles", "See what's in stock") },
+    { id: "bot:book", title: L(lang, "Pedir valoración", "Book an assessment") },
+    { id: "bot:human", title: L(lang, "Hablar con alguien", "Talk to someone") },
+  ]);
+}
+
+async function productsMenu(db: SupabaseClient, conv: Conv, waId: string, lang: Lang, s: Settings, page = 0) {
+  await setState(db, conv, null);
+  const offset = page * 7;
+  const { data, error } = await availableProducts(db, conv.bot_location).order("brand").order("name").order("id").range(offset, offset + 7);
+  if (error) throw error;
+  const items = data ?? [];
+  const rows: Row[] = items.slice(0, 7).map((p) => ({
+    id: `bot:product:${p.id}`, title: p.name,
+    description: [p.brand, p.size, money(productPrice(p.sale_price, conv, s)), L(lang, `${p.stock_qty} disponibles`, `${p.stock_qty} in stock`)].filter(Boolean).join(" · "),
+  }));
+  if (page > 0) rows.push({ id: `bot:products:${page - 1}`, title: L(lang, "Anterior", "Previous") });
+  if (items.length > 7) rows.push({ id: `bot:products:${page + 1}`, title: L(lang, "Más productos", "More products") });
+  rows.push({ id: "bot:menu", title: L(lang, "Menú principal", "Main menu") });
+  await sendList(db, conv, waId, items.length
+    ? L(lang, `Productos disponibles en ${productPlace(conv)}. Elige uno para pedirlo.`, `Products available at ${productPlace(conv)}. Choose one to request it.`)
+    : L(lang, "No hay productos disponibles en esta página. Puedes volver al menú y hablar con el equipo.",
+      "There are no products available on this page. Go back to the menu to talk to our team."),
+    L(lang, "Ver opciones", "See options"), rows, lang);
+}
+
+const productId = (id: string) => /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id);
+async function getProduct(db: SupabaseClient, id: string, location: Loc | null) {
+  if (!productId(id)) return null;
+  const { data, error } = await availableProducts(db, location).eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function productDetail(db: SupabaseClient, conv: Conv, waId: string, id: string, lang: Lang, s: Settings) {
+  const p = await getProduct(db, id, conv.bot_location);
+  if (!p) return productsMenu(db, conv, waId, lang, s);
+  await setState(db, conv, `product_quantity:${p.id}`);
+  const name = [p.brand, p.name, p.size].filter(Boolean).join(" ").slice(0, 160);
+  const price = productPrice(p.sale_price, conv, s);
+  const promo = price < Number(p.sale_price) ? ` · Black Friday −${s.product_discount}%` : "";
+  await sendButtons(db, conv, waId, `*${name}* · ${money(price)}${p.sales_taxable ? L(lang, " + impuesto", " + tax") : ""}${promo}\n\n` +
+    L(lang, `Hay ${p.stock_qty} disponibles. Escribe cuántos quieres y nuestro equipo confirmará el pedido contigo.`,
+      `${p.stock_qty} in stock. Type how many you'd like and our team will confirm your order.`), [
+    { id: "bot:products", title: L(lang, "Ver otros productos", "See more products") },
+    { id: "bot:human", title: L(lang, "Hablar con alguien", "Talk to someone") },
+  ]);
+}
 
 // "por unidad", "por vial", "(2 sesiones)"; nothing for a plain session.
 const UNIT_EN: [RegExp, string][] = [[/unidad(es)?/g, "unit"], [/jeringa/g, "syringe"], [/sesiones/g, "sessions"], [/sesi[oó]n/g, "session"], [/protocolo/g, "protocol"]];
@@ -410,6 +547,7 @@ const REASONS: Record<string, string> = {
   after_care: "⚠️ Molestia después de un tratamiento", urgent: "🚨 Posible urgencia", complaint: "Queja o reclamo",
   payment: "Pagos o reembolsos", audio: "Envió un audio", precios: "Pide precios", agendar: "Quiere que le agenden",
   servicios: "Pregunta sobre servicios", unknown: "Mensaje que el asistente no entendió", divine_bliss: "Divine Bliss Studio",
+  product_order: "🛍️ Solicitud de apartado", product_contact: "🛍️ Consulta de compra",
 };
 
 export async function handOff(db: SupabaseClient, conv: Conv, waId: string, reason: string, s: Settings, lang: Lang, preview = "") {
@@ -439,6 +577,9 @@ export async function handOff(db: SupabaseClient, conv: Conv, waId: string, reas
       complaint: ["Lamento mucho lo que pasó. Le paso tu mensaje al equipo para que te responda personalmente.",
         "I'm very sorry about what happened. I'm passing your message to the team so they can answer you personally."],
       payment: ["Le paso tu consulta al equipo para que te ayude personalmente.", "I'm passing your question to the team so they can help you personally."],
+      product_order: [`Envié tu solicitud al equipo: ${preview}. Te confirmarán disponibilidad y compra por aquí.`,
+        `I sent your request to our team: ${preview}. They'll confirm availability and your purchase here.`],
+      product_contact: ["Nuestro equipo te escribirá para ayudarte con la compra.", "Our team will message you to help with the purchase."],
       audio: ["Recibí tu audio. 🎧 Nuestro equipo lo escucha y te responde por aquí.", "I got your audio. 🎧 Our team will listen to it and reply here."],
       question: ["¡Gracias! Le pasé tu pregunta a nuestro equipo y te responden por aquí.", "Thanks! I passed your question to our team and they'll reply here."],
       unknown: ["Le pasé tu mensaje a nuestro equipo y te responden por aquí.", "I passed your message to our team and they'll reply here."],
@@ -505,8 +646,18 @@ export async function runBot(db: SupabaseClient, conversationId: string, waId: s
   if (!conv.bot_lang) { await askLanguage(db, conv, waId); return true; }
   if (!conv.bot_location) { await askLocation(db, conv, waId, lang); return true; }
 
-  // Divine Bliss: no menu, no promotion — straight to the team.
-  if (conv.bot_location === "divine_bliss") {
+  const productAction = ["products", "product", "pickup"].includes(action) || (action === "human" && arg === "product_contact");
+  const productMessage = (!tapped && has(t, PRODUCTS)) || conv.bot_state?.startsWith("product_");
+  // New Jersey uses its own product inventory. Service inquiries go to staff.
+  if (conv.bot_location === "divine_bliss" && !productAction && (Boolean(action) || !productMessage)) {
+    if (action === "loc" || action === "menu") {
+      await setState(db, conv, null);
+      await sendButtons(db, conv, waId, L(lang, "¿Cómo podemos ayudarte en Divine Bliss NJ?", "How can we help at Divine Bliss NJ?"), [
+        { id: "bot:products", title: L(lang, "Ver skincare", "Shop skincare") },
+        { id: "bot:human:divine_bliss", title: L(lang, "Hablar con alguien", "Talk to someone") },
+      ]);
+      return true;
+    }
     await handOff(db, conv, waId, "divine_bliss", s, lang, body || (tapped ? "Eligió Divine Bliss" : ""));
     return true;
   }
@@ -515,7 +666,24 @@ export async function runBot(db: SupabaseClient, conversationId: string, waId: s
   if (action === "lang" || action === "loc") { await welcome(db, conv, waId, s, lang); return true; }
 
   switch (action) {
-    case "menu": await mainMenu(db, conv, waId, lang); return true;
+    case "menu": await setState(db, conv, null); await mainMenu(db, conv, waId, lang); return true;
+    case "products":
+      if (/^\d{1,4}$/.test(arg || "")) await productsMenu(db, conv, waId, lang, s, Number(arg));
+      else await productsHome(db, conv, waId, lang);
+      return true;
+    case "product": await productDetail(db, conv, waId, arg || "", lang, s); return true;
+    case "pickup": {
+      const [, id, units, quoted] = conv.bot_state?.split(":") ?? [];
+      const p = id && conv.bot_state?.startsWith("product_pickup:") ? await getProduct(db, id, conv.bot_location) : null;
+      const quantity = Number(units);
+      if (!p || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > p.stock_qty) await productsMenu(db, conv, waId, lang, s);
+      else if (Number(quoted) !== productPrice(p.sale_price, conv, s)) await productDetail(db, conv, waId, p.id, lang, s);
+      else {
+        const name = [p.brand, p.name, p.size].filter(Boolean).join(" ").slice(0, 95);
+        await handOff(db, conv, waId, "product_order", s, lang, `${quantity} × ${name} · ${money(Number(quoted))} c/u · ${productPlace(conv)}`);
+      }
+      return true;
+    }
     case "services": await servicesMenu(db, conv, waId, s, lang); return true;
     case "cat": await categoryDetail(db, conv, waId, Number(arg) || 0, s, lang); return true;
     case "book": await book(db, conv, waId, lang); return true;
@@ -545,6 +713,39 @@ export async function runBot(db: SupabaseClient, conversationId: string, waId: s
 
   // The patient was asked to write their question.
   if (conv.bot_state === "await_question") { await handOff(db, conv, waId, "question", s, lang, body); return true; }
+
+  if (conv.bot_state?.startsWith("product_quantity:") && /^\d{1,8}(?: (?:unidades?|units?))?$/.test(t)) {
+    const id = conv.bot_state.split(":")[1];
+    const p = await getProduct(db, id, conv.bot_location);
+    const quantity = Number(t.split(" ")[0]);
+    if (!p) await productsMenu(db, conv, waId, lang, s);
+    else if (quantity < 1 || quantity > p.stock_qty) {
+      await sendText(db, conv, waId, L(lang, `Indica una cantidad de 1 a ${p.stock_qty}.`, `Enter a quantity from 1 to ${p.stock_qty}.`));
+    } else {
+      const price = productPrice(p.sale_price, conv, s);
+      await setState(db, conv, `product_pickup:${p.id}:${quantity}:${price}`);
+      await sendButtons(db, conv, waId, L(lang,
+        `${quantity} × ${p.name} · ${money(price)} por unidad · ${productPlace(conv)}. El equipo confirma tu apartado.`,
+        `${quantity} × ${p.name} · ${money(price)} each · ${productPlace(conv)}. Our team will confirm your pickup request.`), [
+        { id: "bot:pickup", title: L(lang, "Pedir apartado", "Request pickup hold") },
+        { id: "bot:human:product_contact", title: L(lang, "Que me escriban", "Contact me") },
+        { id: "bot:products:0", title: L(lang, "Ver más productos", "See more products") },
+      ]);
+    }
+    return true;
+  }
+  if (hasWord(t, ["menu", "inicio", "start"]) && t.length <= 6) {
+    await setState(db, conv, null);
+    await mainMenu(db, conv, waId, lang);
+    return true;
+  }
+  if (conv.bot_state === "product_search") { await searchProducts(db, conv, waId, lang, t, s); return true; }
+  if (has(t, PRODUCTS)) {
+    if (productTags(t, PRODUCT_STEPS).length || productTags(t, PRODUCT_CONCERNS).length) await searchProducts(db, conv, waId, lang, t, s);
+    else await productsHome(db, conv, waId, lang);
+    return true;
+  }
+  if (conv.bot_location === "divine_bliss") { await handOff(db, conv, waId, "divine_bliss", s, lang, body); return true; }
 
   const greetedRecently = conv.bot_greeted_at && Date.now() - new Date(conv.bot_greeted_at).getTime() < GREET_AGAIN_HOURS * 3600_000;
   const short = t.length <= 40;

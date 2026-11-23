@@ -4626,7 +4626,7 @@
         // Products for sale: the skincare catalog's "in stock" items (Contabilidad → Productos).
         let payProducts = [];
         async function loadPayProducts() {
-            const { data, error } = await _supabase.from('sale_products').select('id, name, brand, size, sale_price, suggested_price, sales_taxable, stock_qty, expires_on')
+            const { data, error } = await _supabase.from('sale_products').select('id, name, brand, size, sale_price, suggested_price, sales_taxable, stock_qty, expires_on, location')
                 .eq('active', true).order('brand').order('name');
             if (error) return;
             payProducts = data || [];
@@ -4637,7 +4637,7 @@
             const selected = select.value;
             const available = payProducts.filter(p => p.stock_qty > 0 && (!p.expires_on || p.expires_on >= clinicDateIso(0)));
             select.replaceChildren(new Option('Elige un producto', ''), ...available.map(p => new Option(
-                `${[p.brand, p.name, p.size].filter(Boolean).join(' · ')} (${p.stock_qty} en stock)`, p.id)), new Option('Otro producto…', '__otro'));
+                `${[p.brand, p.name, p.size].filter(Boolean).join(' · ')} (${p.stock_qty} en stock · ${p.location === 'divine_bliss' ? 'Divine Bliss NJ' : p.location === 'piel_spa' ? 'Manhattan' : 'Sin asignar'})`, p.id)), new Option('Otro producto…', '__otro'));
             if (selected && selected !== '__otro' && !available.some(p => p.id === selected)) {
                 select.add(new Option('Producto sin stock o no disponible', selected));
             }
@@ -5263,6 +5263,7 @@
             human: 'Pide hablar con alguien', question: 'Tiene una pregunta', medical: 'Pregunta de salud', photo: 'Envió una foto',
             after_care: '⚠️ Molestia post-tratamiento', urgent: '🚨 Posible urgencia', complaint: 'Queja', payment: 'Pagos',
             audio: 'Audio', precios: 'Pide precios', agendar: 'Quiere que le agenden', servicios: 'Pregunta de servicios', unknown: 'El asistente no entendió',
+            product_order: '🛍️ Solicitud de apartado', product_contact: '🛍️ Consulta de compra',
         };
         // Opens on every chat (unread ones highlighted); "No leídos" narrows it.
         let waFilter = WA_SHOW_ATTENTION ? 'attention' : 'all';
@@ -5553,11 +5554,17 @@
                         <textarea id="wa-bot-promo" rows="2" maxlength="300" class="w-full border border-[#EDE1E7] rounded-lg p-2 mt-1"></textarea></label>
                     <label class="block">La misma promoción en inglés
                         <textarea id="wa-bot-promo-en" rows="2" maxlength="300" class="w-full border border-[#EDE1E7] rounded-lg p-2 mt-1"></textarea></label>
+                    <label class="block">Último día de la promoción (Nueva York)
+                        <input type="date" id="wa-bot-promo-end" class="border border-[#EDE1E7] rounded-lg p-2 mt-1"></label>
+                    <fieldset class="flex flex-wrap gap-3"><legend class="font-semibold mb-1">Promoción de productos en Manhattan</legend>
+                        <label>Descuento (%) <input type="number" id="wa-bot-product-percent" min="0" max="99.99" step="0.01" class="w-24 border rounded-lg p-1"></label>
+                        <label>Último día <input type="date" id="wa-bot-product-end" class="border rounded-lg p-1"></label>
+                    </fieldset>
                     <fieldset><legend class="font-semibold mb-1">Horario de atención humana (Nueva York)</legend>
                         <div id="wa-bot-days" class="flex flex-wrap gap-2 mb-2"></div>
                         <div class="flex items-center gap-2"><input type="time" id="wa-bot-open" class="border border-[#EDE1E7] rounded-lg p-1"> a <input type="time" id="wa-bot-close" class="border border-[#EDE1E7] rounded-lg p-1"></div>
                     </fieldset>
-                    <p class="text-xs opacity-70">Los precios que muestra el asistente salen de Productos → Servicios, solo de los marcados "Visible en el asistente".</p>
+                    <p class="text-xs opacity-70">El asistente muestra los servicios habilitados y los productos marcados para WhatsApp que tengan precio y stock vigente.</p>
                     <p id="wa-bot-error" class="text-red-700" role="alert"></p>
                     <div class="flex justify-end gap-2"><button type="button" class="px-4 py-2 rounded-full border border-[#EDE1E7]" onclick="this.closest('dialog').close()">Cancelar</button>
                         <button class="px-4 py-2 rounded-full bg-[#2A2330] text-white">Guardar</button></div>
@@ -5570,6 +5577,9 @@
             document.getElementById('wa-bot-phones').value = phones.join('\n');
             document.getElementById('wa-bot-promo').value = waSettings.promo_text || '';
             document.getElementById('wa-bot-promo-en').value = waSettings.promo_text_en || '';
+            document.getElementById('wa-bot-promo-end').value = waSettings.promo_ends_on || '';
+            document.getElementById('wa-bot-product-percent').value = waSettings.product_promo_percent ?? 0;
+            document.getElementById('wa-bot-product-end').value = waSettings.product_promo_ends_on || '';
             const h = waSettings.human_hours || { days: [1, 2, 3, 4, 5, 6], open: '09:00', close: '19:00' };
             document.getElementById('wa-bot-days').innerHTML = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((d, i) =>
                 `<label class="flex gap-1 items-center"><input type="checkbox" value="${i}" ${h.days.includes(i) ? 'checked' : ''}> ${d}</label>`).join('');
@@ -5586,6 +5596,12 @@
             const days = [...document.querySelectorAll('#wa-bot-days input:checked')].map(i => Number(i.value));
             const open = document.getElementById('wa-bot-open').value, close = document.getElementById('wa-bot-close').value;
             const err = document.getElementById('wa-bot-error');
+            const productPercent = Number(document.getElementById('wa-bot-product-percent').value);
+            const productEnd = document.getElementById('wa-bot-product-end').value || null;
+            if (!Number.isFinite(productPercent) || productPercent < 0 || productPercent >= 100 || (productPercent > 0 && !productEnd)) {
+                err.textContent = 'Para aplicar un descuento en productos, indica el porcentaje y su fecha final.';
+                return;
+            }
             if (mode === 'test' && !phones.length) { err.textContent = 'Agrega al menos un número de prueba.'; return; }
             if (!days.length || !open || !close || close <= open) { err.textContent = 'Revisa los días y el horario.'; return; }
             if (mode === 'on' && !confirm('El asistente responderá a todos los chats de WhatsApp. ¿Encenderlo?')) return;
@@ -5594,6 +5610,9 @@
                 bot_test_phones: mode === 'off' ? [] : phones,
                 promo_text: document.getElementById('wa-bot-promo').value.trim(),
                 promo_text_en: document.getElementById('wa-bot-promo-en').value.trim(),
+                promo_ends_on: document.getElementById('wa-bot-promo-end').value || null,
+                product_promo_percent: productPercent,
+                product_promo_ends_on: productEnd,
                 human_hours: { days, open, close },
                 updated_at: new Date().toISOString(),
             };
@@ -10311,6 +10330,6 @@
         }
     </script>
     <script src="admin-contabilidad.js?v=20261201-prepaid-sessions"></script>
-    <script src="admin-productos.js?v=20261202-promo-cents"></script>
+    <script src="admin-productos.js?v=20261203-whatsapp-products"></script>
 </body>
 </html>
