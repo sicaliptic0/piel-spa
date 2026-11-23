@@ -333,37 +333,32 @@
         const isPatientUser = (user) => !!user && String(user.email || '').endsWith('@patients.piel-spa.internal');
         const onlyDigits = (v) => String(v || '').replace(/\D/g, '');
 
-        // ---------- Catalog (same ids as dashboard.html TREATMENT_OPTIONS) ----------
-        const TREATMENT_OPTIONS = [
-            { id: 'general_consultation', category: 'consultation', en: 'General Consultation', es: 'Consulta General' },
-            { id: 'upper_face_rejuvenation', category: 'neuromodulators', en: 'Upper Face Rejuvenation', es: 'Rejuvenecimiento de la Parte Superior' },
-            { id: 'masseter_reduction_bruxism', category: 'neuromodulators', en: 'Masseter Reduction (Bruxism)', es: 'Reducción del Masetero (Bruxismo)' },
-            { id: 'gummy_smile_correction', category: 'neuromodulators', en: 'Gummy Smile Correction', es: 'Corrección de Sonrisa Gingival' },
-            { id: 'nasal_profiling', category: 'neuromodulators', en: 'Nasal Profiling', es: 'Perfilado Nasal' },
-            { id: 'hyperhidrosis_treatment', category: 'neuromodulators', en: 'Hyperhidrosis Treatment', es: 'Tratamiento de Hiperhidrosis' },
-            { id: 'lip_augmentation', category: 'fillers', en: 'Lip Augmentation', es: 'Aumento de Labios' },
-            { id: 'facial_harmonization', category: 'fillers', en: 'Facial Harmonization', es: 'Armonización Facial' },
-            { id: 'jawline_masculinization', category: 'fillers', en: 'Jawline Masculinization', es: 'Masculinización de la Mandíbula' },
-            { id: 'facial_feminization', category: 'fillers', en: 'Facial Feminization', es: 'Feminización Facial' },
-            { id: 'sculptra', category: 'biostimulators', en: 'Sculptra (Poly-L-Lactic Acid)', es: 'Sculptra (Acido Polilactico)' },
-            { id: 'radiesse', category: 'biostimulators', en: 'Radiesse (Calcium Hydroxylapatite)', es: 'Radiesse (Hidroxiapatita de Calcio)' },
-            { id: 'exosomes_therapy_direct_injection', category: 'lasers', en: 'Exosomes Therapy (Direct Injection)', es: 'Terapia con Exosomas (Inyección Directa)' },
-            { id: 'microneedling_exosomes', category: 'lasers', en: 'Microneedling + Exosomes', es: 'Microneedling + Exosomas' },
-            { id: 'salmon_pdrn_direct_injection', category: 'lasers', en: 'Salmon PDRN (Direct Injection)', es: 'Salmon PDRN (Inyección Directa)' },
-            { id: 'microneedling_salmon_pdrn', category: 'lasers', en: 'Microneedling + Salmon PDRN', es: 'Microneedling + Salmon PDRN' },
-            { id: 'nctf_skin_boosting', category: 'lasers', en: 'NCTF Skin Boosting', es: 'Impulso de la Piel con NCTF' },
-            { id: 'fractional_co2_laser_resurfacing', category: 'lasers', en: 'Fractional CO2 Laser Resurfacing', es: 'Resurfacing con Láser CO2 Fraccionado' },
-            { id: 'facial_cleansing', category: 'lasers', en: 'Facial Cleansing', es: 'Limpieza Facial' },
-            { id: 'endolaser', category: 'lasers', en: 'Endolaser', es: 'Endoláser' },
-            { id: 'hyaluronidase_injection', category: 'lasers', en: 'Hyaluronidase Injection', es: 'Inyección de Hialuronidasa' },
+        // ---------- Catalog ----------
+        // The public booking only offers a visit type (consultation or treatment
+        // procedure) for ONE of the main concerns shown on index.html. Each pair is
+        // stored as one id, e.g. consult_dark_spots / procedure_wrinkles — keep in
+        // sync with WEB_BOOKING_* in supabase/functions/_shared/clinic.ts, admin.html
+        // and dashboard.html.
+        const VISIT_TYPES = [
+            { id: 'consult', en: 'Consultation', es: 'Consulta', hintEn: 'Evaluation and a treatment plan for your skin.', hintEs: 'Evaluación y plan de tratamiento para tu piel.' },
+            { id: 'procedure', en: 'Treatment procedure', es: 'Procedimiento', hintEn: 'Come in to receive a treatment.', hintEs: 'Ven a realizarte un tratamiento.' },
         ];
-        const TREATMENT_CATEGORIES = [
-            { id: 'consultation', en: 'Consultations', es: 'Consultas' },
-            { id: 'neuromodulators', en: 'Neuromodulators (Botox)', es: 'Neuromoduladores (Botox)' },
-            { id: 'fillers', en: 'Dermal Fillers (Hyaluronic Acid)', es: 'Rellenos Dérmicos (Ácido Hialurónico)' },
-            { id: 'biostimulators', en: 'Biostimulators (Collagen Inducers)', es: 'Bioestimuladores (Inductores de Colágeno)' },
-            { id: 'lasers', en: 'Regenerative Aesthetics & Lasers', es: 'Estética Regenerativa y Láseres' },
+        const CONCERNS = [
+            { id: 'skin_maintenance', en: 'Skin maintenance', es: 'Mantenimiento de mi piel' },
+            { id: 'dark_spots', en: 'Dark spots & melasma', es: 'Manchas y melasma' },
+            { id: 'acne', en: 'Acne & breakouts', es: 'Acné y brotes' },
+            { id: 'texture_pores', en: 'Texture & pores', es: 'Textura y poros' },
+            { id: 'relaxation_drainage', en: 'Relaxation & drainage', es: 'Relajación y drenaje' },
+            { id: 'wrinkles', en: 'Wrinkles', es: 'Arrugas' },
+            { id: 'sagging', en: 'Sagging', es: 'Flacidez' },
+            { id: 'radiance_hydration', en: 'Radiance & hydration', es: 'Luminosidad e hidratación' },
+            { id: 'volume_loss', en: 'Volume loss', es: 'Pérdida de volumen' },
+            { id: 'under_eye', en: 'Under-eye circles', es: 'Ojeras' },
         ];
+        const TREATMENT_OPTIONS = VISIT_TYPES.flatMap(v => CONCERNS.map(c => ({
+            id: `${v.id}_${c.id}`, visit: v.id, concern: c.id,
+            en: `${v.en} · ${c.en}`, es: `${v.es} · ${c.es}`,
+        })));
         const COUNTRY_CODES = [
             ['US', '+1'], ['MX', '+52'], ['CO', '+57'], ['VE', '+58'], ['DO', '+1'], ['PR', '+1'], ['EC', '+593'], ['PE', '+51'],
             ['AR', '+54'], ['CL', '+56'], ['ES', '+34'], ['GT', '+502'], ['SV', '+503'], ['HN', '+504'], ['NI', '+505'],
@@ -376,7 +371,9 @@
         };
 
         // ---------- State ----------
-        const selectedTreatments = new Set();
+        let selectedVisit = null;   // 'consult' | 'procedure'
+        let selectedConcern = null; // CONCERNS id
+        const selectedTreatments = new Set(); // the single combined id, derived from the two above
         let slotsByDay = new Map(); // 'YYYY-MM-DD' -> ['10:00', ...]
         let slotsLoaded = false;
         let selectedDay = null;
@@ -426,7 +423,7 @@
         }
 
         const STEP_HEADS = {
-            1: [['What would you like to treat?', '¿Qué te gustaría tratar?'], ['Choose one or more. Not sure? Pick “General Consultation”.', 'Elige uno o varios. ¿No estás seguro(a)? Elige “Consulta General”.']],
+            1: [['What would you like to book?', '¿Qué te gustaría agendar?'], ['Choose the type of visit and what you want to treat.', 'Elige el tipo de cita y qué quieres tratar.']],
             2: [['Choose your day and time', 'Elige tu día y hora'], ['Times shown in New York time.', 'Horarios en hora de Nueva York.']],
             3: [['Almost done', 'Ya casi terminamos'], ['Your phone is how we recognize you.', 'Con tu teléfono te reconocemos.']]
         };
@@ -449,22 +446,36 @@
 
         // ---------- Step 1 ----------
         function renderTreatments() {
-            document.getElementById('treatment-groups').innerHTML = TREATMENT_CATEGORIES.map(cat => `
+            document.getElementById('treatment-groups').innerHTML = `
                 <div>
-                    <span class="label">${escapeHtml(t(cat.en, cat.es))}</span>
+                    <span class="label">${escapeHtml(t('1. Type of visit', '1. Tipo de cita'))}</span>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        ${TREATMENT_OPTIONS.filter(o => o.category === cat.id).map(o => `
-                            <button type="button" class="chip ${selectedTreatments.has(o.id) ? 'selected' : ''}" onclick="toggleTreatment('${o.id}', this)">
-                                ${escapeHtml(t(o.en, o.es))}
+                        ${VISIT_TYPES.map(v => `
+                            <button type="button" class="chip ${selectedVisit === v.id ? 'selected' : ''}" onclick="pickVisit('${v.id}')">
+                                <span class="block">${escapeHtml(t(v.en, v.es))}</span>
+                                <span class="block text-xs opacity-60 mt-1">${escapeHtml(t(v.hintEn, v.hintEs))}</span>
                             </button>`).join('')}
                     </div>
-                </div>`).join('');
+                </div>
+                <div>
+                    <span class="label">${escapeHtml(t('2. What would you like to treat?', '2. ¿Qué te gustaría tratar?'))}</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        ${CONCERNS.map(c => `
+                            <button type="button" class="chip ${selectedConcern === c.id ? 'selected' : ''}" onclick="pickConcern('${c.id}')">
+                                ${escapeHtml(t(c.en, c.es))}
+                            </button>`).join('')}
+                    </div>
+                    <p class="text-xs opacity-60 mt-3">${escapeHtml(t('Choose one. Not sure which treatment you need? Book a consultation and we will guide you.', 'Elige una. ¿No sabes qué tratamiento necesitas? Agenda una consulta y te orientamos.'))}</p>
+                </div>`;
+            syncSelection();
         }
-        function toggleTreatment(id, el) {
-            if (selectedTreatments.has(id)) selectedTreatments.delete(id); else selectedTreatments.add(id);
-            el.classList.toggle('selected', selectedTreatments.has(id));
+        function syncSelection() {
+            selectedTreatments.clear();
+            if (selectedVisit && selectedConcern) selectedTreatments.add(`${selectedVisit}_${selectedConcern}`);
             document.getElementById('step1-next').disabled = !selectedTreatments.size;
         }
+        function pickVisit(id) { selectedVisit = id; renderTreatments(); }
+        function pickConcern(id) { selectedConcern = id; renderTreatments(); }
 
         // ---------- Step 2 ----------
         async function loadSlots() {
@@ -693,11 +704,13 @@
                 COUNTRY_CODES.map(([iso, dial]) => `<option value="${dial}" ${iso === 'US' ? 'selected' : ''}>${flag(iso)} ${dial}</option>`).join('');
             applyLanguage();
 
-            // Preselect treatments from the link, e.g. agendar.html?t=lip_augmentation
-            const preset = new URLSearchParams(window.location.search).get('t');
-            (preset ? preset.split(',') : []).forEach(id => { if (TREATMENT_OPTIONS.some(o => o.id === id)) selectedTreatments.add(id); });
+            // Preselect from the link: agendar.html?c=dark_spots (concern only, stays on
+            // step 1) or agendar.html?t=procedure_dark_spots (both, skips to step 2).
+            const params = new URLSearchParams(window.location.search);
+            const presetOption = TREATMENT_OPTIONS.find(o => o.id === params.get('t'));
+            if (presetOption) { selectedVisit = presetOption.visit; selectedConcern = presetOption.concern; }
+            else if (CONCERNS.some(c => c.id === params.get('c'))) selectedConcern = params.get('c');
             renderTreatments();
-            document.getElementById('step1-next').disabled = !selectedTreatments.size;
 
             // A patient already signed in skips the phone step. Staff sessions
             // (e.g. the clinic iPad) are ignored — they book from the admin.

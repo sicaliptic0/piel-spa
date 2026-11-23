@@ -55,6 +55,30 @@ export const TREATMENTS: Record<string, { en: string; es: string; bookable?: fal
   hyaluronidase_injection: { en: "Hyaluronidase Injection", es: "Inyección de Hialuronidasa" },
 };
 
+// Public booking (agendar.html): a visit type for one of the main concerns,
+// stored as one id like consult_dark_spots / procedure_wrinkles.
+const WEB_BOOKING_VISITS: [string, string, string][] = [
+  ["consult", "Consultation", "Consulta"],
+  ["procedure", "Treatment procedure", "Procedimiento"],
+];
+const WEB_BOOKING_CONCERNS: [string, string, string][] = [
+  ["skin_maintenance", "Skin maintenance", "Mantenimiento de mi piel"],
+  ["dark_spots", "Dark spots & melasma", "Manchas y melasma"],
+  ["acne", "Acne & breakouts", "Acné y brotes"],
+  ["texture_pores", "Texture & pores", "Textura y poros"],
+  ["relaxation_drainage", "Relaxation & drainage", "Relajación y drenaje"],
+  ["wrinkles", "Wrinkles", "Arrugas"],
+  ["sagging", "Sagging", "Flacidez"],
+  ["radiance_hydration", "Radiance & hydration", "Luminosidad e hidratación"],
+  ["volume_loss", "Volume loss", "Pérdida de volumen"],
+  ["under_eye", "Under-eye circles", "Ojeras"],
+];
+for (const [v, vEn, vEs] of WEB_BOOKING_VISITS) {
+  for (const [c, cEn, cEs] of WEB_BOOKING_CONCERNS) {
+    TREATMENTS[`${v}_${c}`] = { en: `${vEn} · ${cEn}`, es: `${vEs} · ${cEs}` };
+  }
+}
+
 export function isBookableTreatment(id: string): boolean {
   return !!TREATMENTS[id] && TREATMENTS[id].bookable !== false;
 }

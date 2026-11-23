@@ -365,6 +365,19 @@
             { id: 'endolaser', category: 'lasers', en: 'Endolaser', es: 'Endoláser', price: '' },
             { id: 'hyaluronidase_injection', category: 'lasers', en: 'Hyaluronidase Injection', es: 'Inyección de Hialuronidasa', price: '' },
         ];
+        // Public booking (agendar.html) ids, e.g. consult_dark_spots — labels only.
+        [['consult', 'Consultation', 'Consulta'], ['procedure', 'Treatment procedure', 'Procedimiento']].forEach(([v, vEn, vEs]) => [
+            ['skin_maintenance', 'Skin maintenance', 'Mantenimiento de mi piel'],
+            ['dark_spots', 'Dark spots & melasma', 'Manchas y melasma'],
+            ['acne', 'Acne & breakouts', 'Acné y brotes'],
+            ['texture_pores', 'Texture & pores', 'Textura y poros'],
+            ['relaxation_drainage', 'Relaxation & drainage', 'Relajación y drenaje'],
+            ['wrinkles', 'Wrinkles', 'Arrugas'],
+            ['sagging', 'Sagging', 'Flacidez'],
+            ['radiance_hydration', 'Radiance & hydration', 'Luminosidad e hidratación'],
+            ['volume_loss', 'Volume loss', 'Pérdida de volumen'],
+            ['under_eye', 'Under-eye circles', 'Ojeras'],
+        ].forEach(([c, cEn, cEs]) => TREATMENT_OPTIONS.push({ id: `${v}_${c}`, category: 'web_booking', en: `${vEn} · ${cEn}`, es: `${vEs} · ${cEs}` })));
 
         const TREATMENT_CATEGORIES = [
             { id: 'consultation', en: 'Consultations', es: 'Consultas' },
