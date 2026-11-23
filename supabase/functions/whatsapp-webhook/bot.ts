@@ -39,7 +39,7 @@ const BOOKING_URL = "https://piel-spa.com/agendar.html";
 const MAPS_URL = "https://maps.app.goo.gl/?q=481+8th+Ave+Suite+1221+New+York+NY+10001";
 
 type Hours = { days: number[]; open: string; close: string };
-type Settings = { promo_text: string; promo_text_en: string; human_hours: Hours; product_discount: number; test_phones: string[]; test_mode: boolean };
+type Settings = { promo_text: string; promo_text_en: string; promo_ends_on: string | null; human_hours: Hours; product_discount: number; test_phones: string[]; test_mode: boolean };
 type Conv = {
   id: string; patient_id: string | null; profile_name: string | null; bot_state: string | null; bot_greeted_at: string | null;
   bot_lang: Lang | null; bot_location: Loc | null;
@@ -80,6 +80,8 @@ const SERVICES = ["precio", "cuanto", "cuesta", "costo", "servicio", "tratamient
 const BOOK = ["cita", "agendar", "agenda", "reservar", "reserva", "turno", "appointment", "book", "schedule", "time slots"];
 const PROMOTION = ["black friday", "promocion", "promociones", "oferta", "ofertas", "descuento", "descuentos", "promotion", "promotions", "discount", "discounts"];
 const PRICE_INQUIRY = ["precio", "precios", "cuanto cuesta", "cuanto sale", "cost", "price", "prices", "how much"];
+const TOXIN_CODE = "TOXINA-UNIDAD";
+const TOXIN_TERMS = ["botox", "dysport", "disport", "toxina botulinica", "toxina", "botulinum toxin", "tratamiento antiarrugas", "antiarrugas", "anti-wrinkle treatment"];
 const INFO = ["donde", "direccion", "ubicacion", "ubicados", "como llego", "estacionamiento", "parking", "horario", "abren", "address",
   "location", "hours", "where", "open"];
 const PRODUCTS = ["producto", "comprar", "protector solar", "bloqueador", "spf", "crema", "serum", "limpiador", "rutina", "skincare", "product", "sunscreen", "cleanser", "moisturizer", "routine", "buy"];
@@ -127,6 +129,7 @@ async function loadSettings(db: SupabaseClient): Promise<Settings> {
   return {
     promo_text: expired ? "" : String(data?.promo_text ?? "").trim(),
     promo_text_en: expired ? "" : String(data?.promo_text_en ?? "").trim(),
+    promo_ends_on: data?.promo_ends_on ?? null,
     product_discount: (data?.product_promo_ends_on || "") >= clinicDate(0) ? Number(data?.product_promo_percent) || 0 : 0,
     test_phones: data?.bot_test_phones ?? [],
     test_mode: data?.bot_enabled === false,
@@ -473,7 +476,7 @@ function unitText(unit: string, lang: Lang): string {
   return /^\d/.test(u) ? ` (${u})` : L(lang, ` por ${u}`, ` per ${u}`);
 }
 // bot_price_mode: exact = the price · from = "desde" · consult = no price, it depends on the consultation.
-function priceLine(s: Service, lang: Lang): string {
+function priceLine(s: Service, lang: Lang, settings: Settings): string {
   const name = lang === "en" ? (s.bot_name_en || s.name) : s.name;
   const desc = lang === "en" ? (s.bot_description_en || "") : (s.bot_description || "");
   if (s.status === "soon") return `• *${name}*: ${L(lang, "próximamente", "coming soon")}`;
@@ -481,12 +484,14 @@ function priceLine(s: Service, lang: Lang): string {
   const mode = s.bot_price_mode || "exact";
   const per = unitText(s.unit, lang);
   const from = mode === "from" ? L(lang, "desde ", "from ") : "";
+  const formatPrice = (amount: number) => s.code === TOXIN_CODE ? `$${Number(amount).toFixed(2)}` : money(amount);
   let price = "";
   if (mode === "consult" || base == null) price = L(lang, "precio según tu consulta", "price depends on your consultation");
-  else if (s.promo_price != null && s.promo_price < base) {
-    price = L(lang, `${from}${money(s.promo_price)}${per} en promoción (regular ${from}${money(base)})`,
-      `${from}${money(s.promo_price)}${per} on promotion (regular ${from}${money(base)})`);
-  } else price = `${from}${money(base)}${per}`;
+  else if (s.promo_price != null && s.promo_price < base &&
+    (s.code !== TOXIN_CODE || Boolean(settings.promo_ends_on && settings.promo_ends_on >= clinicDate(0)))) {
+    price = L(lang, `${from}${formatPrice(s.promo_price)}${per} en promoción (regular ${from}${formatPrice(base)})`,
+      `${from}${formatPrice(s.promo_price)}${per} on promotion (regular ${from}${formatPrice(base)})`);
+  } else price = `${from}${formatPrice(base)}${per}`;
   return `• *${name}*: ${price}${desc ? `\n  ${desc}` : ""}`;
 }
 
@@ -517,8 +522,8 @@ async function categoryDetail(db: SupabaseClient, conv: Conv, waId: string, inde
   const { categories, byCat } = await botServices(db);
   const cat = categories[index];
   if (!cat || isConsult(cat)) return servicesMenu(db, conv, waId, s, lang);
-  const lines = byCat[cat].map((x) => priceLine(x, lang)).join("\n");
-  const consult = categories.filter(isConsult).flatMap((c) => byCat[c]).map((x) => priceLine(x, lang)).join("\n");
+  const lines = byCat[cat].map((x) => priceLine(x, lang, s)).join("\n");
+  const consult = categories.filter(isConsult).flatMap((c) => byCat[c]).map((x) => priceLine(x, lang, s)).join("\n");
   const text = L(lang, `Para *${cat.toLowerCase()}* te podemos ofrecer:`, `For *${catName(cat, lang).toLowerCase()}* we offer:`) + `\n${lines}` +
     (consult ? `\n\n${L(lang, "Si no sabes cuál elegir, empieza con una valoración:", "Not sure which one? Start with an assessment:")}\n${consult}` : "") +
     `\n\n${L(lang, "En tu primera visita revisamos tu piel para confirmar el tratamiento ideal para ti.",
@@ -541,6 +546,27 @@ async function routeQuestion(db: SupabaseClient, conv: Conv, waId: string, lang:
   const { categories, byCat } = await botServices(db);
   const services = categories.flatMap((category) => byCat[category]);
   const t = norm(body);
+  const brandQuestion = hasWord(t, ["marca", "marcas", "brand", "brands", "dysport", "disport"]);
+  const toxinFollowUp = conv.bot_state === "toxin_info" &&
+    (brandQuestion || hasWord(t, [...PRICE_INQUIRY, "unidades", "dosis", "units", "dose"]));
+  if (hasWord(t, TOXIN_TERMS) || toxinFollowUp) {
+    const toxin = services.find((service) => service.code === TOXIN_CODE);
+    if (!toxin) return false;
+    const brand = brandQuestion
+      ? L(lang, " Una de las marcas con las que trabajamos es Dysport®.", " One of the brands we work with is Dysport®.")
+      : hasWord(t, ["botox"]) ? L(lang, " Botox® es una marca de toxina botulínica.", " Botox® is one brand of botulinum toxin.") : "";
+    const text = L(lang, "Ofrecemos tratamiento para líneas de expresión con toxina botulínica en Piel Spa Manhattan.",
+      "We offer botulinum toxin treatment for expression lines at Piel Spa Manhattan.") + brand +
+      `\n\n${priceLine({ ...toxin, name: "Toxina botulínica", bot_name_en: "Botulinum toxin", bot_description: null, bot_description_en: null }, lang, s)}\n\n` +
+      L(lang, "En la valoración, el especialista revisa qué zonas quieres tratar y te confirma la cantidad de unidades y el precio total antes de empezar.",
+        "At your assessment, the specialist reviews the areas you want treated and confirms the number of units and total price before treatment.");
+    await setState(db, conv, "toxin_info");
+    await sendButtons(db, conv, waId, text, [
+      { id: "bot:book", title: L(lang, "Agendar valoración", "Book an assessment") },
+      { id: "bot:human:servicios", title: L(lang, "Hablar con el equipo", "Talk to our team") },
+    ]);
+    return true;
+  }
   const names = services.flatMap((service, index) =>
     [service.name, service.bot_name_en].filter((name): name is string => Boolean(name)).map((name) => ({ name: norm(name), index })));
   const direct = names.filter(({ name }) => name.length > 3 && hasWord(t, [name])).sort((a, b) => b.name.length - a.name.length)[0];
@@ -556,7 +582,7 @@ async function routeQuestion(db: SupabaseClient, conv: Conv, waId: string, lang:
   }
   const service = /^service_\d+$/.test(intent) ? services[Number(intent.split("_")[1])] : undefined;
   if (service) {
-    await sendButtons(db, conv, waId, priceLine(service, lang).slice(0, 1000), [
+    await sendButtons(db, conv, waId, priceLine(service, lang, s).slice(0, 1000), [
       { id: "bot:book", title: L(lang, service.status === "assessment" ? "Pedir valoración" : "Agendar cita",
         service.status === "assessment" ? "Book an assessment" : "Book appointment") },
       { id: `bot:cat:${categories.indexOf(service.category)}`, title: L(lang, "Ver opciones afines", "See related options") },
@@ -567,7 +593,7 @@ async function routeQuestion(db: SupabaseClient, conv: Conv, waId: string, lang:
   const category = /^category_\d+$/.test(intent) ? Number(intent.split("_")[1]) : -1;
   if (category >= 0 && category < categories.length) {
     if (isConsult(categories[category])) {
-      await sendButtons(db, conv, waId, priceLine(byCat[categories[category]][0], lang).slice(0, 1000), back(lang));
+      await sendButtons(db, conv, waId, priceLine(byCat[categories[category]][0], lang, s).slice(0, 1000), back(lang));
     } else await categoryDetail(db, conv, waId, category, s, lang);
     return true;
   }
@@ -818,6 +844,7 @@ export async function runBot(db: SupabaseClient, conversationId: string, waId: s
   if (has(t, COMPLAINT)) { await handOff(db, conv, waId, "complaint", s, lang, body); return true; }
   if (has(t, PAYMENT)) { await handOff(db, conv, waId, "payment", s, lang, body); return true; }
   if (has(t, HUMAN)) { await handOff(db, conv, waId, "human", s, lang, body); return true; }
+  if (has(t, ["retox", "re tox"])) { await handOff(db, conv, waId, "servicios", s, lang, body); return true; }
 
   // The patient was asked to write their question.
   if (conv.bot_state === "await_question") { await handOff(db, conv, waId, "question", s, lang, body); return true; }
