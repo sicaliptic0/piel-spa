@@ -5506,7 +5506,9 @@
             const mode = document.getElementById('wa-chat-mode');
             const action = document.getElementById('wa-chat-action');
             const botHere = waBotOn(c);
-            const adTag = c.ad_headline ? ` <span class="text-sky-700 normal-case tracking-normal">· 📣 Anuncio: ${escapeHtml(c.ad_headline)}</span>` : '';
+            const adTag = (c.ad_headline ? ` <span class="text-sky-700 normal-case tracking-normal">· 📣 Anuncio: ${escapeHtml(c.ad_headline)}</span>` : '')
+                + (c.bot_location ? ` <span class="normal-case tracking-normal opacity-70">· 📍 ${c.bot_location === 'divine_bliss' ? 'Divine Bliss' : 'Manhattan'}</span>` : '')
+                + (c.bot_lang === 'en' ? ' <span class="normal-case tracking-normal text-sky-700">· 🇺🇸 Inglés</span>' : '');
             if (botHere && c.bot_active) {
                 mode.innerHTML = '<span class="text-purple-600">🤖 IA atendiendo</span>' + adTag;
                 action.innerText = 'Tomar conversación';
@@ -5547,8 +5549,10 @@
                     </fieldset>
                     <label class="block">Números de prueba (con código de país, uno por línea)
                         <textarea id="wa-bot-phones" rows="3" class="w-full border border-[#EDE1E7] rounded-lg p-2 mt-1" placeholder="19295550000"></textarea></label>
-                    <label class="block">Promoción que menciona en cada saludo (vacío = ninguna)
+                    <label class="block">Promoción de Piel Spa Manhattan en cada saludo (vacío = ninguna). Divine Bliss no la ve.
                         <textarea id="wa-bot-promo" rows="2" maxlength="300" class="w-full border border-[#EDE1E7] rounded-lg p-2 mt-1"></textarea></label>
+                    <label class="block">La misma promoción en inglés
+                        <textarea id="wa-bot-promo-en" rows="2" maxlength="300" class="w-full border border-[#EDE1E7] rounded-lg p-2 mt-1"></textarea></label>
                     <fieldset><legend class="font-semibold mb-1">Horario de atención humana (Nueva York)</legend>
                         <div id="wa-bot-days" class="flex flex-wrap gap-2 mb-2"></div>
                         <div class="flex items-center gap-2"><input type="time" id="wa-bot-open" class="border border-[#EDE1E7] rounded-lg p-1"> a <input type="time" id="wa-bot-close" class="border border-[#EDE1E7] rounded-lg p-1"></div>
@@ -5565,6 +5569,7 @@
             dlg.querySelectorAll('[name="wa-bot-mode"]').forEach(r => { r.checked = r.value === modeNow; });
             document.getElementById('wa-bot-phones').value = phones.join('\n');
             document.getElementById('wa-bot-promo').value = waSettings.promo_text || '';
+            document.getElementById('wa-bot-promo-en').value = waSettings.promo_text_en || '';
             const h = waSettings.human_hours || { days: [1, 2, 3, 4, 5, 6], open: '09:00', close: '19:00' };
             document.getElementById('wa-bot-days').innerHTML = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((d, i) =>
                 `<label class="flex gap-1 items-center"><input type="checkbox" value="${i}" ${h.days.includes(i) ? 'checked' : ''}> ${d}</label>`).join('');
@@ -5588,6 +5593,7 @@
                 bot_enabled: mode === 'on',
                 bot_test_phones: mode === 'off' ? [] : phones,
                 promo_text: document.getElementById('wa-bot-promo').value.trim(),
+                promo_text_en: document.getElementById('wa-bot-promo-en').value.trim(),
                 human_hours: { days, open, close },
                 updated_at: new Date().toISOString(),
             };
@@ -5610,7 +5616,10 @@
         // the chat back (bot_active = true).
         async function resolveWaConversation(id) {
             const updates = { needs_attention: false, unread_count: 0, handoff_reason: null };
-            if (waBotOn(waConversations.find(c => c.id === id))) Object.assign(updates, { bot_active: true, human_since: null, human_by: null, bot_state: null });
+            const conv = waConversations.find(c => c.id === id);
+            if (waBotOn(conv)) Object.assign(updates, { bot_active: true, human_since: null, human_by: null, bot_state: null });
+            // Not a patient: next time the bot asks again which location they mean.
+            if (waBotOn(conv) && !conv.patient_id) updates.bot_location = null;
             const { error } = await _supabase.from('wa_conversations').update(updates).eq('id', id);
             if (error) alert('No se pudo actualizar: ' + error.message);
         }

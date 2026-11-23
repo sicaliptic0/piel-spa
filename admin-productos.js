@@ -417,6 +417,8 @@
           <label class="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" id="svc-bot-visible"> Visible en el asistente de WhatsApp</label>
           <label class="text-sm block">Cómo muestra el precio<select id="svc-bot-price-mode"><option value="exact">Precio exacto</option><option value="from">Desde (precio mínimo)</option><option value="consult">Según consulta (sin precio)</option></select></label>
           <label class="text-sm block">Descripción corta para WhatsApp (opcional)<input id="svc-bot-description" maxlength="140" placeholder="Ej. Limpieza profunda, 60 min"></label>
+          <label class="text-sm block">Nombre en inglés (si el paciente elige inglés)<input id="svc-bot-name-en" maxlength="120" placeholder="Ej. Essential Facial"></label>
+          <label class="text-sm block">Descripción en inglés (opcional)<input id="svc-bot-description-en" maxlength="140" placeholder="Ej. Deep cleansing, 60 min"></label>
           <p class="text-xs opacity-70">El asistente muestra el nombre, el precio Piel Spa y la promoción de los servicios marcados. Los servicios en estado Próximamente se muestran sin precio.</p>
         </div>
         <p class="text-xs opacity-70" id="svc-code-help">Usa letras, números, guion o guion bajo. El Libro Contable usa el código vigente en todos los cobros vinculados a este servicio.</p>
@@ -459,6 +461,8 @@
         $('svc-notes').value = service?.notes || '';
         $('svc-bot-visible').checked = !!service?.bot_visible;
         $('svc-bot-description').value = service?.bot_description || '';
+        $('svc-bot-name-en').value = service?.bot_name_en || '';
+        $('svc-bot-description-en').value = service?.bot_description_en || '';
         $('svc-bot-price-mode').value = service?.bot_price_mode || 'exact';
         $('svc-reference').textContent = service?.reference_price == null ? '' :
             `Tarifario interno ${service.source_code || ''} · Regular ${money(service.reference_price)} · Promoción ${money(service.reference_promo)}`;
@@ -567,6 +571,8 @@
         row.notes = $('svc-notes').value.trim() || null;
         row.bot_visible = $('svc-bot-visible').checked;
         row.bot_description = $('svc-bot-description').value.trim() || null;
+        row.bot_name_en = $('svc-bot-name-en').value.trim() || null;
+        row.bot_description_en = $('svc-bot-description-en').value.trim() || null;
         row.bot_price_mode = $('svc-bot-price-mode').value;
         row.updated_at = new Date().toISOString();
         const table = _supabase.from('sale_services');
