@@ -100,7 +100,7 @@ function months(db) {
   return out;
 }
 const share = (db, row, socio) => row === socio ? 1 : row === 'Ambos (50/50)' ? db.share[socio] : 0;
-const reembolsable = g => g.libro === 'LLC' && (g.estado === 'Pendiente' || g.estado === 'Reembolsado') && g.pagado_por !== 'LLC';
+const reembolsable = g => g.libro === 'LLC' && ['Pendiente', 'Parcial', 'Reembolsado'].includes(g.estado) && g.pagado_por !== 'LLC';
 function socioMes(db, socio, m) {
   const r = { aportes: 0, retiros: 0, gastos: 0, reembolsos: 0, prestamos: 0, pagosPrestamo: 0 };
   db.movimientos.filter(x => x.confirmado && ym(x.fecha) === m).forEach(x => {
@@ -111,7 +111,7 @@ function socioMes(db, socio, m) {
   db.gastos.forEach(g => {
     const f = share(db, g.pagado_por, socio); if (!f || !reembolsable(g)) return;
     if (ym(g.fecha) === m) r.gastos += g.monto * f;
-    if (g.estado === 'Reembolsado' && ym(g.fecha_reembolso || g.fecha) === m) r.reembolsos += g.monto * f;
+    if (ym(g.fecha_reembolso || g.fecha) === m) r.reembolsos += (g.estado === 'Reembolsado' ? g.monto : Number(g.monto_reembolsado || 0)) * f;
   });
   return r;
 }
@@ -165,9 +165,9 @@ function syncNow() {
   try {
     const db = fetchData(), ms = months(db), stamp = Utilities.formatDate(new Date(), TIME_ZONE, 'yyyy-MM-dd HH:mm');
     writePanel(db, ms, stamp);
-    writeTable('Gastos · Sistema', ['Fecha', 'Descripción', 'Proveedor', 'Categoría', 'Tipo', 'Libro', 'Monto', 'Cuenta / tarjeta', 'Pagado por', 'Estado reembolso', 'Fecha reembolso', 'Origen', 'Recibo', 'Gasto fijo', 'Nota'],
-      db.gastos.slice().reverse().map(g => [d(g.fecha), g.descripcion, g.proveedor || '', g.categoria, db.kind[g.categoria] || '', g.libro, g.monto, g.cuenta || '', g.pagado_por, g.estado, d(g.fecha_reembolso), g.origen, g.recibo ? 'Sí' : '', g.fijo ? 'Sí' : '', g.nota || '']),
-      { money: [7], dates: [1, 11], redWhen: { col: 10, value: 'Pendiente' } }, stamp);
+    writeTable('Gastos · Sistema', ['Fecha', 'Descripción', 'Proveedor', 'Categoría', 'Tipo', 'Libro', 'Monto', 'Cuenta / tarjeta', 'Titular del pago', 'Estado reembolso', 'Fecha reembolso', 'Origen', 'Recibo', 'Gasto fijo', 'Nota', 'Método de pago', 'Pagado desde', 'Reembolsado desde', 'Origen de fondos', 'Monto reembolsado'],
+      db.gastos.slice().reverse().map(g => [d(g.fecha), g.descripcion, g.proveedor || '', g.categoria, db.kind[g.categoria] || '', g.libro, g.monto, g.cuenta || '', g.pagado_por, g.estado, d(g.fecha_reembolso), g.origen, g.recibo ? 'Sí' : '', g.fijo ? 'Sí' : '', g.nota || '', g.metodo_pago || '', [g.metodo_pago, g.cuenta, g.pagado_por].filter(Boolean).join(' · '), g.reembolsado_desde || '', g.origen_fondos || '', g.estado === 'Reembolsado' ? g.monto : g.monto_reembolsado ?? '']),
+      { money: [7, 20], dates: [1, 11], redWhen: { col: 10, value: 'Pendiente' } }, stamp);
     writeTable('Ingresos · Sistema', ['Fecha', 'Cliente', 'Servicio', 'Categoría', 'Método', 'Venta', 'Descuento', 'Impuesto', 'Recargo', 'Total cobrado', 'Libro', 'Origen', 'Nota', 'Código Servicio', 'ID cobro'],
       db.ingresos.slice().reverse().map(i => [d(i.fecha), i.cliente, i.servicio || '', i.categoria || '', i.metodo || '', i.monto == null ? '' : i.monto, Number(i.descuento || 0), i.impuesto, i.recargo, i.total == null ? '' : i.total, i.anulado ? 'Anulado' : i.libro, i.origen, i.nota || '', i.codigo_servicio || '', i.cobro_id || '']),
       { money: [6, 7, 8, 9, 10], dates: [1] }, stamp);

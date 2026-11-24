@@ -14,6 +14,8 @@
     let serviceProducts = [];
     let serviceBusy = false;
     const selectedServices = new Set();
+    const selectedProducts = new Set();
+    let productsBusy = false;
 
     const $ = id => document.getElementById(id);
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -37,7 +39,7 @@
         if (p.stock_qty <= 0) out.push(['Sin stock', 'b-red']);
         else if (p.min_stock != null && p.stock_qty <= p.min_stock) out.push(['Stock bajo', 'b-amber']);
         if (!p.sales_taxable) out.push(['Sin sales tax', 'b-grey']);
-        if (!p.active) out.push(['Eliminado', 'b-grey']);
+        if (!p.active) out.push(['Archivado', 'b-grey']);
         return out.map(([t, c]) => `<span class="pbadge ${c}">${esc(t)}</span>`).join('');
     }
 
@@ -131,6 +133,76 @@
 
     const stockLocation = (value) => ({ piel_spa: 'Manhattan', divine_bliss: 'Divine Bliss NJ' })[value] || 'Sin asignar';
     let locationFilter = 'all';
+    const productCheckbox = p => p.active ? `<input type="checkbox" data-product-check="${p.id}" class="accent-[#B76E88]" aria-label="Seleccionar ${esc(p.name)}" onclick="event.stopPropagation()">` : '';
+    const offer = p => p.promo_price == null ? '–' : `<span class="font-semibold">${money(p.promo_price)}</span>${p.promo_percent != null
+        ? ` <span class="pbadge b-amber">−${Number(p.promo_percent)}%</span>` : ''}`;
+
+    function bindProductSelection(visible) {
+        const body = $('prod-body');
+        const checks = [...body.querySelectorAll('[data-product-check]')];
+        const all = $('prod-select-all');
+        const buttons = [...body.querySelectorAll('[data-product-action]')];
+        const percent = $('prod-discount');
+        const refresh = () => {
+            checks.forEach(check => {
+                check.checked = selectedProducts.has(check.dataset.productCheck);
+                check.disabled = productsBusy;
+            });
+            all.checked = visible.length > 0 && selectedProducts.size === visible.length;
+            all.indeterminate = selectedProducts.size > 0 && !all.checked;
+            all.disabled = productsBusy || !visible.length;
+            percent.disabled = productsBusy || !selectedProducts.size;
+            buttons.forEach(button => { button.disabled = percent.disabled; });
+            $('prod-selected-count').textContent = `${selectedProducts.size} seleccionados`;
+        };
+        checks.forEach(check => {
+            check.onchange = () => {
+                const id = check.dataset.productCheck;
+                if (check.checked) selectedProducts.add(id);
+                else selectedProducts.delete(id);
+                refresh();
+            };
+        });
+        all.onchange = () => {
+            selectedProducts.clear();
+            if (all.checked) visible.forEach(id => selectedProducts.add(id));
+            refresh();
+        };
+        buttons.forEach(button => {
+            button.onclick = async () => {
+                if (productsBusy) return;
+                const action = button.dataset.productAction;
+                const ids = [...selectedProducts];
+                if (!ids.length) return;
+                if (action === 'discount' && !percent.reportValidity()) return;
+                if (action === 'archive' && !confirm(`¿Archivar ${ids.length} productos seleccionados? Se conservarán los cobros registrados.`)) return;
+                const update = action === 'archive' ? { active: false } : action === 'clear'
+                    ? { promo_percent: null, promo_price: null } : { promo_percent: Number(percent.value) };
+                productsBusy = true;
+                refresh();
+                try {
+                    const { data, error } = await _supabase.from('sale_products')
+                        .update({ ...update, updated_at: new Date().toISOString() }).in('id', ids).eq('active', true).select('id');
+                    if (error) { alert('No se pudo completar la acción: ' + error.message); return; }
+                    selectedProducts.clear();
+                    const result = { archive: 'archivados', discount: 'con descuento aplicado', clear: 'sin oferta' };
+                    toast(`${data.length} productos ${result[action]}.`);
+                    productsBusy = false;
+                    await open();
+                    if (typeof loadPayProducts === 'function') loadPayProducts();
+                } catch (error) {
+                    alert('No se pudo completar la acción: ' + error.message);
+                } finally {
+                    const interrupted = productsBusy;
+                    productsBusy = false;
+                    if (percent.isConnected) refresh();
+                    else if (interrupted && tab === 'productos' && $('prod-select-all')) render();
+                }
+            };
+        });
+        refresh();
+    }
+
     function render() {
         const activos = rows.filter(p => p.active);
         const unidades = activos.reduce((s, p) => s + Math.max(0, p.stock_qty), 0);
@@ -145,22 +217,34 @@
             && (locationFilter === 'all' || (p.location || '') === locationFilter)
             && (filtro === 'todos' || (filtro === 'vencer' && (() => { const d = diasPara(p.expires_on); return d != null && d <= VENCE_PRONTO_DIAS; })())
                 || (filtro === 'stock' && (p.stock_qty <= 0 || (p.min_stock != null && p.stock_qty <= p.min_stock)))));
+        const visible = list.filter(p => p.active).map(p => p.id);
+        const visibleIds = new Set(visible);
+        for (const id of selectedProducts) if (!visibleIds.has(id)) selectedProducts.delete(id);
         $('prod-body').innerHTML = `
           <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">${k.map(([a, b, c]) => `<div class="card p-3"><p class="lbl">${a}</p><p class="text-xl font-semibold mt-1">${b}</p>${c ? `<p class="text-[11px] opacity-60">${c}</p>` : ''}</div>`).join('')}</div>
           <div class="card p-3 mb-4 flex flex-wrap gap-3 items-end">
             <div class="flex-1 min-w-[180px]"><label class="lbl" for="prod-q">Buscar</label><input id="prod-q" type="search" placeholder="Marca, producto o código" value="${esc(q)}"></div>
             <div><label class="lbl" for="prod-f">Mostrar</label><select id="prod-f"><option value="todos">Todos</option><option value="vencer">Por vencer</option><option value="stock">Stock bajo</option></select></div>
             <div><label class="lbl" for="prod-location">Sede</label><select id="prod-location"><option value="all">Todas</option><option value="">Sin asignar</option><option value="piel_spa">Manhattan</option><option value="divine_bliss">Divine Bliss NJ</option></select></div>
-            <label class="flex items-center gap-2 text-xs pb-2"><input type="checkbox" id="prod-del" class="accent-[#B76E88]" ${verEliminados ? 'checked' : ''}> Ver eliminados</label>
+            <label class="flex items-center gap-2 text-xs pb-2"><input type="checkbox" id="prod-del" class="accent-[#B76E88]" ${verEliminados ? 'checked' : ''}> Ver archivados</label>
           </div>
-          <div class="card overflow-hidden hidden md:block"><div class="overflow-x-auto"><table class="t"><thead><tr><th>Marca</th><th>Producto</th><th>Categoría</th><th class="num">Precio sugerido</th><th class="num">Precio Piel Spa</th><th class="num">Costo</th><th class="num">Margen</th><th class="num">Stock</th><th>Vence</th><th></th></tr></thead><tbody>
-            ${grupos(list).map(([marca, items]) => `<tr class="brand-row"><td colspan="10"><span class="font-bold">${esc(marca)}</span> <span class="text-[11px] opacity-60">· ${resumenMarca(items)}</span></td></tr>` + items.map(p => `<tr onclick="Prod.abrir('${p.id}')" class="${p.active ? '' : 'opacity-50'}"><td class="text-xs whitespace-nowrap opacity-70">${esc(p.brand)}</td><td><div class="font-medium">${esc(p.name)}</div><div class="text-[11px] opacity-60">${p.size ? esc(p.size) : ''}${p.sku ? (p.size ? ' · ' : '') + esc(p.sku) : ''}</div></td>
-              <td class="text-xs">${esc(p.category || '')}</td><td class="num">${money(p.suggested_price)}</td><td class="num font-semibold">${money(p.sale_price)}</td><td class="num">${money(p.cost)}</td>
+          <div class="card p-3 mb-4 flex flex-wrap items-end gap-3 text-sm">
+            <label class="flex items-center gap-2"><input type="checkbox" class="accent-[#B76E88]" id="prod-select-all"> Seleccionar visibles</label>
+            <span id="prod-selected-count" role="status"></span>
+            <div><label class="lbl" for="prod-discount">% de descuento</label><input id="prod-discount" type="number" min="0.01" max="99.99" step="0.01" inputmode="decimal" required class="w-28"></div>
+            <button type="button" class="pbtn disabled:opacity-50" data-product-action="discount">Aplicar descuento</button>
+            <button type="button" class="soft disabled:opacity-50" data-product-action="clear">Quitar oferta</button>
+            <button type="button" class="soft disabled:opacity-50" data-product-action="archive">Archivar</button>
+            <p class="basis-full text-xs opacity-70">El descuento se calcula sobre el precio Piel Spa o, si está vacío, sobre el precio sugerido.</p>
+          </div>
+          <div class="card overflow-hidden hidden md:block"><div class="overflow-x-auto"><table class="t"><thead><tr><th aria-label="Selección"></th><th>Marca</th><th>Producto</th><th>Categoría</th><th class="num">Precio sugerido</th><th class="num">Precio Piel Spa</th><th class="num">Precio de oferta</th><th class="num">Costo</th><th class="num">Margen</th><th class="num">Stock</th><th>Vence</th><th></th></tr></thead><tbody>
+            ${grupos(list).map(([marca, items]) => `<tr class="brand-row"><td colspan="12"><span class="font-bold">${esc(marca)}</span> <span class="text-[11px] opacity-60">· ${resumenMarca(items)}</span></td></tr>` + items.map(p => `<tr onclick="Prod.abrir('${p.id}')" class="${p.active ? '' : 'opacity-50'}"><td>${productCheckbox(p)}</td><td class="text-xs whitespace-nowrap opacity-70">${esc(p.brand)}</td><td><div class="font-medium">${esc(p.name)}</div><div class="text-[11px] opacity-60">${p.size ? esc(p.size) : ''}${p.sku ? (p.size ? ' · ' : '') + esc(p.sku) : ''}</div></td>
+              <td class="text-xs">${esc(p.category || '')}</td><td class="num">${money(p.suggested_price)}</td><td class="num font-semibold">${money(p.sale_price)}</td><td class="num">${offer(p)}</td><td class="num">${money(p.cost)}</td>
               <td class="num">${margen(p) != null ? margen(p) + '%' : '–'}</td><td class="num">${p.stock_qty}<div class="text-[11px] opacity-60">${stockLocation(p.location)}</div></td><td class="whitespace-nowrap text-xs">${fdate(p.expires_on)}</td><td><div class="flex flex-wrap gap-1">${estado(p)}</div></td></tr>`).join('')).join('')}
           </tbody></table></div></div>
           <div class="md:hidden space-y-2">${grupos(list).map(([marca, items]) => `<p class="pt-3 pb-1 font-bold text-[#B76E88] uppercase text-[11px] tracking-widest">${esc(marca)} <span class="normal-case tracking-normal font-normal opacity-70">· ${resumenMarca(items)}</span></p>` + items.map(p => `<div class="pcard ${p.active ? '' : 'opacity-50'}" onclick="Prod.abrir('${p.id}')">
-              <div class="flex justify-between gap-2"><div class="min-w-0"><p class="font-medium leading-snug">${esc(p.name)}</p><p class="text-[12px] opacity-60">${esc(p.brand)}${p.size ? ' · ' + esc(p.size) : ''}</p></div>
-              <div class="text-right"><p class="font-semibold">${money(precio(p))}</p>${p.sale_price == null && p.suggested_price != null ? '<p class="text-[11px] opacity-60">Precio sugerido</p>' : ''}<p class="text-[11px] opacity-60">${p.stock_qty} en stock · ${stockLocation(p.location)}</p></div></div>
+              <div class="flex justify-between gap-2">${productCheckbox(p)}<div class="min-w-0 flex-1"><p class="font-medium leading-snug">${esc(p.name)}</p><p class="text-[12px] opacity-60">${esc(p.brand)}${p.size ? ' · ' + esc(p.size) : ''}</p></div>
+              <div class="text-right"><p class="font-semibold">${money(precio(p))}</p>${p.promo_price != null ? `<p class="text-[11px]">Oferta: ${offer(p)}</p>` : ''}${p.sale_price == null && p.suggested_price != null ? '<p class="text-[11px] opacity-60">Precio sugerido</p>' : ''}<p class="text-[11px] opacity-60">${p.stock_qty} en stock · ${stockLocation(p.location)}</p></div></div>
               <div class="flex flex-wrap gap-1 mt-1.5">${estado(p)}${p.expires_on ? `<span class="text-[11px] opacity-60">vence ${fdate(p.expires_on)}</span>` : ''}</div></div>`).join('')).join('')}</div>
           ${list.length ? '' : '<p class="text-sm opacity-60 text-center py-8">No hay productos con este filtro.</p>'}
           <p class="text-[12px] opacity-60 mt-4">Los protectores solares están sin sales tax, como indicaron. Confírmenlo con la contadora: en NY depende de si se venden como medicamento OTC (con "Drug Facts") o como cosmético. El inventario al costo del 31 de diciembre es el que pide la contadora para el costo de ventas.</p>`;
@@ -169,6 +253,7 @@
         $('prod-location').onchange = e => { locationFilter = e.target.value; render(); };
         $('prod-f').value = filtro; $('prod-f').onchange = e => { filtro = e.target.value; render(); };
         $('prod-del').onchange = e => { verEliminados = e.target.checked; render(); };
+        bindProductSelection(visible);
     }
 
     let skincareCatalog = null;
@@ -179,8 +264,9 @@
         <div><label class="lbl" for="pf-name">Producto</label><input id="pf-name" required></div>
         <div class="grid grid-cols-2 gap-3"><div><label class="lbl" for="pf-size">Tamaño</label><input id="pf-size" placeholder="50 ml"></div>
           <div><label class="lbl" for="pf-sku">Código / SKU</label><input id="pf-sku" placeholder="Opcional"></div></div>
-        <div class="grid grid-cols-3 gap-3"><div><label class="lbl" for="pf-sug">Precio sugerido</label><input id="pf-sug" inputmode="decimal" placeholder="$"></div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3"><div><label class="lbl" for="pf-sug">Precio sugerido</label><input id="pf-sug" inputmode="decimal" placeholder="$"></div>
           <div><label class="lbl" for="pf-price">Precio Piel Spa</label><input id="pf-price" inputmode="decimal" placeholder="$"></div>
+          <div><label class="lbl" for="pf-promo">Precio de oferta</label><input id="pf-promo" type="number" min="0" step="0.01" inputmode="decimal" placeholder="$"></div>
           <div><label class="lbl" for="pf-cost">Costo</label><input id="pf-cost" inputmode="decimal" placeholder="$"></div></div>
         <p class="text-[11px] opacity-60" id="pf-margin"></p>
         <div class="grid grid-cols-3 gap-3"><div><label class="lbl" for="pf-stock">Cantidad en stock</label><input id="pf-stock" inputmode="numeric"></div>
@@ -193,7 +279,7 @@
         <label class="block text-sm">Sede del inventario<select id="pf-location"><option value="">Sin asignar</option><option value="piel_spa">Piel Spa Manhattan</option><option value="divine_bliss">Divine Bliss NJ</option></select></label>
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="pf-bot-visible" class="accent-[#B76E88] w-5 h-5"> Visible en el asistente de WhatsApp</label>
         <div><label class="lbl" for="pf-notes">Notas</label><textarea id="pf-notes" rows="2" placeholder="Para quién es, cómo se usa, dónde está guardado…"></textarea></div>
-        <div class="dlg-actions flex justify-between gap-2 pt-2"><button type="button" class="soft text-red-700" id="pf-del" onclick="Prod.eliminar()">Eliminar</button>
+        <div class="dlg-actions flex justify-between gap-2 pt-2"><button type="button" class="soft text-red-700" id="pf-del" onclick="Prod.eliminar()">Archivar</button>
           <div class="flex gap-2"><button type="button" class="soft" onclick="this.closest('dialog').close()">Cancelar</button><button class="pbtn dark" id="pf-save">Guardar</button></div></div>
       </form></dialog>`;
     function abrir(id) {
@@ -203,7 +289,7 @@
         $('pf-sups').innerHTML = [...new Set(rows.map(r => r.supplier).filter(Boolean))].map(b => `<option value="${esc(b)}">`).join('');
         $('pf-id').value = id || ''; $('pf-brand').value = p.brand || ''; $('pf-name').value = p.name || ''; $('pf-size').value = p.size || ''; $('pf-sku').value = p.sku || '';
         $('pf-cat').value = CATEGORIAS.includes(p.category) ? p.category : 'Otro';
-        $('pf-sug').value = p.suggested_price ?? ''; $('pf-price').value = p.sale_price ?? ''; $('pf-cost').value = p.cost ?? '';
+        $('pf-sug').value = p.suggested_price ?? ''; $('pf-price').value = p.sale_price ?? ''; $('pf-cost').value = p.cost ?? ''; $('pf-promo').value = p.promo_price ?? '';
         $('pf-stock').value = p.stock_qty ?? 0; $('pf-min').value = p.min_stock ?? ''; $('pf-exp').value = p.expires_on || ''; $('pf-lot').value = p.lot || '';
         $('pf-sup').value = p.supplier || ''; $('pf-tax').checked = p.sales_taxable !== false; $('pf-notes').value = p.notes || '';
         $('pf-bot-visible').checked = !!p.bot_visible;
@@ -215,7 +301,7 @@
         $('pf-catalog').value = p.catalog_id || '';
         $('pf-catalog').disabled = !skincareCatalog;
         $('pf-location').value = p.location || '';
-        $('pf-del').textContent = p.active === false ? 'Volver a poner a la venta' : 'Eliminar';
+        $('pf-del').textContent = p.active === false ? 'Volver a poner a la venta' : 'Archivar';
         $('pf-del').classList.toggle('invisible', !id);
         margenInfo();
         ['pf-price', 'pf-cost', 'pf-sug'].forEach(i => $(i).oninput = margenInfo);
@@ -227,7 +313,7 @@
     }
     async function guardar(ev) {
         ev.preventDefault();
-        const vals = { suggested_price: num($('pf-sug').value), sale_price: num($('pf-price').value), cost: num($('pf-cost').value) };
+        const vals = { suggested_price: num($('pf-sug').value), sale_price: num($('pf-price').value), promo_price: num($('pf-promo').value), cost: num($('pf-cost').value) };
         const botVisible = $('pf-bot-visible').checked;
         const location = $('pf-location').value || null;
         if (botVisible && !location) { alert('Selecciona la sede donde está este stock para mostrarlo en WhatsApp.'); return; }
@@ -242,6 +328,8 @@
         const stock = parseInt($('pf-stock').value || '0', 10), min = $('pf-min').value.trim() === '' ? null : parseInt($('pf-min').value, 10);
         if (isNaN(stock) || stock < 0 || (min !== null && (isNaN(min) || min < 0))) { alert('La cantidad y el aviso deben ser números enteros.'); return; }
         const id = $('pf-id').value;
+        const previous = rows.find(p => p.id === id);
+        if (previous?.promo_percent != null && vals.promo_price !== Number(previous.promo_price)) vals.promo_percent = null;
         const row = { brand: $('pf-brand').value.trim(), name: $('pf-name').value.trim(), size: $('pf-size').value.trim() || null, sku: $('pf-sku').value.trim() || null,
             category: $('pf-cat').value, catalog_id: catalogId, location,
             ...vals, stock_qty: stock, min_stock: min, expires_on: $('pf-exp').value || null, lot: $('pf-lot').value.trim() || null,
@@ -260,7 +348,7 @@
         if (!volver && !confirm(`¿Quitar "${p.name}" de la venta? Deja de salir en Cobros; las ventas que ya tuvo se conservan.`)) return;
         const { error } = await _supabase.from('sale_products').update({ active: volver, updated_at: new Date().toISOString() }).eq('id', id);
         if (error) { alert('No se pudo cambiar: ' + error.message); return; }
-        $('prod-dlg').close(); toast(volver ? 'Producto de nuevo a la venta.' : 'Producto eliminado de la venta.'); open();
+        $('prod-dlg').close(); toast(volver ? 'Producto de nuevo a la venta.' : 'Producto archivado.'); open();
         if (typeof loadPayProducts === 'function') loadPayProducts();
     }
 

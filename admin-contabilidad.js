@@ -6,7 +6,8 @@
 (function () {
     'use strict';
     const SOCIOS = ['Freddy', 'Samuel'];
-    const ESTADOS = ['Pendiente', 'Reembolsado', 'Aportado como capital', 'No aplica (pagó la LLC)', 'Sin dato'];
+    const ESTADOS = ['Pendiente', 'Parcial', 'Reembolsado', 'Aportado como capital', 'No aplica (pagó la LLC)', 'Sin dato'];
+    const FUND_SOURCES = ['Capital aportado', 'Fondos de operación', 'Ganancias reservadas', 'Otro'];
     const PAGADORES = ['LLC', 'Freddy', 'Samuel', 'Ambos (50/50)', 'Otra persona', 'Sin dato'];
     const LIBROS = ['LLC', 'NJ (fuera de la LLC)', 'Revisar'];
     const CUENTAS = ['Chase Ink Business', 'Amex Business', 'Débito Chase Business', 'Cuenta LLC (Zelle/cheque)', 'Tarjeta Chase', 'BofA Mastercard',
@@ -37,7 +38,11 @@
     const share = (row, socio) => row === socio ? 1 : row === 'Ambos (50/50)' ? (socio === 'Freddy' ? db.cfg.share_freddy : db.cfg.share_samuel) : 0;
     const SHARE = s => s === 'Freddy' ? Number(db.cfg.share_freddy) : Number(db.cfg.share_samuel);
     const catTipo = c => (db.categorias.find(x => x.name === c) || {}).kind || 'Revisar';
-    const reembolsable = g => g.libro === 'LLC' && (g.estado === 'Pendiente' || g.estado === 'Reembolsado') && g.pagado_por !== 'LLC';
+    const refundRecorded = status => status === 'Reembolsado' || status === 'Parcial';
+    const refundAmount = g => g.estado === 'Reembolsado' ? g.monto : g.monto_reembolsado || 0;
+    const reembolsable = g => g.libro === 'LLC' && (g.estado === 'Pendiente' || refundRecorded(g.estado)) && g.pagado_por !== 'LLC';
+    const paidFrom = g => [g.metodo_pago, g.cuenta, g.pagado_por].filter(Boolean).join(' · ');
+    const refundFrom = g => [g.reembolsado_desde, g.origen_fondos].filter(Boolean).join(' · ');
     const isCard = m => m === 'Tarjeta de crédito' || m === 'Tarjeta de débito';
     function toast(msg) {
         let t = $('acc-toast');
@@ -86,7 +91,7 @@
             fijos,
             cuentas: cuentas.map(c => c.name),
             gastos: exp.map(e => ({ id: e.id, fecha: e.spent_on, descripcion: e.description, proveedor: e.vendor || '', categoria: e.category, libro: e.ledger,
-                monto: Number(e.amount), cuenta: e.account || '', pagado_por: e.paid_by, estado: e.reimb_status, fecha_reembolso: e.reimbursed_on, nota: e.note || '',
+                monto: Number(e.amount), cuenta: e.account || '', pagado_por: e.paid_by, estado: e.reimb_status, fecha_reembolso: e.reimbursed_on, metodo_pago: e.payment_method, reembolsado_desde: e.reimbursed_from, origen_fondos: e.reimbursement_funds, monto_reembolsado: Number(e.reimbursed_amount || 0), nota: e.note || '',
                 receipt: e.receipt_path, source: e.source, fijo: !!e.recurring_id })),
             movimientos: mov.map(m => ({ id: m.id, fecha: m.moved_on, socio: m.partner, tipo: m.kind, monto: Number(m.amount), concepto: m.concept,
                 confirmado: m.confirmed, nota: (m.note || '').replace(' [libro]', '').replace('[libro]', '') })),
@@ -139,7 +144,11 @@
         db.gastos.forEach(g => {
             const f = share(g.pagado_por, socio); if (!f || !reembolsable(g)) return;
             if (ym(g.fecha) === m) { r.gastos += g.monto * f; r.listaGastos.push({ ...g, parte: g.monto * f }); }
-            if (g.estado === 'Reembolsado' && ym(g.fecha_reembolso || g.fecha) === m) { r.reembolsos += g.monto * f; r.listaReemb.push({ ...g, parte: g.monto * f }); }
+            if (refundRecorded(g.estado) && ym(g.fecha_reembolso || g.fecha) === m) {
+                const parte = refundAmount(g) * f;
+                r.reembolsos += parte;
+                r.listaReemb.push({ ...g, parte });
+            }
         });
         return r;
     }
@@ -276,7 +285,7 @@
     // ---------- Gastos
     const gf = { q: '', mes: '', pag: '', est: '', cat: '' };
     function badgeEstado(e) {
-        const c = { 'Pendiente': 'b-pendr', 'Reembolsado': 'b-ok', 'Aportado como capital': 'b-cap', 'No aplica (pagó la LLC)': 'b-llc', 'Sin dato': 'b-sd' }[e] || 'b-llc';
+        const c = { 'Pendiente': 'b-pendr', 'Parcial': 'b-pendr', 'Reembolsado': 'b-ok', 'Aportado como capital': 'b-cap', 'No aplica (pagó la LLC)': 'b-llc', 'Sin dato': 'b-sd' }[e] || 'b-llc';
         return `<span class="badge ${c}">${esc(e === 'No aplica (pagó la LLC)' ? 'Pagó la LLC' : e === 'Aportado como capital' ? 'Capital' : e)}</span>`;
     }
     function viewGastos(body) {
@@ -288,7 +297,7 @@
                 </div>
                 <div id="acc-gfil" class="hidden md:grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
                   <div><label class="lbl" for="acc-gmes">Mes</label><select id="acc-gmes"></select></div>
-                  <div><label class="lbl" for="acc-gpag">Pagado por</label><select id="acc-gpag"></select></div>
+                  <div><label class="lbl" for="acc-gpag">Titular del pago</label><select id="acc-gpag"></select></div>
                   <div><label class="lbl" for="acc-gest">Estado</label><select id="acc-gest"></select></div>
                   <div><label class="lbl" for="acc-gcat">Categoría</label><select id="acc-gcat"></select></div>
                   <div class="col-span-2 md:hidden"><label class="lbl" for="acc-gord">Ordenar por</label><select id="acc-gord">
@@ -315,15 +324,16 @@
         const list = sortList('gastos', db.gastos.filter(g => (!q || (g.descripcion + ' ' + g.proveedor).toLowerCase().includes(q)) && (!gf.mes || ym(g.fecha) === gf.mes)
             && (!gf.pag || g.pagado_por === gf.pag) && (!gf.est || g.estado === gf.est) && (!gf.cat || g.categoria === gf.cat)));
         visibles = list.map(g => g.id);
-        const total = list.reduce((s, g) => s + g.monto, 0), pend = list.filter(g => g.estado === 'Pendiente').reduce((s, g) => s + g.monto, 0);
+        const total = list.reduce((s, g) => s + g.monto, 0), pend = list.filter(g => ['Pendiente', 'Parcial'].includes(g.estado)).reduce((s, g) => s + g.monto - refundAmount(g), 0);
         $('acc-gsum').innerHTML = `<b>${list.length}</b> gastos · total <b>${money(total)}</b> · pendiente de reembolso <b>${money(pend)}</b>`;
-        $('acc-gtbl').innerHTML = `<thead><tr><th><input type="checkbox" onchange="Acc.selAll(this)" aria-label="Seleccionar todos"></th>${th('gastos', 'fecha', 'Fecha')}${th('gastos', 'descripcion', 'Descripción')}${th('gastos', 'categoria', 'Categoría')}${th('gastos', 'monto', 'Monto', 'num')}${th('gastos', 'pagado_por', 'Pagado por')}${th('gastos', 'estado', 'Estado')}<th></th></tr></thead><tbody>` +
+        $('acc-gtbl').innerHTML = `<thead><tr><th><input type="checkbox" onchange="Acc.selAll(this)" aria-label="Seleccionar todos"></th>${th('gastos', 'fecha', 'Fecha')}${th('gastos', 'descripcion', 'Descripción')}${th('gastos', 'categoria', 'Categoría')}${th('gastos', 'monto', 'Monto', 'num')}${th('gastos', 'pagado_por', 'Pagado desde')}${th('gastos', 'estado', 'Estado')}<th>Reembolsado desde</th><th></th></tr></thead><tbody>` +
             list.map(g => `<tr><td><input type="checkbox" ${sel.has(g.id) ? 'checked' : ''} onchange="Acc.toggleSel('${g.id}', this.checked)" aria-label="Seleccionar"></td>
               <td class="whitespace-nowrap">${fdate(g.fecha)}</td>
-              <td><div>${esc(g.descripcion)}${g.receipt ? ` <button class="text-[11px] text-[#B76E88] underline" onclick="Acc.verRecibo('${g.id}')">recibo</button>` : ''}</div><div class="text-[11px] opacity-60">${esc(g.proveedor)}${g.proveedor && g.cuenta ? ' · ' : ''}${esc(g.cuenta)}${g.libro !== 'LLC' ? ` <span class="badge ${g.libro.startsWith('NJ') ? 'b-nj' : 'b-sd'}">${esc(g.libro.startsWith('NJ') ? 'NJ fuera' : g.libro)}</span>` : ''}${/jornada NJ/.test(g.nota) ? ' <span class="badge b-nj">viaje NJ</span>' : ''}${g.source === 'telefono' ? ' <span class="badge b-llc">teléfono</span>' : ''}${g.fijo ? ' <span class="badge b-cap">fijo</span>' : ''}</div></td>
+              <td><div>${esc(g.descripcion)}${g.receipt ? ` <button class="text-[11px] text-[#B76E88] underline" onclick="Acc.verRecibo('${g.id}')">recibo</button>` : ''}</div><div class="text-[11px] opacity-60">${esc(g.proveedor)}${g.libro !== 'LLC' ? ` <span class="badge ${g.libro.startsWith('NJ') ? 'b-nj' : 'b-sd'}">${esc(g.libro.startsWith('NJ') ? 'NJ fuera' : g.libro)}</span>` : ''}${/jornada NJ/.test(g.nota) ? ' <span class="badge b-nj">viaje NJ</span>' : ''}${g.source === 'telefono' ? ' <span class="badge b-llc">teléfono</span>' : ''}${g.fijo ? ' <span class="badge b-cap">fijo</span>' : ''}</div></td>
               <td class="text-xs">${esc(g.categoria)}${g.categoria === 'Revisar' ? ' <span class="badge b-sd">revisar</span>' : ''}</td>
-              <td class="num">${money(g.monto)}</td><td class="text-xs whitespace-nowrap">${esc(g.pagado_por)}</td>
-              <td>${badgeEstado(g.estado)}${g.fecha_reembolso ? `<div class="text-[10px] opacity-60 mt-1">${fdate(g.fecha_reembolso)}</div>` : ''}</td>
+              <td class="num">${money(g.monto)}</td><td class="text-xs whitespace-nowrap">${esc(paidFrom(g))}</td>
+              <td>${badgeEstado(g.estado)}${g.estado === 'Parcial' ? ` <span class="text-xs">${money(refundAmount(g))}</span>` : ''}${g.fecha_reembolso ? `<div class="text-[10px] opacity-60 mt-1">${fdate(g.fecha_reembolso)}</div>` : ''}</td>
+              <td class="text-xs">${esc(refundFrom(g) || '—')}</td>
               <td><button class="text-xs text-[#B76E88] hover:underline" onclick="Acc.openGasto('${g.id}')">Editar</button></td></tr>`).join('') + '</tbody>';
         // Phone: one card per expense; tap to edit, the box selects it for the bulk actions.
         const corto = c => ({ 'Insumos y productos de tratamiento': 'Insumos', 'Envíos y aranceles de importación': 'Envíos', 'Comidas de negocio (50%)': 'Comidas',
@@ -333,7 +343,8 @@
               <div class="flex-1 min-w-0">
                 <div class="flex justify-between gap-2"><p class="text-[15px] font-medium leading-snug break-words min-w-0">${esc(g.descripcion)}</p><p class="text-[15px] font-semibold whitespace-nowrap">${money(g.monto)}</p></div>
                 <p class="text-[12px] opacity-60 mt-0.5">${fdate(g.fecha)} · ${esc(corto(g.categoria))}${g.proveedor ? ' · ' + esc(g.proveedor) : ''}</p>
-                <div class="flex flex-wrap gap-1 mt-1.5 items-center"><span class="badge b-llc">${esc(g.pagado_por)}</span>${badgeEstado(g.estado)}${g.categoria === 'Revisar' ? '<span class="badge b-sd">revisar</span>' : ''}${g.libro !== 'LLC' ? '<span class="badge b-nj">NJ fuera</span>' : ''}${g.source === 'telefono' ? '<span class="badge b-llc">teléfono</span>' : ''}${g.fijo ? '<span class="badge b-cap">fijo</span>' : ''}${g.receipt ? `<button class="text-[12px] text-[#B76E88] underline" onclick="event.stopPropagation();Acc.verRecibo('${g.id}')">recibo</button>` : ''}</div>
+                <div class="flex flex-wrap gap-1 mt-1.5 items-center"><span class="badge b-llc">${esc(paidFrom(g))}</span>${badgeEstado(g.estado)}${g.categoria === 'Revisar' ? '<span class="badge b-sd">revisar</span>' : ''}${g.libro !== 'LLC' ? '<span class="badge b-nj">NJ fuera</span>' : ''}${g.source === 'telefono' ? '<span class="badge b-llc">teléfono</span>' : ''}${g.fijo ? '<span class="badge b-cap">fijo</span>' : ''}${g.receipt ? `<button class="text-[12px] text-[#B76E88] underline" onclick="event.stopPropagation();Acc.verRecibo('${g.id}')">recibo</button>` : ''}</div>
+                ${refundRecorded(g.estado) ? `<p class="text-xs mt-1">Reembolso ${money(refundAmount(g))}${refundFrom(g) ? ' · ' + esc(refundFrom(g)) : ''}</p>` : ''}
               </div></div>`).join('') +
             (list.length > gLimit ? `<button class="soft w-full" onclick="Acc.masGastos()">Ver ${Math.min(50, list.length - gLimit)} más</button>` : '') +
             (list.length ? '' : '<p class="text-sm opacity-60 text-center py-8">No hay gastos con estos filtros.</p>');
@@ -352,9 +363,10 @@
     function selAll(cb) { visibles.forEach(id => cb.checked ? sel.add(id) : sel.delete(id)); tablaGastos(); }
     async function bulkSet(estado) {
         const d = $('acc-bulkd').value || today();
-        const ids = db.gastos.filter(g => sel.has(g.id) && g.pagado_por !== 'LLC').map(g => g.id);
-        if (!ids.length) { toast('Ninguno de los seleccionados lo pagó un socio.'); return; }
-        const { error } = await _supabase.from('acct_expenses').update({ reimb_status: estado, reimbursed_on: estado === 'Reembolsado' ? d : null }).in('id', ids);
+        const eligible = db.gastos.filter(g => sel.has(g.id) && g.pagado_por !== 'LLC' && !refundRecorded(g.estado));
+        const ids = eligible.map(g => g.id);
+        if (!ids.length) { toast('La selección no incluye gastos de socios sin reembolso registrado.'); return; }
+        const { error } = await _supabase.from('acct_expenses').update({ reimb_status: estado, reimbursed_on: estado === 'Reembolsado' ? d : null }).in('id', ids).not('reimb_status', 'in', '(Parcial,Reembolsado)');
         if (error) { alert('No se pudo guardar: ' + error.message); return; }
         sel.clear(); await refresh(); toast(estado === 'Reembolsado' ? `${ids.length} gastos marcados como reembolsados.` : `${ids.length} gastos pasaron a capital.`);
     }
@@ -368,10 +380,15 @@
       <div><label class="lbl" for="acc-g-desc">Descripción</label><input id="acc-g-desc" required></div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="lbl" for="acc-g-prov">Proveedor</label><input id="acc-g-prov"></div>
         <div><label class="lbl" for="acc-g-cat">Categoría</label><select id="acc-g-cat"></select></div></div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="lbl" for="acc-g-cuenta">Cuenta / tarjeta</label><select id="acc-g-cuenta"></select></div>
-        <div><label class="lbl" for="acc-g-pag">Pagado por</label><select id="acc-g-pag"></select></div></div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3"><div><label class="lbl" for="acc-g-metodo">Método de pago</label><select id="acc-g-metodo"></select></div><div><label class="lbl" for="acc-g-cuenta">Cuenta / tarjeta</label><select id="acc-g-cuenta"></select></div>
+        <div><label class="lbl" for="acc-g-pag">Titular del pago</label><select id="acc-g-pag"></select></div></div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="lbl" for="acc-g-est">Estado reembolso</label><select id="acc-g-est"></select></div>
         <div><label class="lbl" for="acc-g-freemb">Fecha reembolso</label><input type="date" id="acc-g-freemb"></div></div>
+      <div id="acc-g-refund" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div><label class="lbl" for="acc-g-desde">Reembolsado desde</label><input id="acc-g-desde" list="acc-g-cuentas-list" placeholder="Cuenta o medio del reembolso"><datalist id="acc-g-cuentas-list"></datalist></div>
+        <div><label class="lbl" for="acc-g-fondos">Origen de fondos</label><select id="acc-g-fondos"></select></div>
+        <div id="acc-g-parcial"><label class="lbl" for="acc-g-reemb-monto">Monto reembolsado ($)</label><input id="acc-g-reemb-monto" type="number" min="0.01" step="0.01" inputmode="decimal"></div>
+      </div>
       <div><label class="lbl" for="acc-g-lib">Libro</label><select id="acc-g-lib"></select></div>
       <label id="acc-g-fijo-row" class="flex items-start gap-2 text-sm cursor-pointer"><input type="checkbox" id="acc-g-fijo" class="accent-[#B76E88] w-5 h-5 mt-0.5 shrink-0">
         <span><b>Gasto fijo</b>: se repite cada mes. Desde el mes que viene se crea solo, el mismo día y por el mismo monto.</span></label>
@@ -401,6 +418,30 @@
         $('acc-g-id').value = id || ''; $('acc-g-fecha').value = g.fecha || ''; $('acc-g-monto').value = g.monto ?? ''; $('acc-g-desc').value = g.descripcion || '';
         $('acc-g-prov').value = g.proveedor || ''; $('acc-g-cat').value = g.categoria; fillCuentas($('acc-g-cuenta'), g.cuenta || 'Sin dato'); $('acc-g-pag').value = g.pagado_por;
         $('acc-g-est').value = g.estado; $('acc-g-freemb').value = g.fecha_reembolso || ''; $('acc-g-lib').value = g.libro; $('acc-g-nota').value = g.nota || ''; $('acc-g-foto').value = '';
+        fill($('acc-g-metodo'), Object.values(PAY_LABEL), 'Sin especificar');
+        fill($('acc-g-fondos'), FUND_SOURCES, 'Sin especificar');
+        $('acc-g-metodo').value = g.metodo_pago || '';
+        $('acc-g-fondos').value = g.origen_fondos || '';
+        $('acc-g-desde').value = g.reembolsado_desde || '';
+        $('acc-g-reemb-monto').value = g.monto_reembolsado || '';
+        $('acc-g-cuentas-list').replaceChildren(...db.cuentas.map(c => new Option(c, c)));
+        const showRefund = () => {
+            const payer = $('acc-g-pag').value;
+            const state = $('acc-g-est');
+            if (payer === 'LLC') state.value = 'No aplica (pagó la LLC)';
+            else if (state.value === 'No aplica (pagó la LLC)') state.value = 'Pendiente';
+            state.disabled = payer === 'LLC';
+            const partial = state.value === 'Parcial';
+            const recorded = refundRecorded(state.value);
+            $('acc-g-refund').classList.toggle('hidden', !recorded);
+            $('acc-g-parcial').classList.toggle('hidden', !partial);
+            $('acc-g-reemb-monto').required = partial;
+            $('acc-g-reemb-monto').disabled = !partial;
+            $('acc-g-freemb').disabled = !recorded;
+            $('acc-g-freemb').required = partial;
+        };
+        $('acc-g-pag').onchange = $('acc-g-est').onchange = showRefund;
+        showRefund();
         $('acc-g-fotoinfo').textContent = g.receipt ? 'Ya tiene recibo. Si subes otro, reemplaza el anterior.' : '';
         $('acc-g-fijo').checked = false;
         $('acc-g-fijo-row').classList.toggle('hidden', !!g.fijo); $('acc-g-fijo-info').classList.toggle('hidden', !g.fijo);
@@ -421,9 +462,17 @@
         const id = $('acc-g-id').value, pag = $('acc-g-pag').value;
         let est = $('acc-g-est').value;
         if (pag === 'LLC') est = 'No aplica (pagó la LLC)'; else if (est === 'No aplica (pagó la LLC)') est = 'Pendiente';
+        const partial = est === 'Parcial' ? amt($('acc-g-reemb-monto').value) : null;
+        if (est === 'Parcial' && (!(partial > 0 && partial < monto) || !$('acc-g-freemb').value)) {
+            alert('Ingresa la fecha y un monto de reembolso parcial menor que el gasto.');
+            return;
+        }
         const row = { spent_on: $('acc-g-fecha').value, amount: monto, description: $('acc-g-desc').value.trim(), vendor: $('acc-g-prov').value.trim() || null,
             category: $('acc-g-cat').value, account: $('acc-g-cuenta').value, paid_by: pag, reimb_status: est,
-            reimbursed_on: est === 'Reembolsado' ? ($('acc-g-freemb').value || null) : null, ledger: $('acc-g-lib').value, note: $('acc-g-nota').value.trim() || null };
+            payment_method: $('acc-g-metodo').value || null,
+            reimbursed_on: refundRecorded(est) ? ($('acc-g-freemb').value || null) : null,
+            reimbursed_amount: partial, reimbursed_from: refundRecorded(est) ? $('acc-g-desde').value.trim() || null : null,
+            reimbursement_funds: refundRecorded(est) ? $('acc-g-fondos').value || null : null, ledger: $('acc-g-lib').value, note: $('acc-g-nota').value.trim() || null };
         const hacerFijo = $('acc-g-fijo').checked && !$('acc-g-fijo-row').classList.contains('hidden');
         if (hacerFijo && !['LLC', 'Freddy', 'Samuel', 'Ambos (50/50)'].includes(pag)) { alert('Un gasto fijo lo paga la LLC, Freddy, Samuel o ambos.'); return; }
         if (hacerFijo && !row.spent_on) { alert('Elige la fecha: el gasto fijo se repite ese día de cada mes.'); return; }
@@ -749,8 +798,8 @@
             Libro: i.anulado ? 'Anulado' : i.libro,
         }))), [11, 36, 20, 40, 24, 10, 16, 16, 14, 14, 20, 14]), 'Detalle servicios');
         XLSX.utils.book_append_sheet(wb, sheet(db.gastos.map(g => ({ Fecha: asDate(g.fecha), Mes: mes(g.fecha), Descripción: g.descripcion, Proveedor: g.proveedor, Categoría: g.categoria, Tipo: catTipo(g.categoria),
-            Libro: g.libro, 'Monto ($)': g.monto, 'Cuenta / tarjeta': g.cuenta, 'Método original': '', 'Pagado por': g.pagado_por, 'Estado reembolso': g.estado, 'Fecha reembolso': asDate(g.fecha_reembolso),
-            'Mes reembolso': g.estado === 'Reembolsado' ? mes(g.fecha_reembolso || g.fecha) : '', Reembolsable: reembolsable(g) ? 'Sí' : 'No', Nota: g.nota, Origen: g.source })), [11, 11, 45, 20, 30, 15, 20, 12, 22, 10, 14, 22, 12, 11, 11, 50, 12]), 'Gastos');
+            Libro: g.libro, 'Monto ($)': g.monto, 'Pagado desde': paidFrom(g), 'Estado reembolso': g.estado, 'Reembolsado desde': g.reembolsado_desde, 'Origen de fondos': g.origen_fondos, 'Monto reembolsado ($)': refundRecorded(g.estado) ? refundAmount(g) : '', 'Fecha reembolso': asDate(g.fecha_reembolso),
+            'Mes reembolso': refundRecorded(g.estado) ? mes(g.fecha_reembolso || g.fecha) : '', Reembolsable: reembolsable(g) ? 'Sí' : 'No', Nota: g.nota, Origen: g.source })), [11, 11, 45, 20, 30, 15, 20, 12, 22, 10, 14, 22, 12, 11, 11, 50, 12]), 'Gastos');
         XLSX.utils.book_append_sheet(wb, sheet(db.movimientos.map(m => ({ Fecha: asDate(m.fecha), Mes: mes(m.fecha), Socio: m.socio, Tipo: m.tipo, 'Monto ($)': m.monto, Concepto: m.concepto,
             Confirmado: m.confirmado ? 'Sí' : 'No', Origen: 'Contabilidad', Nota: m.nota })), [11, 11, 16, 26, 12, 50, 11, 14, 50]), 'Movimientos socios');
         XLSX.writeFile(wb, `Libro Contable PIEL SPA - datos ${today()}.xlsx`);

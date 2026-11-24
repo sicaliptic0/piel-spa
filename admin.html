@@ -4626,7 +4626,7 @@
         // Products for sale: the skincare catalog's "in stock" items (Contabilidad → Productos).
         let payProducts = [];
         async function loadPayProducts() {
-            const { data, error } = await _supabase.from('sale_products').select('id, name, brand, size, sale_price, suggested_price, sales_taxable, stock_qty, expires_on, location')
+            const { data, error } = await _supabase.from('sale_products').select('id, name, brand, size, sale_price, suggested_price, promo_price, sales_taxable, stock_qty, expires_on, location')
                 .eq('active', true).order('brand').order('name');
             if (error) return;
             payProducts = data || [];
@@ -4657,7 +4657,7 @@
             fillPayProductOptions(select);
             select.onchange = () => {
                 const product = payProducts.find(p => p.id === select.value);
-                const price = product?.sale_price ?? product?.suggested_price;
+                const price = product?.promo_price > 0 ? product.promo_price : product?.sale_price ?? product?.suggested_price;
                 const name = line.querySelector('[data-product-name]');
                 name.classList.toggle('hidden', select.value !== '__otro');
                 name.value = '';
@@ -10335,7 +10335,7 @@
             catch (e) { alert('No se pudo generar el PDF: ' + e.message); }
         }
     </script>
-    <script src="admin-contabilidad.js?v=20261201-prepaid-sessions"></script>
-    <script src="admin-productos.js?v=20261204-product-availability"></script>
+    <script src="admin-contabilidad.js?v=20261207-expense-payments"></script>
+    <script src="admin-productos.js?v=20261206-product-promotions"></script>
 </body>
 </html>
