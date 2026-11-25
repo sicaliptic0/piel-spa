@@ -85,6 +85,10 @@
         root.querySelectorAll('.sub').forEach(b => b.onclick = () => { tab = b.dataset.t; return open(); });
         document.body.insertAdjacentHTML('beforeend', DIALOG + SERVICE_DIALOG);
         $('prod-form').addEventListener('submit', guardar);
+        $('prod-location-form').addEventListener('submit', saveLocationStock);
+        $('prod-location-dlg').addEventListener('cancel', event => {
+            if ($('pl-save').disabled) event.preventDefault();
+        });
         $('svc-form').addEventListener('submit', saveService);
     }
     async function open() {
@@ -279,11 +283,29 @@
         <label class="block text-sm">Sede del inventario<select id="pf-location"><option value="">Sin asignar</option><option value="piel_spa">Piel Spa Manhattan</option><option value="divine_bliss">Divine Bliss NJ</option></select></label>
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="pf-bot-visible" class="accent-[#B76E88] w-5 h-5"> Visible en el asistente de WhatsApp</label>
         <div><label class="lbl" for="pf-notes">Notas</label><textarea id="pf-notes" rows="2" placeholder="Para quién es, cómo se usa, dónde está guardado…"></textarea></div>
+        <div id="pf-location-actions" class="flex flex-wrap gap-2 border-t border-[#EDE1E7] pt-3">
+          <button type="button" class="soft" onclick="Prod.openLocationStock(false)">Duplicar en otra sede</button>
+          <button type="button" class="soft" id="pf-move-stock" onclick="Prod.openLocationStock(true)">Mover stock entre sedes</button>
+        </div>
         <div class="dlg-actions flex justify-between gap-2 pt-2"><button type="button" class="soft text-red-700" id="pf-del" onclick="Prod.eliminar()">Archivar</button>
           <div class="flex gap-2"><button type="button" class="soft" onclick="this.closest('dialog').close()">Cancelar</button><button class="pbtn dark" id="pf-save">Guardar</button></div></div>
+      </form></dialog>
+      <dialog id="prod-location-dlg" class="prod" aria-labelledby="pl-title"><form id="prod-location-form" class="p-6 space-y-3">
+        <h3 id="pl-title" class="text-xl font-semibold"></h3>
+        <p id="pl-origin" class="text-sm"></p>
+        <p id="pl-description" class="text-xs opacity-70"></p>
+        <div><label class="lbl" for="pl-destination">Sede de destino</label><select id="pl-destination" required></select></div>
+        <div><label class="lbl" for="pl-quantity">Cantidad de unidades</label><input id="pl-quantity" type="number" inputmode="numeric" min="1" step="1" required></div>
+        <p id="pl-error" class="text-sm text-red-700" role="alert" hidden></p>
+        <div class="dlg-actions flex justify-end gap-2">
+          <button type="button" id="pl-cancel" class="soft" onclick="this.closest('dialog').close()">Cancelar</button>
+          <button id="pl-save" class="pbtn dark disabled:opacity-50"></button>
+        </div>
       </form></dialog>`;
+    let stockLocationAction;
     function abrir(id) {
         const p = id ? rows.find(x => x.id === id) : { brand: '', name: '', category: 'Protector solar', stock_qty: 0, sales_taxable: true, active: true };
+        if (!p) return;
         $('prod-title').textContent = id ? 'Editar producto' : 'Nuevo producto';
         $('pf-brands').innerHTML = [...new Set(rows.map(r => r.brand))].map(b => `<option value="${esc(b)}">`).join('');
         $('pf-sups').innerHTML = [...new Set(rows.map(r => r.supplier).filter(Boolean))].map(b => `<option value="${esc(b)}">`).join('');
@@ -303,9 +325,59 @@
         $('pf-location').value = p.location || '';
         $('pf-del').textContent = p.active === false ? 'Volver a poner a la venta' : 'Archivar';
         $('pf-del').classList.toggle('invisible', !id);
+        $('pf-location-actions').classList.toggle('hidden', !id || !p.active);
+        $('pf-move-stock').classList.toggle('hidden', !(p.stock_qty > 0));
         margenInfo();
         ['pf-price', 'pf-cost', 'pf-sug'].forEach(i => $(i).oninput = margenInfo);
         $('prod-dlg').showModal();
+    }
+    function openLocationStock(move) {
+        const product = rows.find(p => p.id === $('pf-id').value && p.active);
+        if (!product || $('pf-save').disabled || (move && product.stock_qty < 1)) return;
+        stockLocationAction = { id: product.id, move };
+        $('pl-title').textContent = move ? 'Mover stock entre sedes' : 'Duplicar en otra sede';
+        $('pl-origin').textContent = `${product.name} · ${stockLocation(product.location)} · ${product.stock_qty} en stock`;
+        $('pl-description').textContent = move
+            ? 'Las unidades salen del origen y se agregan al destino.'
+            : 'La copia usa los datos guardados del producto. Ingresa solo unidades nuevas.';
+        const destinations = ['piel_spa', 'divine_bliss'].filter(location => location !== product.location);
+        $('pl-destination').replaceChildren(new Option('Elige una sede', ''), ...destinations.map(location => new Option(stockLocation(location), location)));
+        if (destinations.length === 1) $('pl-destination').value = destinations[0];
+        const qty = $('pl-quantity');
+        qty.max = move ? product.stock_qty : 2147483647;
+        qty.value = '';
+        $('pl-error').hidden = true;
+        $('pl-save').textContent = move ? 'Mover stock' : 'Duplicar producto';
+        $('prod-location-dlg').showModal();
+    }
+    async function saveLocationStock(event) {
+        event.preventDefault();
+        const save = $('pl-save');
+        if (save.disabled) return;
+        const { id, move } = stockLocationAction;
+        const destination = $('pl-destination').value;
+        const errorText = $('pl-error');
+        errorText.hidden = true;
+        save.disabled = $('pl-cancel').disabled = true;
+        try {
+            const { data, error } = await _supabase.rpc('change_sale_product_location', {
+                p_product_id: id, p_destination: destination, p_quantity: $('pl-quantity').valueAsNumber, p_move: move,
+            });
+            if (error) throw error;
+            const updated = new Map(data.map(product => [product.id, product]));
+            rows = rows.filter(product => !updated.has(product.id)).concat(data);
+            $('prod-location-dlg').close();
+            $('prod-dlg').close();
+            if (tab === 'productos') render();
+            const target = data.find(product => product.location === destination);
+            toast(`${stockLocation(destination)} · ${target.stock_qty} en stock.`);
+            if (typeof loadPayProducts === 'function') loadPayProducts();
+        } catch (error) {
+            errorText.textContent = error.message;
+            errorText.hidden = false;
+        } finally {
+            save.disabled = $('pl-cancel').disabled = false;
+        }
     }
     function margenInfo() {
         const pv = num($('pf-price').value) ?? num($('pf-sug').value), c = num($('pf-cost').value);
@@ -335,10 +407,16 @@
             ...vals, stock_qty: stock, min_stock: min, expires_on: $('pf-exp').value || null, lot: $('pf-lot').value.trim() || null,
             supplier: $('pf-sup').value.trim() || null, sales_taxable: $('pf-tax').checked, bot_visible: botVisible, notes: $('pf-notes').value.trim() || null, updated_at: new Date().toISOString() };
         const btn = $('pf-save'); btn.disabled = true;
-        const res = id ? await _supabase.from('sale_products').update(row).eq('id', id)
+        const res = id ? await _supabase.from('sale_products').update(row).eq('id', id).eq('updated_at', previous.updated_at).select('id').maybeSingle()
             : await _supabase.from('sale_products').insert({ ...row, created_by: (await _supabase.auth.getUser()).data.user?.id || null });
         btn.disabled = false;
         if (res.error) { alert('No se pudo guardar: ' + res.error.message); return; }
+        if (id && !res.data) {
+            $('prod-dlg').close();
+            await open();
+            toast('La ficha cambió. Vuelve a abrirla para editarla.');
+            return;
+        }
         $('prod-dlg').close(); toast('Producto guardado.'); open();
         if (typeof loadPayProducts === 'function') loadPayProducts();
     }
@@ -714,5 +792,5 @@
         else abrir();
     }
 
-    window.Prod = { open, add, abrir, eliminar, archiveService };
+    window.Prod = { open, add, abrir, eliminar, archiveService, openLocationStock };
 })();
